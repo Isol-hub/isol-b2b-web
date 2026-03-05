@@ -19,8 +19,7 @@ export default function LoginPage() {
 
   async function requestOtp(e: React.FormEvent) {
     e.preventDefault()
-    setLoading(true)
-    setError('')
+    setLoading(true); setError('')
     try {
       const res = await fetch('/api/auth/request-otp', {
         method: 'POST',
@@ -30,17 +29,13 @@ export default function LoginPage() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to send code')
       setStep('otp')
-    } catch (err: any) {
-      setError(err.message)
-    } finally {
-      setLoading(false)
-    }
+    } catch (err: any) { setError(err.message) }
+    finally { setLoading(false) }
   }
 
   async function verifyOtp(e: React.FormEvent) {
     e.preventDefault()
-    setLoading(true)
-    setError('')
+    setLoading(true); setError('')
     try {
       const res = await fetch('/api/auth/verify-otp', {
         method: 'POST',
@@ -52,95 +47,97 @@ export default function LoginPage() {
       saveToken(data.token)
       const session = getSession()
       navigate(`/${session?.workspaceSlug ?? ''}`, { replace: true })
-    } catch (err: any) {
-      setError(err.message)
-    } finally {
-      setLoading(false)
-    }
+    } catch (err: any) { setError(err.message) }
+    finally { setLoading(false) }
   }
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex' }}>
-      {/* Left — value proposition (hidden on narrow screens) */}
+
+      {/* ── Left: hero ──────────────────────────────────────────────────── */}
       <div className="login-hero">
-        <div style={{ maxWidth: 460 }}>
+        <div style={{ maxWidth: 480 }}>
+
           {/* Logo */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 52 }}>
-            <div style={{
-              width: 36, height: 36,
-              background: 'var(--blue)',
-              borderRadius: 10,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>
-              <span style={{ color: '#0a0f1a', fontWeight: 900, fontSize: 18 }}>i</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 56 }}>
+            <div className="logo-mark" style={{ width: 40, height: 40 }}>
+              <span style={{ color: '#fff', fontWeight: 900, fontSize: 20 }}>i</span>
             </div>
             <span style={{ fontSize: 16, fontWeight: 800, letterSpacing: '0.08em', color: 'var(--text)' }}>ISOL</span>
           </div>
 
           {/* Headline */}
           <h1 style={{
-            fontSize: 'clamp(28px, 3vw, 42px)',
+            fontSize: 'clamp(32px, 3.5vw, 52px)',
             fontWeight: 800,
-            lineHeight: 1.15,
-            marginBottom: 18,
-            letterSpacing: '-0.02em',
+            lineHeight: 1.1,
+            letterSpacing: '-0.03em',
+            marginBottom: 20,
           }}>
             Every meeting,<br />
-            <span style={{ color: 'var(--blue)' }}>in every language.</span>
+            <span className="gradient-text">in every language.</span>
           </h1>
 
           <p style={{
-            fontSize: 17,
-            color: 'rgba(249,250,251,0.60)',
+            fontSize: 18,
+            color: 'rgba(238,242,255,0.55)',
             lineHeight: 1.65,
-            marginBottom: 40,
+            marginBottom: 48,
+            maxWidth: 400,
           }}>
-            Real-time captions and translation for your team — no installation, no delay.
+            Real-time captions and translation for your team — no app, no delay.
           </p>
 
-          {/* Feature list */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+          {/* Features */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             {[
-              { icon: '🌐', text: 'Understand every word, even in foreign-language meetings' },
-              { icon: '🎧', text: 'Works with any audio: meetings, webinars, podcasts' },
-              { icon: '⚡', text: 'Under 2 seconds latency. No app to install.' },
+              { icon: '🌐', text: 'Understand every word, even in foreign-language calls' },
+              { icon: '⚡', text: 'Under 2 seconds latency, streamed live' },
+              { icon: '🎤', text: 'Works with microphone or any browser tab audio' },
             ].map(({ icon, text }) => (
               <div key={text} style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
                 <span style={{
-                  fontSize: 20,
-                  flexShrink: 0,
-                  marginTop: 1,
-                  filter: 'grayscale(0.2)',
+                  fontSize: 22, flexShrink: 0, marginTop: 1,
+                  width: 40, height: 40,
+                  background: 'rgba(255,255,255,0.05)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  borderRadius: 10,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>{icon}</span>
-                <span style={{
-                  fontSize: 15,
-                  color: 'rgba(249,250,251,0.72)',
-                  lineHeight: 1.5,
-                }}>{text}</span>
+                <span style={{ fontSize: 15, color: 'rgba(238,242,255,0.70)', lineHeight: 1.55, paddingTop: 10 }}>
+                  {text}
+                </span>
               </div>
             ))}
           </div>
 
-          {/* Fake subtitle preview */}
+          {/* Live preview card */}
           <div style={{
-            marginTop: 48,
-            background: 'rgba(26,210,255,0.06)',
-            border: '1px solid rgba(26,210,255,0.16)',
-            borderRadius: 14,
-            padding: '18px 22px',
+            marginTop: 52,
+            background: 'rgba(255,255,255,0.04)',
+            border: '1px solid rgba(167,139,250,0.18)',
+            borderRadius: 16,
+            padding: '20px 24px',
+            boxShadow: '0 0 40px rgba(124,58,237,0.10)',
           }}>
-            <p style={{ fontSize: 13, color: 'var(--text-dim)', marginBottom: 8 }}>Live preview →</p>
-            <p style={{ fontSize: 20, fontWeight: 500, color: 'rgba(249,250,251,0.40)', lineHeight: 1.45 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#4ade80', boxShadow: '0 0 6px #4ade80' }} />
+              <span style={{ fontSize: 11, color: 'rgba(238,242,255,0.40)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Live preview</span>
+            </div>
+            <p style={{ fontSize: 17, color: 'rgba(238,242,255,0.30)', lineHeight: 1.5, marginBottom: 8 }}>
               …il bilancio del Q4 è stato migliore del previsto
             </p>
-            <p style={{ fontSize: 22, fontWeight: 600, color: 'var(--text)', lineHeight: 1.45, marginTop: 6 }}>
+            <p style={{ fontSize: 22, fontWeight: 600, color: 'var(--text)', lineHeight: 1.45 }}>
               Q4 results exceeded expectations.
             </p>
           </div>
         </div>
       </div>
 
-      {/* Right — login form */}
+      {/* Divider */}
+      <div className="login-divider" />
+
+      {/* ── Right: form ─────────────────────────────────────────────────── */}
       <div style={{
         flex: '0 0 auto',
         width: '100%',
@@ -148,39 +145,33 @@ export default function LoginPage() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '40px 32px',
-        borderLeft: '1px solid var(--border)',
+        padding: '48px 36px',
       }}>
         <div style={{ width: '100%' }}>
-          {/* Mobile-only logo */}
-          <div className="login-mobile-logo">
-            <div style={{
-              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-              width: 44, height: 44,
-              background: 'var(--blue)',
-              borderRadius: 12,
-              marginBottom: 14,
-            }}>
-              <span style={{ color: '#0a0f1a', fontWeight: 900, fontSize: 20 }}>i</span>
+
+          {/* Mobile logo */}
+          <div className="login-mobile-logo" style={{ marginBottom: 32 }}>
+            <div className="logo-mark" style={{ width: 48, height: 48, marginBottom: 14 }}>
+              <span style={{ color: '#fff', fontWeight: 900, fontSize: 22 }}>i</span>
             </div>
             <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>ISOL Meeting Captions</h1>
-            <p style={{ fontSize: 14, color: 'var(--text-dim)', marginBottom: 28 }}>Live translation for your team</p>
+            <p style={{ fontSize: 14, color: 'var(--text-dim)' }}>Live translation for your team</p>
           </div>
 
-          <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 6 }}>
-            {step === 'email' ? 'Sign in to your workspace' : 'Check your email'}
+          <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 6, letterSpacing: '-0.02em' }}>
+            {step === 'email' ? 'Sign in to your workspace' : 'Check your inbox'}
           </h2>
-          <p style={{ fontSize: 14, color: 'var(--text-dim)', marginBottom: 28 }}>
+          <p style={{ fontSize: 14, color: 'var(--text-dim)', marginBottom: 28, lineHeight: 1.6 }}>
             {step === 'email'
-              ? 'Enter your work email to receive a login code.'
-              : `We sent a 6-digit code to ${email}`}
+              ? 'Enter your work email — we\'ll send a one-time code.'
+              : <>Code sent to <strong style={{ color: 'var(--text)' }}>{email}</strong></>}
           </p>
 
           <div className="card">
             {step === 'email' ? (
               <form onSubmit={requestOtp} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: 13, color: 'var(--text-dim)', marginBottom: 8 }}>
+                  <label style={{ display: 'block', fontSize: 12, color: 'var(--text-dim)', marginBottom: 8, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
                     Work email
                   </label>
                   <input
@@ -189,13 +180,12 @@ export default function LoginPage() {
                     placeholder="you@company.com"
                     value={email}
                     onChange={e => setEmail(e.target.value)}
-                    required
-                    autoFocus
+                    required autoFocus
                   />
                 </div>
                 {error && <p style={{ color: 'var(--red)', fontSize: 13 }}>{error}</p>}
                 <button className="btn-primary" type="submit" disabled={loading || !email}>
-                  {loading ? 'Sending…' : 'Send login code →'}
+                  {loading ? 'Sending…' : 'Continue →'}
                 </button>
               </form>
             ) : (
@@ -208,9 +198,8 @@ export default function LoginPage() {
                   placeholder="000000"
                   value={otp}
                   onChange={e => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                  required
-                  autoFocus
-                  style={{ textAlign: 'center', fontSize: 28, letterSpacing: '0.25em', fontWeight: 600 }}
+                  required autoFocus
+                  style={{ textAlign: 'center', fontSize: 32, letterSpacing: '0.3em', fontWeight: 700, padding: '16px' }}
                 />
                 {error && <p style={{ color: 'var(--red)', fontSize: 13 }}>{error}</p>}
                 <button className="btn-primary" type="submit" disabled={loading || otp.length !== 6}>
@@ -227,8 +216,8 @@ export default function LoginPage() {
             )}
           </div>
 
-          <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--text-dim)', marginTop: 20, lineHeight: 1.6 }}>
-            Audio is streamed for live captioning and is not stored.
+          <p style={{ textAlign: 'center', fontSize: 12, color: 'rgba(238,242,255,0.30)', marginTop: 24, lineHeight: 1.6 }}>
+            Audio is streamed for live captioning and never stored.
           </p>
         </div>
       </div>

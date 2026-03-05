@@ -10,9 +10,21 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
   return <>{children}</>
 }
 
+function BgBlobs() {
+  return (
+    <div className="bg-blobs">
+      <div className="blob blob-1" />
+      <div className="blob blob-2" />
+      <div className="blob blob-3" />
+      <div className="blob blob-4" />
+    </div>
+  )
+}
+
 export default function App() {
   return (
     <BrowserRouter>
+      <BgBlobs />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/join/:workspaceSlug/:sessionId" element={

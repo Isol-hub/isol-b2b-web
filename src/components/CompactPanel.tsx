@@ -1,6 +1,5 @@
 import { useRef, useState, useCallback } from 'react'
 import SubtitleView from './SubtitleView'
-import StatusBadge from './StatusBadge'
 import type { WsState } from '../hooks/useWebSocket'
 import type { AudioCaptureState } from '../hooks/useAudioCapture'
 
@@ -16,7 +15,14 @@ export default function CompactPanel({ current, previous, wsState, audioState, o
   const panelRef = useRef<HTMLDivElement>(null)
   const dragStart = useRef<{ x: number; y: number; left: number; top: number } | null>(null)
   const [pos, setPos] = useState({ left: 40, top: 40 })
-  const [size, setSize] = useState({ width: 480, height: 140 })
+  const [size, setSize] = useState({ width: 500, height: 150 })
+
+  const isActive = audioState === 'active' && wsState === 'connected'
+  const isError = wsState === 'error' || audioState === 'error'
+  const dotColor = isError ? 'var(--red)'
+    : wsState === 'reconnecting' ? 'var(--orange)'
+    : isActive ? 'var(--green)'
+    : 'rgba(238,242,255,0.3)'
 
   const onMouseDown = useCallback((e: React.MouseEvent) => {
     if (!panelRef.current) return
@@ -44,47 +50,45 @@ export default function CompactPanel({ current, previous, wsState, audioState, o
         position: 'fixed',
         left: pos.left, top: pos.top,
         width: size.width, height: size.height,
-        background: 'rgba(10,15,26,0.92)',
-        backdropFilter: 'blur(18px)',
-        border: '1px solid rgba(255,255,255,0.14)',
-        borderRadius: 14,
+        background: 'rgba(7,7,26,0.82)',
+        backdropFilter: 'blur(28px)',
+        WebkitBackdropFilter: 'blur(28px)',
+        border: '1px solid rgba(167,139,250,0.18)',
+        borderRadius: 16,
         overflow: 'hidden',
         zIndex: 9999,
-        display: 'flex',
-        flexDirection: 'column',
-        boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
-        resize: 'both',
-        minWidth: 280,
-        minHeight: 100,
+        display: 'flex', flexDirection: 'column',
+        boxShadow: '0 8px 48px rgba(0,0,0,0.6), 0 0 32px rgba(124,58,237,0.10)',
+        resize: 'both', minWidth: 280, minHeight: 100,
       }}
-      onMouseMove={e => {
-        if ((e.target as HTMLElement).dataset.resize) return
+      onMouseMove={() => {
         const r = panelRef.current?.getBoundingClientRect()
         if (r) setSize({ width: r.width, height: r.height })
       }}
     >
-      {/* Header drag handle */}
+      {/* Drag handle */}
       <div
         onMouseDown={onMouseDown}
         style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '8px 12px',
-          cursor: 'grab',
-          background: 'rgba(255,255,255,0.04)',
-          borderBottom: '1px solid rgba(255,255,255,0.07)',
+          padding: '8px 14px', cursor: 'grab',
+          background: 'rgba(255,255,255,0.03)',
+          borderBottom: '1px solid rgba(255,255,255,0.06)',
           userSelect: 'none',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 11, color: 'rgba(249,250,251,0.40)', fontWeight: 600, letterSpacing: '0.08em' }}>ISOL</span>
-          <StatusBadge wsState={wsState} audioState={audioState} />
+          <span style={{ fontSize: 11, color: 'rgba(238,242,255,0.35)', fontWeight: 700, letterSpacing: '0.1em' }}>ISOL</span>
+          <span style={{ width: 6, height: 6, borderRadius: '50%', background: dotColor, boxShadow: isActive ? `0 0 6px ${dotColor}` : 'none', transition: 'all 0.3s' }} />
         </div>
         <button
           onClick={onClose}
-          style={{ background: 'none', color: 'rgba(249,250,251,0.40)', fontSize: 16, lineHeight: 1, padding: '2px 4px' }}
-        >x</button>
+          style={{ background: 'none', color: 'rgba(238,242,255,0.35)', fontSize: 16, lineHeight: 1, padding: '2px 6px', borderRadius: 4, transition: 'color 0.15s' }}
+          onMouseEnter={e => (e.target as HTMLElement).style.color = 'var(--text)'}
+          onMouseLeave={e => (e.target as HTMLElement).style.color = 'rgba(238,242,255,0.35)'}
+        >×</button>
       </div>
-      {/* Subtitles */}
+
       <div style={{ flex: 1, overflow: 'hidden' }}>
         <SubtitleView current={current} previous={previous} compact />
       </div>
