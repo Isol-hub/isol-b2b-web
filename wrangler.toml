@@ -2,6 +2,9 @@ name = "isol-b2b-web"
 compatibility_date = "2024-09-23"
 pages_build_output_dir = "dist"
 
+[vars]
+VITE_WSS_URL = "wss://wss.isol.live"
+
 [[kv_namespaces]]
 binding = "CF_KV_OTP"
 id = "74d6c66c1ef344fdb062c23728927f6a"
