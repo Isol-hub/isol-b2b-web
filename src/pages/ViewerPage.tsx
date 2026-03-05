@@ -1,10 +1,14 @@
 import { useParams, useNavigate } from 'react-router-dom'
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { getSession } from '../lib/auth'
 import { useWebSocket } from '../hooks/useWebSocket'
 import type { SubtitleMessage } from '../hooks/useWebSocket'
-import SubtitleView from '../components/SubtitleView'
+import DocumentView from '../components/DocumentView'
+import TranscriptModal from '../components/TranscriptModal'
+import GlossaryPanel from '../components/GlossaryPanel'
 import LanguageSelector from '../components/LanguageSelector'
+
+interface TranscriptLine { text: string; time: Date }
 
 export default function ViewerPage() {
   const { workspaceSlug, sessionId } = useParams<{ workspaceSlug: string; sessionId: string }>()
@@ -13,13 +17,24 @@ export default function ViewerPage() {
 
   const [targetLang, setTargetLang] = useState('en')
   const [currentLine, setCurrentLine] = useState('')
-  const [prevLine, setPrevLine] = useState('')
+  const [transcript, setTranscript] = useState<TranscriptLine[]>([])
   const [joined, setJoined] = useState(false)
+  const [showModal, setShowModal] = useState(false)
+  const [glossaryWord, setGlossaryWord] = useState<{ word: string; sentence: string } | null>(null)
+  const wordIndex = useRef<Map<string, string[]>>(new Map())
 
   const wssUrl = import.meta.env.VITE_WSS_URL ?? 'wss://api.isol.live/audio'
 
   const handleMessage = useCallback((msg: SubtitleMessage) => {
-    if (msg.line_final) setPrevLine(msg.line_final)
+    if (msg.line_final) {
+      setTranscript(prev => [...prev, { text: msg.line_final, time: new Date() }])
+      msg.line_final.split(/\s+/).forEach(raw => {
+        const w = raw.toLowerCase().replace(/[^\w]/g, '')
+        if (w.length < 3) return
+        const existing = wordIndex.current.get(w) ?? []
+        wordIndex.current.set(w, [...existing, msg.line_final])
+      })
+    }
     setCurrentLine(msg.line_next || '')
   }, [])
 
@@ -31,121 +46,130 @@ export default function ViewerPage() {
   })
 
   if (!session) {
-    // Redirect to login, then back here
     navigate(`/login?next=/join/${workspaceSlug}/${sessionId}`, { replace: true })
     return null
   }
 
-  const handleJoin = useCallback(() => {
-    ws.open()
-    setJoined(true)
-  }, [ws])
+  const handleJoin = () => { ws.open(); setJoined(true) }
 
   const isActive = ws.state === 'connected'
   const statusColor = ws.state === 'error' ? 'var(--red)'
     : ws.state === 'reconnecting' ? 'var(--orange)'
     : isActive ? 'var(--green)'
-    : 'var(--text-dim)'
-  const statusLabel = ws.state === 'error' ? 'Error'
-    : ws.state === 'reconnecting' ? 'Reconnecting…'
-    : ws.state === 'connecting' ? 'Connecting…'
-    : isActive ? 'Live'
-    : 'Ready'
+    : 'rgba(238,242,255,0.25)'
+
+  const handleWordClick = useCallback((word: string, sentence: string) => {
+    setGlossaryWord({ word: word.toLowerCase(), sentence })
+  }, [])
+
+  const handleLangChange = useCallback((lang: string) => {
+    setTargetLang(lang)
+    if (joined) { ws.close(); setTimeout(() => ws.open(), 100) }
+  }, [joined, ws])
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {/* Header */}
-      <header style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '14px 24px',
-        borderBottom: '1px solid var(--border)',
-        background: 'rgba(10,15,26,0.92)',
-        backdropFilter: 'blur(12px)',
-        position: 'sticky', top: 0, zIndex: 100,
-      }}>
+      <header className="header-glass" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 28px', position: 'sticky', top: 0, zIndex: 100 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{
-            width: 28, height: 28, background: 'var(--blue)', borderRadius: 8,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            <span style={{ color: '#0a0f1a', fontWeight: 900, fontSize: 14 }}>i</span>
+          <div className="logo-mark" style={{ width: 30, height: 30 }}>
+            <span style={{ color: '#fff', fontWeight: 900, fontSize: 15 }}>i</span>
           </div>
           <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.06em' }}>ISOL</span>
-          <span style={{ fontSize: 13, color: 'var(--text-dim)' }}>/ {workspaceSlug}</span>
-          <span style={{ fontSize: 12, color: 'var(--text-dim)', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 6, padding: '2px 8px' }}>
-            Viewer
+          <span style={{ fontSize: 13, color: 'var(--text-dim)', marginLeft: 2 }}>/ {workspaceSlug}</span>
+          <span style={{ fontSize: 11, background: 'rgba(124,58,237,0.20)', border: '1px solid rgba(124,58,237,0.35)', color: '#c4b5fd', borderRadius: 6, padding: '2px 8px', fontWeight: 600, letterSpacing: '0.06em' }}>
+            VIEWER
           </span>
         </div>
-
         {joined && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '5px 12px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 20 }}>
-            <span style={{ width: 7, height: 7, borderRadius: '50%', background: statusColor, boxShadow: isActive ? `0 0 6px ${statusColor}` : 'none', flexShrink: 0 }} />
-            <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>{statusLabel}</span>
+          <div className="status-pill">
+            <span style={{ width: 7, height: 7, borderRadius: '50%', background: statusColor, boxShadow: isActive ? `0 0 8px ${statusColor}` : 'none', flexShrink: 0, transition: 'all 0.3s' }} />
+            <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>
+              {ws.state === 'connected' ? 'Live' : ws.state === 'connecting' ? 'Connecting…' : ws.state === 'reconnecting' ? 'Reconnecting…' : 'Waiting…'}
+            </span>
           </div>
         )}
       </header>
 
-      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', maxWidth: 820, margin: '0 auto', width: '100%', padding: '32px 24px', gap: 20 }}>
-
+      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', maxWidth: 880, margin: '0 auto', width: '100%', padding: '32px 28px', gap: 20 }}>
         {!joined ? (
           /* Join screen */
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 24, maxWidth: 480 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 28, maxWidth: 480 }}>
             <div>
-              <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>You've been invited</h2>
-              <p style={{ fontSize: 14, color: 'var(--text-dim)', lineHeight: 1.6 }}>
-                Someone is sharing a live captioned session. Choose your language and join to see real-time subtitles.
+              <div style={{
+                display: 'inline-flex', alignItems: 'center', gap: 8,
+                background: 'rgba(74,222,128,0.10)', border: '1px solid rgba(74,222,128,0.25)',
+                borderRadius: 20, padding: '5px 14px', marginBottom: 16,
+              }}>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#4ade80', boxShadow: '0 0 6px #4ade80', animation: 'roomPulse 2s infinite' }} />
+                <span style={{ fontSize: 11, color: '#4ade80', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Session in progress</span>
+              </div>
+              <h2 style={{ fontSize: 26, fontWeight: 800, marginBottom: 10, letterSpacing: '-0.02em' }}>
+                You've been invited<br /><span className="gradient-text">to a live session</span>
+              </h2>
+              <p style={{ fontSize: 14, color: 'var(--text-dim)', lineHeight: 1.7 }}>
+                Choose your language and join. You'll see live captions as they're spoken, with real-time translation.
               </p>
             </div>
 
-            <div style={{ width: 220 }}>
+            <div style={{ width: 240 }}>
               <LanguageSelector value={targetLang} onChange={setTargetLang} disabled={false} />
             </div>
 
             <button
               onClick={handleJoin}
               style={{
-                background: 'var(--blue)', color: '#0a0f1a',
-                fontWeight: 700, fontSize: 15,
-                padding: '12px 32px', borderRadius: 10, border: 'none',
+                background: 'linear-gradient(135deg, #7c3aed, #0ea5e9)',
+                color: '#fff', fontWeight: 700, fontSize: 15,
+                padding: '13px 36px', borderRadius: 13, border: 'none',
                 cursor: 'pointer', alignSelf: 'flex-start',
+                boxShadow: '0 0 28px rgba(124,58,237,0.40)',
               }}
             >
               Join session →
             </button>
           </div>
         ) : (
-          /* Live subtitles */
           <>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ fontSize: 13, color: 'var(--text-dim)' }}>Translating to</div>
-              <div style={{ width: 180 }}>
-                <LanguageSelector value={targetLang} onChange={(lang) => {
-                  setTargetLang(lang)
-                  // Reconnect with new language
-                  ws.close()
-                  setTimeout(() => ws.open(), 100)
-                }} disabled={false} />
+            {/* Language selector (can change after joining) */}
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 14 }}>
+              <div style={{ width: 200 }}>
+                <LanguageSelector value={targetLang} onChange={handleLangChange} disabled={false} />
               </div>
-            </div>
-
-            <div style={{
-              background: 'var(--surface)', border: '1px solid var(--border)',
-              borderRadius: 16, minHeight: 200, display: 'flex', flexDirection: 'column',
-              justifyContent: currentLine || prevLine ? 'flex-end' : 'center',
-              flex: 1,
-            }}>
-              {!isActive && !currentLine && !prevLine ? (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 200, gap: 12 }}>
-                  <div style={{ width: 32, height: 32, border: '3px solid var(--border)', borderTopColor: 'var(--blue)', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
-                  <p style={{ fontSize: 14, color: 'var(--text-dim)' }}>Waiting for the host to start…</p>
-                </div>
-              ) : (
-                <SubtitleView current={currentLine} previous={prevLine} />
+              {transcript.length > 0 && (
+                <button onClick={() => setShowModal(true)} className="btn-icon" style={{ fontSize: 13, padding: '10px 18px', marginLeft: 'auto' }}>
+                  Edit & Export →
+                </button>
               )}
             </div>
+
+            <DocumentView
+              transcript={transcript}
+              currentLine={currentLine}
+              isActive={isActive}
+              targetLang={targetLang}
+              onWordClick={handleWordClick}
+            />
           </>
         )}
       </main>
+
+      {showModal && (
+        <TranscriptModal
+          transcript={transcript}
+          targetLang={targetLang}
+          onClose={() => setShowModal(false)}
+        />
+      )}
+
+      {glossaryWord && (
+        <GlossaryPanel
+          word={glossaryWord.word}
+          sentence={glossaryWord.sentence}
+          sentences={wordIndex.current.get(glossaryWord.word) ?? [glossaryWord.sentence]}
+          currentSentence={glossaryWord.sentence}
+          onClose={() => setGlossaryWord(null)}
+        />
+      )}
     </div>
   )
 }

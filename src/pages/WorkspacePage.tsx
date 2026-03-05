@@ -4,8 +4,11 @@ import { getSession, clearSession } from '../lib/auth'
 import { useAudioCapture, type AudioSource } from '../hooks/useAudioCapture'
 import { useWebSocket } from '../hooks/useWebSocket'
 import type { SubtitleMessage } from '../hooks/useWebSocket'
-import SubtitleView from '../components/SubtitleView'
+import DocumentView from '../components/DocumentView'
 import CompactPanel from '../components/CompactPanel'
+import RoomPanel from '../components/RoomPanel'
+import TranscriptModal from '../components/TranscriptModal'
+import GlossaryPanel from '../components/GlossaryPanel'
 import LanguageSelector from '../components/LanguageSelector'
 import ErrorBanner from '../components/ErrorBanner'
 import { LANGUAGES } from '../lib/languages'
@@ -21,15 +24,19 @@ export default function WorkspacePage() {
 
   const [targetLang, setTargetLang] = useState('en')
   const [currentLine, setCurrentLine] = useState('')
-  const [prevLine, setPrevLine] = useState('')
   const [error, setError] = useState('')
   const [compact, setCompact] = useState(false)
   const [sessionActive, setSessionActive] = useState(false)
   const [audioSource, setAudioSource] = useState<AudioSource>('display')
   const [transcript, setTranscript] = useState<TranscriptLine[]>([])
-  const [copied, setCopied] = useState(false)
+  const [showModal, setShowModal] = useState(false)
   const [showOnboarding, setShowOnboarding] = useState(false)
-  const lastFinalRef = useRef('')
+
+  // Glossary state
+  const [glossaryWord, setGlossaryWord] = useState<{ word: string; sentence: string } | null>(null)
+
+  // Build word→sentences index from transcript
+  const wordIndex = useRef<Map<string, string[]>>(new Map())
 
   useEffect(() => {
     if (!localStorage.getItem(ONBOARDING_KEY)) setShowOnboarding(true)
@@ -44,9 +51,16 @@ export default function WorkspacePage() {
 
   const handleMessage = useCallback((msg: SubtitleMessage) => {
     if (msg.line_final) {
-      setPrevLine(msg.line_final)
-      lastFinalRef.current = msg.line_final
-      setTranscript(prev => [...prev, { text: msg.line_final, time: new Date() }])
+      const entry: TranscriptLine = { text: msg.line_final, time: new Date() }
+      setTranscript(prev => [...prev, entry])
+
+      // Index words for glossary
+      msg.line_final.split(/\s+/).forEach(raw => {
+        const w = raw.toLowerCase().replace(/[^\w]/g, '')
+        if (w.length < 3) return
+        const existing = wordIndex.current.get(w) ?? []
+        wordIndex.current.set(w, [...existing, msg.line_final])
+      })
     }
     setCurrentLine(msg.line_next || '')
   }, [])
@@ -55,7 +69,8 @@ export default function WorkspacePage() {
   const audio = useAudioCapture({ chunkMs: 200, onChunk: ws.sendChunk, onError: setError })
 
   const handleStart = useCallback(async () => {
-    setError(''); setCurrentLine(''); setPrevLine(''); setTranscript([])
+    setError(''); setCurrentLine(''); setTranscript([])
+    wordIndex.current.clear()
     dismissOnboarding()
     ws.open()
     await audio.start(audioSource)
@@ -72,28 +87,10 @@ export default function WorkspacePage() {
     navigate('/login', { replace: true })
   }, [handleStop, navigate])
 
-  const shareUrl = ws.sessionId
-    ? `${window.location.origin}/join/${workspaceSlug}/${ws.sessionId}`
-    : null
-
-  const handleCopyLink = useCallback(() => {
-    if (!shareUrl) return
-    navigator.clipboard.writeText(shareUrl).then(() => {
-      setCopied(true); setTimeout(() => setCopied(false), 2000)
-    })
-  }, [shareUrl])
-
-  const handleDownload = useCallback(() => {
-    if (!transcript.length) return
-    const lines = transcript.map(l => `[${l.time.toLocaleTimeString()}] ${l.text}`)
-    const blob = new Blob([lines.join('\n')], { type: 'text/plain' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `isol-transcript-${new Date().toISOString().slice(0, 10)}.txt`
-    a.click()
-    URL.revokeObjectURL(url)
-  }, [transcript])
+  const handleWordClick = useCallback((word: string, sentence: string) => {
+    const w = word.toLowerCase()
+    setGlossaryWord({ word: w, sentence })
+  }, [])
 
   if (!session) { navigate('/login', { replace: true }); return null }
 
@@ -104,7 +101,7 @@ export default function WorkspacePage() {
   const statusColor = ws.state === 'error' || audio.state === 'error' ? 'var(--red)'
     : ws.state === 'reconnecting' ? 'var(--orange)'
     : isActive ? 'var(--green)'
-    : 'rgba(238,242,255,0.3)'
+    : 'rgba(238,242,255,0.25)'
 
   const statusLabel = ws.state === 'error' || audio.state === 'error' ? 'Error'
     : ws.state === 'reconnecting' ? 'Reconnecting…'
@@ -125,7 +122,6 @@ export default function WorkspacePage() {
           <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.06em' }}>ISOL</span>
           <span style={{ fontSize: 13, color: 'var(--text-dim)', marginLeft: 2 }}>/ {workspaceSlug}</span>
         </div>
-
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div className="status-pill">
             <span style={{ width: 7, height: 7, borderRadius: '50%', background: statusColor, boxShadow: isActive ? `0 0 8px ${statusColor}` : 'none', flexShrink: 0, transition: 'all 0.3s' }} />
@@ -143,7 +139,7 @@ export default function WorkspacePage() {
             {[
               { n: '1', text: 'Choose audio source' },
               { n: '2', text: 'Pick target language' },
-              { n: '3', text: 'Click Start and share audio' },
+              { n: '3', text: 'Start — share audio when prompted' },
             ].map(({ n, text }) => (
               <div key={n} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ width: 20, height: 20, borderRadius: '50%', background: 'linear-gradient(135deg,#7c3aed,#0ea5e9)', color: '#fff', fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{n}</span>
@@ -156,15 +152,15 @@ export default function WorkspacePage() {
       )}
 
       {/* Main */}
-      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', maxWidth: 860, margin: '0 auto', width: '100%', padding: '36px 28px', gap: 24 }}>
+      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', maxWidth: 880, margin: '0 auto', width: '100%', padding: '28px 28px', gap: 20 }}>
 
         {error && <ErrorBanner message={error} onDismiss={() => setError('')} />}
 
+        {/* Controls */}
         {!sessionActive ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-            {/* Audio source */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             <div>
-              <p style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 12, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Audio source</p>
+              <p style={{ fontSize: 11, color: 'var(--text-dim)', marginBottom: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Audio source</p>
               <div style={{ display: 'flex', gap: 12 }}>
                 <button className={`source-btn${audioSource === 'display' ? ' active' : ''}`} onClick={() => setAudioSource('display')}>
                   <span style={{ fontSize: 26 }}>🖥</span>
@@ -178,8 +174,6 @@ export default function WorkspacePage() {
                 </button>
               </div>
             </div>
-
-            {/* Language + Start */}
             <div style={{ display: 'flex', gap: 14, alignItems: 'flex-end', flexWrap: 'wrap' }}>
               <div style={{ flex: '0 0 220px' }}>
                 <LanguageSelector value={targetLang} onChange={setTargetLang} disabled={false} />
@@ -194,93 +188,100 @@ export default function WorkspacePage() {
                   cursor: isUnsupported ? 'not-allowed' : 'pointer',
                   opacity: isUnsupported ? 0.4 : 1,
                   boxShadow: '0 0 28px rgba(124,58,237,0.35), 0 4px 12px rgba(0,0,0,0.25)',
-                  transition: 'box-shadow 0.2s, transform 0.15s',
                   whiteSpace: 'nowrap',
                 }}
-                onMouseEnter={e => { if (!isUnsupported) (e.target as HTMLElement).style.boxShadow = '0 0 44px rgba(124,58,237,0.55)' }}
-                onMouseLeave={e => { (e.target as HTMLElement).style.boxShadow = '0 0 28px rgba(124,58,237,0.35), 0 4px 12px rgba(0,0,0,0.25)' }}
               >
-                Start captions →
+                Start session →
               </button>
               <button onClick={() => setCompact(c => !c)} className="btn-icon" title="Compact panel" style={{ fontSize: 18 }}>⊟</button>
             </div>
-
             {isUnsupported && (
-              <div style={{ background: 'rgba(251,191,36,0.07)', border: '1px solid rgba(251,191,36,0.25)', borderRadius: 12, padding: '12px 16px', fontSize: 13, color: 'var(--orange)' }}>
-                Screen audio not supported. Switch to Microphone, or use Chrome / Edge.
-              </div>
-            )}
-            {audioSource === 'display' && !isUnsupported && (
-              <p style={{ fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.6 }}>
-                After clicking Start, share a browser tab or screen. Make sure to check <em>"Share tab audio"</em>.
+              <p style={{ fontSize: 13, color: 'var(--orange)', background: 'rgba(251,191,36,0.07)', border: '1px solid rgba(251,191,36,0.20)', borderRadius: 10, padding: '10px 14px' }}>
+                Screen audio not supported. Switch to Microphone or use Chrome/Edge.
               </p>
             )}
           </div>
         ) : (
-          /* Active session */
           <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap' }}>
             <LanguageSelector value={targetLang} onChange={setTargetLang} disabled={true} />
             <div style={{ marginLeft: 'auto', display: 'flex', gap: 10, alignItems: 'center' }}>
-              {shareUrl && (
-                <button onClick={handleCopyLink} className="btn-icon" style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  {copied ? '✓ Copied!' : '🔗 Share link'}
-                </button>
-              )}
               <button onClick={handleStop} style={{
-                background: 'rgba(248,113,113,0.10)', border: '1px solid rgba(248,113,113,0.25)',
+                background: 'rgba(248,113,113,0.10)', border: '1px solid rgba(248,113,113,0.22)',
                 color: 'var(--red)', fontWeight: 600, fontSize: 14,
                 padding: '10px 24px', borderRadius: 12, cursor: 'pointer',
-              }}>
-                Stop
-              </button>
+              }}>Stop</button>
               <button onClick={() => setCompact(c => !c)} className="btn-icon" style={{ fontSize: 18 }}>⊟</button>
             </div>
           </div>
         )}
 
-        {/* Subtitle area */}
+        {/* Live document view */}
         {!compact && (
-          <div
-            className={`subtitle-card${isActive ? ' active' : ''}`}
-            style={{ minHeight: 200, display: 'flex', flexDirection: 'column', justifyContent: currentLine || prevLine ? 'flex-end' : 'center' }}
-          >
-            <SubtitleView current={currentLine} previous={prevLine} />
-          </div>
+          <DocumentView
+            transcript={transcript}
+            currentLine={currentLine}
+            isActive={isActive}
+            targetLang={targetLangLabel ? `${targetLangLabel.flag} ${targetLangLabel.label}` : targetLang}
+            onWordClick={handleWordClick}
+          />
         )}
 
-        {/* Transcript download */}
+        {/* Room panel — shown when session active and we have session_id */}
+        {sessionActive && ws.sessionId && workspaceSlug && (
+          <RoomPanel sessionId={ws.sessionId} workspaceSlug={workspaceSlug} />
+        )}
+
+        {/* Post-session: edit & export */}
         {!sessionActive && transcript.length > 0 && (
           <div style={{
-            background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(167,139,250,0.20)',
-            borderRadius: 14, padding: '18px 22px',
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16,
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(167,139,250,0.18)',
+            borderRadius: 14, padding: '16px 22px', gap: 16,
             backdropFilter: 'blur(16px)',
-            boxShadow: '0 0 24px rgba(124,58,237,0.08)',
           }}>
             <div>
-              <p style={{ fontSize: 14, fontWeight: 600, marginBottom: 3 }}>Session complete</p>
-              <p style={{ fontSize: 13, color: 'var(--text-dim)' }}>
-                {transcript.length} line{transcript.length !== 1 ? 's' : ''} captured
-              </p>
+              <p style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>Session complete</p>
+              <p style={{ fontSize: 13, color: 'var(--text-dim)' }}>{transcript.length} lines captured</p>
             </div>
-            <button onClick={handleDownload} style={{
+            <button onClick={() => setShowModal(true)} style={{
               background: 'linear-gradient(135deg,#7c3aed,#0ea5e9)',
-              color: '#fff', fontWeight: 600, fontSize: 13,
-              padding: '10px 22px', borderRadius: 11, border: 'none',
-              cursor: 'pointer', whiteSpace: 'nowrap',
-              boxShadow: '0 0 20px rgba(124,58,237,0.30)',
+              color: '#fff', fontWeight: 700, fontSize: 13,
+              padding: '10px 24px', borderRadius: 11, border: 'none',
+              cursor: 'pointer', boxShadow: '0 0 20px rgba(124,58,237,0.30)',
             }}>
-              ↓ Download transcript
+              Edit & Export →
             </button>
           </div>
         )}
       </main>
 
+      {/* Compact floating panel */}
       {compact && (
         <CompactPanel
-          current={currentLine} previous={prevLine}
+          current={currentLine}
+          previous={transcript[transcript.length - 1]?.text ?? ''}
           wsState={ws.state} audioState={audio.state}
           onClose={() => setCompact(false)}
+        />
+      )}
+
+      {/* Transcript modal */}
+      {showModal && (
+        <TranscriptModal
+          transcript={transcript}
+          targetLang={targetLang}
+          onClose={() => setShowModal(false)}
+        />
+      )}
+
+      {/* Glossary panel */}
+      {glossaryWord && (
+        <GlossaryPanel
+          word={glossaryWord.word}
+          sentence={glossaryWord.sentence}
+          sentences={wordIndex.current.get(glossaryWord.word) ?? [glossaryWord.sentence]}
+          currentSentence={glossaryWord.sentence}
+          onClose={() => setGlossaryWord(null)}
         />
       )}
     </div>

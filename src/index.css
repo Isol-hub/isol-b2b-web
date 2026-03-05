@@ -260,6 +260,42 @@ input, select {
   box-shadow: 0 0 20px rgba(124,58,237,0.20);
 }
 
+/* ─── Matrix text character reveal ──────────────────────────────────────── */
+@keyframes charReveal {
+  0%   { color: #c4b5fd; text-shadow: 0 0 10px rgba(167,139,250,0.9), 0 0 4px rgba(167,139,250,0.6); opacity: 0.6; }
+  35%  { color: var(--text); text-shadow: 0 0 6px rgba(167,139,250,0.3); opacity: 1; }
+  100% { color: inherit; text-shadow: none; opacity: 1; }
+}
+.matrix-char {
+  animation: charReveal 0.45s ease-out forwards;
+  display: inline;
+}
+
+/* ─── Document cursor blink ──────────────────────────────────────────────── */
+@keyframes cursorBlink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+.doc-cursor {
+  display: inline-block;
+  color: rgba(167,139,250,0.7);
+  animation: cursorBlink 1s step-end infinite;
+  font-size: 0.85em;
+  margin-left: 2px;
+}
+
+/* ─── Room panel live dot pulse ──────────────────────────────────────────── */
+@keyframes roomPulse {
+  0%, 100% { box-shadow: 0 0 6px #4ade80; }
+  50%       { box-shadow: 0 0 14px #4ade80, 0 0 4px #4ade80; }
+}
+
+/* ─── Glossary slide in ──────────────────────────────────────────────────── */
+@keyframes glossarySlideIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 /* ─── Glow subtitle card ─────────────────────────────────────────────────── */
 .subtitle-card {
   background: rgba(255,255,255,0.035);
