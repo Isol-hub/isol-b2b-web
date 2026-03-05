@@ -46,8 +46,9 @@ export function useAudioCapture({ chunkMs = 200, onChunk, onError }: AudioCaptur
       ctxRef.current = audioCtx
 
       const source = audioCtx.createMediaStreamSource(display)
-      // ScriptProcessorNode (legacy but universally supported)
-      const bufferSize = Math.round((audioCtx.sampleRate * chunkMs) / 1000)
+      // ScriptProcessorNode requires power-of-2 buffer size
+      const rawSize = (audioCtx.sampleRate * chunkMs) / 1000
+      const bufferSize = Math.pow(2, Math.round(Math.log2(rawSize))) as 256 | 512 | 1024 | 2048 | 4096 | 8192 | 16384
       const processor = audioCtx.createScriptProcessor(bufferSize, 1, 1)
       processorRef.current = processor
 
