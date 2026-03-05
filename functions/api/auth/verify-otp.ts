@@ -18,9 +18,6 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     const { otp: validOtp, workspace } = JSON.parse(stored)
     if (otp.trim() !== validOtp) return Response.json({ error: 'Incorrect code. Please try again.' }, { status: 401, headers })
 
-    // Delete OTP after successful use
-    await env.CF_KV_OTP.delete(`otp:${emailLower}`)
-
     // Exchange verified identity for ISOL RS256 token via lsol-auth
     const authRes = await fetch(LSOL_AUTH_URL, {
       method: 'POST',
@@ -33,6 +30,9 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       return Response.json({ error: 'Auth service error. Try again.' }, { status: 502, headers })
     }
     const { access_token } = await authRes.json<{ access_token: string }>()
+
+    // Delete OTP only after successful token issuance
+    await env.CF_KV_OTP.delete(`otp:${emailLower}`)
 
     return Response.json({ token: access_token }, { status: 200, headers })
   } catch (err) {
