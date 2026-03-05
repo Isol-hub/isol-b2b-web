@@ -52,7 +52,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'ISOL <noreply@isol.live>',
+        from: 'ISOL <onboarding@resend.dev>',
         to: [emailLower],
         subject: `Your ISOL login code: ${otp}`,
         html: `
