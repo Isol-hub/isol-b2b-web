@@ -1,14 +1,14 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { useState, useCallback, useRef } from 'react'
 import { getSession, clearSession } from '../lib/auth'
-import { useAudioCapture } from '../hooks/useAudioCapture'
+import { useAudioCapture, type AudioSource } from '../hooks/useAudioCapture'
 import { useWebSocket } from '../hooks/useWebSocket'
 import type { SubtitleMessage } from '../hooks/useWebSocket'
 import SubtitleView from '../components/SubtitleView'
 import CompactPanel from '../components/CompactPanel'
-import StatusBadge from '../components/StatusBadge'
 import LanguageSelector from '../components/LanguageSelector'
 import ErrorBanner from '../components/ErrorBanner'
+import { LANGUAGES } from '../lib/languages'
 
 export default function WorkspacePage() {
   const { workspaceSlug } = useParams<{ workspaceSlug: string }>()
@@ -21,6 +21,7 @@ export default function WorkspacePage() {
   const [error, setError] = useState('')
   const [compact, setCompact] = useState(false)
   const [sessionActive, setSessionActive] = useState(false)
+  const [audioSource, setAudioSource] = useState<AudioSource>('display')
   const lastFinalRef = useRef('')
 
   const wssUrl = import.meta.env.VITE_WSS_URL ?? 'wss://api.isol.live/audio'
@@ -50,9 +51,9 @@ export default function WorkspacePage() {
     setCurrentLine('')
     setPrevLine('')
     ws.open()
-    await audio.start()
+    await audio.start(audioSource)
     setSessionActive(true)
-  }, [ws, audio])
+  }, [ws, audio, audioSource])
 
   const handleStop = useCallback(() => {
     audio.stop()
@@ -72,7 +73,21 @@ export default function WorkspacePage() {
     return null
   }
 
-  const isUnsupportedBrowser = !('getDisplayMedia' in navigator.mediaDevices)
+  const isUnsupported = audioSource === 'display' && !('getDisplayMedia' in navigator.mediaDevices)
+  const targetLangLabel = LANGUAGES.find(l => l.code === targetLang)
+
+  // Status text
+  const isActive = audio.state === 'active' && ws.state === 'connected'
+  const statusColor = ws.state === 'error' || audio.state === 'error' ? 'var(--red)'
+    : ws.state === 'reconnecting' ? 'var(--orange)'
+    : isActive ? 'var(--green)'
+    : 'var(--text-dim)'
+  const statusLabel = ws.state === 'error' || audio.state === 'error' ? 'Error'
+    : ws.state === 'reconnecting' ? 'Reconnecting…'
+    : ws.state === 'connecting' ? 'Connecting…'
+    : audio.state === 'requesting' ? 'Requesting permission…'
+    : isActive ? `Listening  •  → ${targetLangLabel?.flag ?? ''} ${targetLangLabel?.label ?? targetLang}`
+    : 'Ready'
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -81,44 +96,130 @@ export default function WorkspacePage() {
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '14px 24px',
         borderBottom: '1px solid var(--border)',
-        background: 'rgba(10,15,26,0.85)',
+        background: 'rgba(10,15,26,0.92)',
         backdropFilter: 'blur(12px)',
         position: 'sticky', top: 0, zIndex: 100,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--blue)', letterSpacing: '0.1em' }}>ISOL</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{
+            width: 28, height: 28,
+            background: 'var(--blue)',
+            borderRadius: 8,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <span style={{ color: '#0a0f1a', fontWeight: 900, fontSize: 14 }}>i</span>
+          </div>
+          <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.06em' }}>ISOL</span>
           <span style={{ fontSize: 13, color: 'var(--text-dim)' }}>/ {workspaceSlug}</span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <StatusBadge wsState={ws.state} audioState={audio.state} />
-          <span style={{ fontSize: 13, color: 'var(--text-dim)' }}>{session.email}</span>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {/* Status pill */}
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 7,
+            padding: '5px 12px',
+            background: 'var(--surface)',
+            border: '1px solid var(--border)',
+            borderRadius: 20,
+          }}>
+            <span style={{
+              width: 7, height: 7, borderRadius: '50%',
+              background: statusColor,
+              boxShadow: isActive ? `0 0 6px ${statusColor}` : 'none',
+              flexShrink: 0,
+            }} />
+            <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>{statusLabel}</span>
+          </div>
+          <span style={{ fontSize: 13, color: 'var(--text-dim)', marginLeft: 8 }}>{session.email}</span>
           <button onClick={handleLogout} className="btn-icon" style={{ fontSize: 12, padding: '7px 12px' }}>Sign out</button>
         </div>
       </header>
 
       {/* Main */}
-      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', maxWidth: 780, margin: '0 auto', width: '100%', padding: '32px 24px', gap: 24 }}>
-
-        {isUnsupportedBrowser && (
-          <div style={{
-            background: 'rgba(251,191,36,0.10)',
-            border: '1px solid rgba(251,191,36,0.30)',
-            borderRadius: 10, padding: '12px 16px',
-            fontSize: 13, color: 'var(--orange)',
-          }}>
-            Your browser may not support audio capture. Please use Chrome or Edge for best results.
-          </div>
-        )}
+      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', maxWidth: 820, margin: '0 auto', width: '100%', padding: '32px 24px', gap: 20 }}>
 
         {error && <ErrorBanner message={error} onDismiss={() => setError('')} />}
 
-        {/* Controls row */}
-        <div style={{ display: 'flex', gap: 16, alignItems: 'flex-end', flexWrap: 'wrap' }}>
-          <div style={{ flex: '0 0 220px' }}>
-            <LanguageSelector value={targetLang} onChange={setTargetLang} disabled={sessionActive} />
+        {!sessionActive ? (
+          /* Pre-session setup */
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            {/* Audio source selector */}
+            <div>
+              <p style={{ fontSize: 13, color: 'var(--text-dim)', marginBottom: 10 }}>Audio source</p>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button
+                  className={`source-btn${audioSource === 'display' ? ' active' : ''}`}
+                  onClick={() => setAudioSource('display')}
+                >
+                  <span style={{ fontSize: 24 }}>🖥</span>
+                  <span>Share screen / tab</span>
+                  <span style={{ fontSize: 11, opacity: 0.6 }}>System audio, Chrome / Edge</span>
+                </button>
+                <button
+                  className={`source-btn${audioSource === 'microphone' ? ' active' : ''}`}
+                  onClick={() => setAudioSource('microphone')}
+                >
+                  <span style={{ fontSize: 24 }}>🎤</span>
+                  <span>Microphone</span>
+                  <span style={{ fontSize: 11, opacity: 0.6 }}>All browsers</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Language + Start row */}
+            <div style={{ display: 'flex', gap: 14, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+              <div style={{ flex: '0 0 220px' }}>
+                <LanguageSelector value={targetLang} onChange={setTargetLang} disabled={false} />
+              </div>
+              <button
+                onClick={handleStart}
+                disabled={isUnsupported}
+                style={{
+                  background: 'var(--blue)',
+                  color: '#0a0f1a',
+                  fontWeight: 700, fontSize: 15,
+                  padding: '11px 32px', borderRadius: 10,
+                  cursor: isUnsupported ? 'not-allowed' : 'pointer',
+                  opacity: isUnsupported ? 0.45 : 1,
+                  border: 'none',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                Start captions →
+              </button>
+              <button
+                onClick={() => setCompact(c => !c)}
+                className="btn-icon"
+                title="Toggle compact floating panel"
+                style={{ fontSize: 18 }}
+              >
+                &#8861;
+              </button>
+            </div>
+
+            {isUnsupported && (
+              <div style={{
+                background: 'rgba(251,191,36,0.10)',
+                border: '1px solid rgba(251,191,36,0.30)',
+                borderRadius: 10, padding: '12px 16px',
+                fontSize: 13, color: 'var(--orange)',
+              }}>
+                Screen audio capture is not supported in this browser. Switch to Microphone, or use Chrome / Edge.
+              </div>
+            )}
+
+            {audioSource === 'display' && (
+              <p style={{ fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.6 }}>
+                Click <strong style={{ color: 'rgba(249,250,251,0.7)' }}>Start captions</strong>, then share a browser tab or your screen with audio.
+                Make sure to check <em>"Share tab audio"</em> in the browser dialog.
+              </p>
+            )}
           </div>
-          <div style={{ display: 'flex', gap: 10, marginLeft: 'auto' }}>
-            {sessionActive ? (
+        ) : (
+          /* Active session controls */
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+            <LanguageSelector value={targetLang} onChange={setTargetLang} disabled={true} />
+            <div style={{ marginLeft: 'auto', display: 'flex', gap: 10 }}>
               <button onClick={handleStop} style={{
                 background: 'rgba(248,113,113,0.15)',
                 border: '1px solid rgba(248,113,113,0.30)',
@@ -129,33 +230,17 @@ export default function WorkspacePage() {
               }}>
                 Stop
               </button>
-            ) : (
               <button
-                onClick={handleStart}
-                disabled={isUnsupportedBrowser}
-                style={{
-                  background: 'var(--blue)',
-                  color: '#0a0f1a',
-                  fontWeight: 700, fontSize: 15,
-                  padding: '10px 28px', borderRadius: 10,
-                  cursor: isUnsupportedBrowser ? 'not-allowed' : 'pointer',
-                  opacity: isUnsupportedBrowser ? 0.45 : 1,
-                  border: 'none',
-                }}
+                onClick={() => setCompact(c => !c)}
+                className="btn-icon"
+                title="Toggle compact floating panel"
+                style={{ fontSize: 18 }}
               >
-                Start captions
+                &#8861;
               </button>
-            )}
-            <button
-              onClick={() => setCompact(c => !c)}
-              className="btn-icon"
-              title="Toggle compact floating panel"
-              style={{ fontSize: 18 }}
-            >
-              &#8861;
-            </button>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Subtitle area */}
         {!compact && (
@@ -163,7 +248,7 @@ export default function WorkspacePage() {
             background: 'var(--surface)',
             border: '1px solid var(--border)',
             borderRadius: 16,
-            minHeight: 160,
+            minHeight: 180,
             display: 'flex',
             flexDirection: 'column',
             justifyContent: currentLine || prevLine ? 'flex-end' : 'center',
@@ -171,21 +256,6 @@ export default function WorkspacePage() {
             <SubtitleView current={currentLine} previous={prevLine} />
           </div>
         )}
-
-        {/* Privacy + info */}
-        <div style={{
-          background: 'rgba(26,210,255,0.06)',
-          border: '1px solid rgba(26,210,255,0.14)',
-          borderRadius: 10,
-          padding: '12px 16px',
-        }}>
-          <p style={{ fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.6 }}>
-            <strong style={{ color: 'rgba(249,250,251,0.70)' }}>How it works:</strong>
-            {' '}Click "Start captions", then share your screen or a browser tab with audio in the dialog.
-            Audio is streamed for live captioning and is not stored.
-            Supported: Chrome 74+, Edge 79+.
-          </p>
-        </div>
       </main>
 
       {/* Compact floating panel */}

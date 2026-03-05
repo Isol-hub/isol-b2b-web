@@ -79,3 +79,55 @@ input {
   border-radius: var(--radius);
   padding: 28px;
 }
+
+/* Login page */
+.login-hero {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 60px 64px;
+  background: linear-gradient(135deg, #0a0f1a 0%, #0e1628 100%);
+}
+
+.login-mobile-logo {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+@media (max-width: 768px) {
+  .login-hero { display: none; }
+  .login-mobile-logo { display: flex; }
+}
+
+/* Subtitle fade-in */
+@keyframes subtitleFadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Audio source selector */
+.source-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 12px;
+  border-radius: 12px;
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  color: var(--text-dim);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+.source-btn:hover { border-color: rgba(26,210,255,0.4); background: rgba(26,210,255,0.05); }
+.source-btn.active {
+  border-color: var(--blue);
+  background: rgba(26,210,255,0.08);
+  color: var(--blue);
+}
