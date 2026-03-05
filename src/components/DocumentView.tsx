@@ -48,8 +48,8 @@ export default function DocumentView({ transcript, currentLine, isActive, target
       overflow: 'hidden',
       display: 'flex',
       flexDirection: 'column',
-      minHeight: 320,
-      flex: 1,
+      minHeight: 280,
+      maxHeight: 'calc(100vh - 280px)',
       backdropFilter: 'blur(20px)',
       transition: 'border-color 0.4s, box-shadow 0.4s',
       ...(isActive ? {
