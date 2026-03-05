@@ -1,18 +1,9 @@
 interface Env {
   CF_KV_OTP: KVNamespace
-  JWT_SECRET: string
+  B2B_SERVICE_KEY: string
 }
 
-async function signJwt(payload: Record<string, unknown>, secret: string): Promise<string> {
-  const encoder = new TextEncoder()
-  const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_')
-  const body = btoa(JSON.stringify(payload)).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_')
-  const unsigned = `${header}.${body}`
-  const key = await crypto.subtle.importKey('raw', encoder.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'])
-  const sig = await crypto.subtle.sign('HMAC', key, encoder.encode(unsigned))
-  const sigB64 = btoa(String.fromCharCode(...new Uint8Array(sig))).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_')
-  return `${unsigned}.${sigB64}`
-}
+const LSOL_AUTH_URL = 'https://auth.isol.live/auth/b2b/token'
 
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   const headers = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
@@ -30,15 +21,20 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     // Delete OTP after successful use
     await env.CF_KV_OTP.delete(`otp:${emailLower}`)
 
-    const now = Math.floor(Date.now() / 1000)
-    const token = await signJwt({
-      sub: emailLower,
-      wsp: workspace,
-      iat: now,
-      exp: now + 60 * 60 * 24 * 7, // 7 days
-    }, env.JWT_SECRET)
+    // Exchange verified identity for ISOL RS256 token via lsol-auth
+    const authRes = await fetch(LSOL_AUTH_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: emailLower, workspace, service_key: env.B2B_SERVICE_KEY }),
+    })
+    if (!authRes.ok) {
+      const err = await authRes.text()
+      console.error('lsol-auth error:', err)
+      return Response.json({ error: 'Auth service error. Try again.' }, { status: 502, headers })
+    }
+    const { access_token } = await authRes.json<{ access_token: string }>()
 
-    return Response.json({ token }, { status: 200, headers })
+    return Response.json({ token: access_token }, { status: 200, headers })
   } catch (err) {
     console.error(err)
     return Response.json({ error: 'Internal error' }, { status: 500, headers })

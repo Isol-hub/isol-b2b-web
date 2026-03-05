@@ -18,8 +18,10 @@ export function useAudioCapture({ chunkMs = 200, onChunk, onError }: AudioCaptur
     setState('requesting')
     try {
       // Request display media with system audio
+      // video: true is required by spec (Safari throws TypeError with video: false)
+      // We stop video tracks immediately after getting audio
       const display = await (navigator.mediaDevices as any).getDisplayMedia({
-        video: false,
+        video: true,
         audio: {
           channelCount: 1,
           sampleRate: 16000,
@@ -29,6 +31,9 @@ export function useAudioCapture({ chunkMs = 200, onChunk, onError }: AudioCaptur
         },
         preferCurrentTab: false,
       })
+
+      // Stop video tracks immediately — we only need audio
+      display.getVideoTracks().forEach((t: MediaStreamTrack) => t.stop())
 
       // If no audio track, error out
       if (!display.getAudioTracks().length) {
