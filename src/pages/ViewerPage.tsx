@@ -164,7 +164,6 @@ export default function ViewerPage() {
       {glossaryWord && (
         <GlossaryPanel
           word={glossaryWord.word}
-          sentence={glossaryWord.sentence}
           sentences={wordIndex.current.get(glossaryWord.word) ?? [glossaryWord.sentence]}
           currentSentence={glossaryWord.sentence}
           onClose={() => setGlossaryWord(null)}

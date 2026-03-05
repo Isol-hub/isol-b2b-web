@@ -278,7 +278,6 @@ export default function WorkspacePage() {
       {glossaryWord && (
         <GlossaryPanel
           word={glossaryWord.word}
-          sentence={glossaryWord.sentence}
           sentences={wordIndex.current.get(glossaryWord.word) ?? [glossaryWord.sentence]}
           currentSentence={glossaryWord.sentence}
           onClose={() => setGlossaryWord(null)}
