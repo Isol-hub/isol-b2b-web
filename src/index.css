@@ -108,6 +108,11 @@ input {
   to   { opacity: 1; transform: translateY(0); }
 }
 
+/* Spinner for viewer waiting state */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 /* Audio source selector */
 .source-btn {
   flex: 1;
