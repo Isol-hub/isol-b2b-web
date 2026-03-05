@@ -26,15 +26,11 @@ export default function WorkspacePage() {
   const wssUrl = import.meta.env.VITE_WSS_URL ?? 'wss://api.isol.live/audio'
 
   const handleMessage = useCallback((msg: SubtitleMessage) => {
-    const text = msg.translation || msg.original
-    if (!text) return
-    if (msg.is_final) {
-      setPrevLine(text)
-      setCurrentLine('')
-      lastFinalRef.current = text
-    } else {
-      setCurrentLine(text)
+    if (msg.line_final) {
+      setPrevLine(msg.line_final)
+      lastFinalRef.current = msg.line_final
     }
+    setCurrentLine(msg.line_next || '')
   }, [])
 
   const ws = useWebSocket({

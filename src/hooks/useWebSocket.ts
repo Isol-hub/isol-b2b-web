@@ -4,10 +4,11 @@ import { getToken } from '../lib/auth'
 export type WsState = 'disconnected' | 'connecting' | 'connected' | 'reconnecting' | 'error'
 
 export interface SubtitleMessage {
-  original: string
-  translation: string
+  line_final: string
+  line_next: string
+  original_text?: string
+  type?: string
   is_final?: boolean
-  lang?: string
 }
 
 interface UseWebSocketOptions {
@@ -60,7 +61,7 @@ export function useWebSocket({ url, targetLang, onMessage, onStateChange }: UseW
         const msg = typeof ev.data === 'string' ? JSON.parse(ev.data) : null
         if (!msg) return
         if (msg.type === 'pong') return
-        if (msg.translation || msg.original) {
+        if (msg.type === 'subtitle' || msg.line_final !== undefined || msg.line_next !== undefined) {
           onMessage(msg as SubtitleMessage)
         }
       } catch { /* ignore malformed */ }
