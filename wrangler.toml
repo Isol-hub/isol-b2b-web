@@ -4,5 +4,5 @@ pages_build_output_dir = "dist"
 
 [[kv_namespaces]]
 binding = "CF_KV_OTP"
-id = "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
-preview_id = "REPLACE_WITH_YOUR_KV_PREVIEW_ID"
+id = "74d6c66c1ef344fdb062c23728927f6a"
+preview_id = "74d6c66c1ef344fdb062c23728927f6a"
