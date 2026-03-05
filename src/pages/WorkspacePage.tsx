@@ -23,7 +23,7 @@ export default function WorkspacePage() {
   const [sessionActive, setSessionActive] = useState(false)
   const lastFinalRef = useRef('')
 
-  const wssUrl = import.meta.env.VITE_WSS_URL ?? 'wss://wss.isol.live'
+  const wssUrl = import.meta.env.VITE_WSS_URL ?? 'wss://api.isol.live/audio'
 
   const handleMessage = useCallback((msg: SubtitleMessage) => {
     const text = msg.translation || msg.original
