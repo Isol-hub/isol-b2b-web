@@ -3,7 +3,7 @@ interface Env {
   B2B_SERVICE_KEY: string
 }
 
-const LSOL_AUTH_URL = 'https://auth.isol.live/auth/b2b/token'
+const LSOL_AUTH_URL = 'https://api.isol.live/auth/b2b/token'
 
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   const headers = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
