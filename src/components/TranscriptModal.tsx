@@ -1,4 +1,6 @@
 import { useState, useMemo, useCallback } from 'react'
+import { jsPDF } from 'jspdf'
+import { Document, Paragraph, TextRun, HeadingLevel, Packer } from 'docx'
 
 interface TranscriptLine {
   text: string
@@ -6,7 +8,7 @@ interface TranscriptLine {
 }
 
 type ViewMode = 'raw' | 'dialogue' | 'notes'
-type FileFormat = 'txt' | 'md' | 'json'
+type FileFormat = 'txt' | 'md' | 'json' | 'pdf' | 'docx' | 'ics'
 
 interface Props {
   transcript: TranscriptLine[]
@@ -60,7 +62,6 @@ function toNotes(lines: TranscriptLine[]): string {
   const date = lines[0].time.toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
   const duration = Math.round((lines[lines.length - 1].time.getTime() - lines[0].time.getTime()) / 60000)
 
-  // Group into sections by pauses > 8 seconds
   const sections: TranscriptLine[][] = []
   let current: TranscriptLine[] = []
   for (let i = 0; i < lines.length; i++) {
@@ -72,13 +73,104 @@ function toNotes(lines: TranscriptLine[]): string {
   }
   if (current.length) sections.push(current)
 
-  const body = sections.map((sec, i) => {
+  const body = sections.map(sec => {
     const t = formatTime(sec[0].time)
     const bullets = sec.map(l => `  • ${l.text}`).join('\n')
     return `[${t}]\n${bullets}`
   }).join('\n\n')
 
   return `# Meeting Notes\n${date}\nDuration: ~${duration} min\n\n---\n\n${body}`
+}
+
+function generateIcs(transcript: TranscriptLine[]): string {
+  if (!transcript.length) return ''
+  const start = transcript[0].time
+  const end = transcript[transcript.length - 1].time
+  const stamp = new Date()
+
+  const fmt = (d: Date) => d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
+  const desc = transcript.map(l => l.text).join('\\n').replace(/[,;]/g, (c) => `\\${c}`)
+
+  return [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//ISOL//Meeting Transcript//EN',
+    'BEGIN:VEVENT',
+    `DTSTART:${fmt(start)}`,
+    `DTEND:${fmt(end)}`,
+    `DTSTAMP:${fmt(stamp)}`,
+    `UID:isol-${Date.now()}@isol.live`,
+    'SUMMARY:ISOL Session Transcript',
+    `DESCRIPTION:${desc}`,
+    'END:VEVENT',
+    'END:VCALENDAR',
+  ].join('\r\n')
+}
+
+async function downloadPdf(content: string, filename: string) {
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' })
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(11)
+
+  const pageW = doc.internal.pageSize.getWidth()
+  const margin = 18
+  const maxW = pageW - margin * 2
+  let y = margin + 6
+
+  for (const rawLine of content.split('\n')) {
+    const isH1 = rawLine.startsWith('# ')
+    const isH2 = rawLine.startsWith('## ')
+    const isH3 = rawLine.startsWith('### ')
+
+    const text = isH1 ? rawLine.slice(2) : isH2 ? rawLine.slice(3) : isH3 ? rawLine.slice(4) : rawLine
+
+    if (isH1) { doc.setFontSize(18); doc.setFont('helvetica', 'bold') }
+    else if (isH2) { doc.setFontSize(14); doc.setFont('helvetica', 'bold') }
+    else if (isH3) { doc.setFontSize(12); doc.setFont('helvetica', 'bold') }
+    else { doc.setFontSize(11); doc.setFont('helvetica', 'normal') }
+
+    if (rawLine.trim() === '') { y += 4; continue }
+
+    const wrapped = doc.splitTextToSize(text, maxW)
+    for (const wLine of wrapped) {
+      if (y > doc.internal.pageSize.getHeight() - margin) { doc.addPage(); y = margin + 6 }
+      doc.text(wLine, margin, y)
+      y += isH1 ? 9 : isH2 ? 7 : isH3 ? 6.5 : 6
+    }
+    if (isH1 || isH2) y += 3
+  }
+
+  doc.save(filename)
+}
+
+async function downloadDocx(content: string, filename: string) {
+  const children: Paragraph[] = []
+
+  for (const rawLine of content.split('\n')) {
+    if (rawLine.startsWith('# ')) {
+      children.push(new Paragraph({ text: rawLine.slice(2), heading: HeadingLevel.HEADING_1 }))
+    } else if (rawLine.startsWith('## ')) {
+      children.push(new Paragraph({ text: rawLine.slice(3), heading: HeadingLevel.HEADING_2 }))
+    } else if (rawLine.startsWith('### ')) {
+      children.push(new Paragraph({ text: rawLine.slice(4), heading: HeadingLevel.HEADING_3 }))
+    } else if (rawLine.trim() === '') {
+      children.push(new Paragraph({ children: [new TextRun('')] }))
+    } else {
+      children.push(new Paragraph({ children: [new TextRun({ text: rawLine, size: 24 })] }))
+    }
+  }
+
+  const doc = new Document({
+    sections: [{ children }],
+  })
+
+  const blob = await Packer.toBlob(doc)
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(url)
 }
 
 function serialize(content: string, lines: TranscriptLine[], format: FileFormat, mode: ViewMode): string {
@@ -88,20 +180,14 @@ function serialize(content: string, lines: TranscriptLine[], format: FileFormat,
     }
     return JSON.stringify(lines.map(l => ({ text: l.text, time: l.time.toISOString() })), null, 2)
   }
+  if (format === 'ics') return generateIcs(lines)
   return content
-}
-
-function mime(format: FileFormat): string {
-  return format === 'json' ? 'application/json' : 'text/plain'
-}
-
-function ext(format: FileFormat): string {
-  return format === 'md' ? 'md' : format === 'json' ? 'json' : 'txt'
 }
 
 export default function TranscriptModal({ transcript, targetLang, onClose }: Props) {
   const [mode, setMode] = useState<ViewMode>('dialogue')
   const [format, setFormat] = useState<FileFormat>('md')
+  const [downloading, setDownloading] = useState(false)
 
   const generated = useMemo(() => {
     if (mode === 'raw') return toRaw(transcript)
@@ -112,18 +198,36 @@ export default function TranscriptModal({ transcript, targetLang, onClose }: Pro
   const [edited, setEdited] = useState<string | null>(null)
   const content = edited ?? generated
 
-  // Reset edits when mode changes
   const switchMode = useCallback((m: ViewMode) => { setMode(m); setEdited(null) }, [])
 
-  const handleDownload = useCallback(() => {
-    const data = serialize(content, transcript, format, mode)
-    const blob = new Blob([data], { type: mime(format) })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `isol-${mode}-${new Date().toISOString().slice(0, 10)}.${ext(format)}`
-    a.click()
-    URL.revokeObjectURL(url)
+  const handleDownload = useCallback(async () => {
+    setDownloading(true)
+    try {
+      const base = `isol-${mode}-${new Date().toISOString().slice(0, 10)}`
+
+      if (format === 'pdf') {
+        await downloadPdf(content, `${base}.pdf`)
+      } else if (format === 'docx') {
+        await downloadDocx(content, `${base}.docx`)
+      } else if (format === 'ics') {
+        const data = generateIcs(transcript)
+        const blob = new Blob([data], { type: 'text/calendar' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url; a.download = `${base}.ics`; a.click()
+        URL.revokeObjectURL(url)
+      } else {
+        const mime = format === 'json' ? 'application/json' : 'text/plain'
+        const data = serialize(content, transcript, format, mode)
+        const blob = new Blob([data], { type: mime })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url; a.download = `${base}.${format}`; a.click()
+        URL.revokeObjectURL(url)
+      }
+    } finally {
+      setDownloading(false)
+    }
   }, [content, transcript, format, mode])
 
   const TAB_STYLE = (active: boolean): React.CSSProperties => ({
@@ -135,12 +239,23 @@ export default function TranscriptModal({ transcript, targetLang, onClose }: Pro
   })
 
   const FORMAT_STYLE = (active: boolean): React.CSSProperties => ({
-    padding: '5px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600,
+    padding: '5px 11px', borderRadius: 7, fontSize: 11, fontWeight: 700,
     border: `1px solid ${active ? 'rgba(167,139,250,0.5)' : 'rgba(255,255,255,0.08)'}`,
     cursor: 'pointer', transition: 'all 0.15s',
     background: active ? 'rgba(124,58,237,0.15)' : 'rgba(255,255,255,0.04)',
-    color: active ? '#c4b5fd' : 'rgba(238,242,255,0.45)',
+    color: active ? '#c4b5fd' : 'rgba(238,242,255,0.40)',
   })
+
+  const FORMAT_LABELS: { id: FileFormat; label: string }[] = [
+    { id: 'txt', label: '.txt' },
+    { id: 'md', label: '.md' },
+    { id: 'pdf', label: 'PDF' },
+    { id: 'docx', label: 'Word' },
+    { id: 'json', label: 'JSON' },
+    { id: 'ics', label: '📅 Calendar' },
+  ]
+
+  const binaryFormat = format === 'pdf' || format === 'docx' || format === 'ics'
 
   return (
     <div style={{
@@ -151,7 +266,7 @@ export default function TranscriptModal({ transcript, targetLang, onClose }: Pro
       padding: 24,
     }} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
       <div style={{
-        width: '100%', maxWidth: 740,
+        width: '100%', maxWidth: 760,
         background: 'rgba(255,255,255,0.04)',
         border: '1px solid rgba(167,139,250,0.20)',
         borderRadius: 20,
@@ -171,16 +286,16 @@ export default function TranscriptModal({ transcript, targetLang, onClose }: Pro
         </div>
 
         {/* Mode tabs */}
-        <div style={{ display: 'flex', gap: 4, padding: '12px 24px 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+        <div style={{ display: 'flex', gap: 4, padding: '12px 24px 0', borderBottom: '1px solid rgba(255,255,255,0.06)', flexWrap: 'wrap', alignItems: 'flex-end' }}>
           {(['raw', 'dialogue', 'notes'] as ViewMode[]).map(m => (
             <button key={m} style={TAB_STYLE(mode === m)} onClick={() => switchMode(m)}>
               {m === 'raw' ? '📄 Raw' : m === 'dialogue' ? '💬 Dialogue' : '📝 Notes'}
             </button>
           ))}
-          <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center', paddingBottom: 8 }}>
-            {(['txt', 'md', 'json'] as FileFormat[]).map(f => (
-              <button key={f} style={FORMAT_STYLE(format === f)} onClick={() => setFormat(f)}>
-                .{f}
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: 5, alignItems: 'center', paddingBottom: 8, flexWrap: 'wrap' }}>
+            {FORMAT_LABELS.map(({ id, label }) => (
+              <button key={id} style={FORMAT_STYLE(format === id)} onClick={() => setFormat(id)}>
+                {label}
               </button>
             ))}
           </div>
@@ -190,31 +305,54 @@ export default function TranscriptModal({ transcript, targetLang, onClose }: Pro
         <div style={{ padding: '10px 24px', borderBottom: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)' }}>
           <p style={{ fontSize: 12, color: 'rgba(238,242,255,0.40)', lineHeight: 1.5 }}>
             {mode === 'raw' && 'Timestamped lines exactly as captured. Edit freely before downloading.'}
-            {mode === 'dialogue' && 'Speakers detected automatically from pauses (A, B, C…). Edit names and attribution before exporting.'}
+            {mode === 'dialogue' && 'Speakers detected automatically from pauses (A, B, C…). Edit names before exporting.'}
             {mode === 'notes' && 'Content reorganized into sections by topic pauses. Add titles, highlights, action items.'}
+            {format === 'ics' && ' · Calendar file opens in Apple Calendar, Google Calendar, Outlook.'}
           </p>
         </div>
 
-        {/* Editable content */}
-        <textarea
-          value={content}
-          onChange={e => setEdited(e.target.value)}
-          style={{
-            flex: 1,
-            background: 'transparent',
-            border: 'none',
-            padding: '20px 24px',
-            color: 'rgba(238,242,255,0.85)',
-            fontSize: 14,
-            fontFamily: mode === 'raw' ? 'monospace' : "'Georgia', serif",
-            lineHeight: 1.8,
-            resize: 'none',
-            outline: 'none',
-            minHeight: 320,
-            overflowY: 'auto',
-          }}
-          spellCheck={false}
-        />
+        {/* Editable content — hidden for binary/calendar formats */}
+        {binaryFormat ? (
+          <div style={{
+            flex: 1, minHeight: 160,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            gap: 10, color: 'rgba(238,242,255,0.35)',
+          }}>
+            <span style={{ fontSize: 36 }}>
+              {format === 'pdf' ? '📄' : format === 'docx' ? '📝' : '📅'}
+            </span>
+            <span style={{ fontSize: 14 }}>
+              {format === 'ics'
+                ? `${transcript.length} lines · ${Math.round((transcript[transcript.length - 1]?.time.getTime() - transcript[0]?.time.getTime()) / 60000) || 0} min session`
+                : `Click Download to generate the ${format.toUpperCase()} file`}
+            </span>
+            {format === 'ics' && (
+              <span style={{ fontSize: 12, color: 'rgba(238,242,255,0.25)', textAlign: 'center', maxWidth: 320 }}>
+                The session time and full transcript will be added to your calendar event.
+              </span>
+            )}
+          </div>
+        ) : (
+          <textarea
+            value={content}
+            onChange={e => setEdited(e.target.value)}
+            style={{
+              flex: 1,
+              background: 'transparent',
+              border: 'none',
+              padding: '20px 24px',
+              color: 'rgba(238,242,255,0.85)',
+              fontSize: 14,
+              fontFamily: mode === 'raw' ? 'monospace' : "'Georgia', serif",
+              lineHeight: 1.8,
+              resize: 'none',
+              outline: 'none',
+              minHeight: 320,
+              overflowY: 'auto',
+            }}
+            spellCheck={false}
+          />
+        )}
 
         {/* Footer */}
         <div style={{
@@ -225,24 +363,33 @@ export default function TranscriptModal({ transcript, targetLang, onClose }: Pro
         }}>
           <button
             onClick={() => setEdited(null)}
-            disabled={edited === null}
+            disabled={edited === null || binaryFormat}
             style={{
               background: 'none', color: 'var(--text-dim)', fontSize: 13,
-              textDecoration: 'underline', opacity: edited === null ? 0.3 : 1,
+              textDecoration: 'underline', opacity: (edited === null || binaryFormat) ? 0.3 : 1,
             }}
           >
             Reset edits
           </button>
           <div style={{ display: 'flex', gap: 10 }}>
             <button onClick={onClose} className="btn-icon" style={{ fontSize: 13, padding: '9px 18px' }}>Cancel</button>
-            <button onClick={handleDownload} style={{
+            <button onClick={handleDownload} disabled={downloading} style={{
               background: 'linear-gradient(135deg,#7c3aed,#0ea5e9)',
               color: '#fff', fontWeight: 700, fontSize: 14,
               padding: '10px 28px', borderRadius: 12, border: 'none',
-              cursor: 'pointer',
+              cursor: downloading ? 'default' : 'pointer',
+              opacity: downloading ? 0.7 : 1,
               boxShadow: '0 0 24px rgba(124,58,237,0.35)',
+              display: 'flex', alignItems: 'center', gap: 8,
             }}>
-              ↓ Download .{format}
+              {downloading ? (
+                <>
+                  <span style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite', display: 'inline-block' }} />
+                  Generating…
+                </>
+              ) : (
+                `↓ Download ${FORMAT_LABELS.find(f => f.id === format)?.label ?? format}`
+              )}
             </button>
           </div>
         </div>

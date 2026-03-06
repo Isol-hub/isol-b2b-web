@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom'
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { getSession } from '../lib/auth'
 import { useWebSocket } from '../hooks/useWebSocket'
 import type { SubtitleMessage } from '../hooks/useWebSocket'
@@ -22,6 +22,27 @@ export default function ViewerPage() {
   const [showModal, setShowModal] = useState(false)
   const [glossaryWord, setGlossaryWord] = useState<{ word: string; sentence: string } | null>(null)
   const wordIndex = useRef<Map<string, string[]>>(new Map())
+  const [aiFormatted, setAiFormatted] = useState<string | undefined>()
+  const [aiLoading, setAiLoading] = useState(false)
+  const aiRunningRef = useRef(false)
+
+  useEffect(() => {
+    if (transcript.length === 0 || transcript.length % 20 !== 0) return
+    if (aiRunningRef.current) return
+    aiRunningRef.current = true
+    setAiLoading(true)
+    fetch('/api/ai/format', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lines: transcript.map(l => l.text) }),
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then((data: { formatted?: string } | null) => {
+        if (data?.formatted) setAiFormatted(data.formatted)
+      })
+      .catch(() => {})
+      .finally(() => { setAiLoading(false); aiRunningRef.current = false })
+  }, [transcript.length])
 
   const wssUrl = import.meta.env.VITE_WSS_URL ?? 'wss://api.isol.live/audio'
 
@@ -147,6 +168,8 @@ export default function ViewerPage() {
               currentLine={currentLine}
               isActive={isActive}
               targetLang={targetLang}
+              aiFormatted={aiFormatted}
+              aiLoading={aiLoading}
               onWordClick={handleWordClick}
             />
           </>

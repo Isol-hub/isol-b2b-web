@@ -35,8 +35,32 @@ export default function WorkspacePage() {
   // Glossary state
   const [glossaryWord, setGlossaryWord] = useState<{ word: string; sentence: string } | null>(null)
 
+  // AI formatting state
+  const [aiFormatted, setAiFormatted] = useState<string | undefined>()
+  const [aiLoading, setAiLoading] = useState(false)
+  const aiRunningRef = useRef(false)
+
   // Build word→sentences index from transcript
   const wordIndex = useRef<Map<string, string[]>>(new Map())
+
+  // Trigger AI formatting every 20 finalized lines
+  useEffect(() => {
+    if (transcript.length === 0 || transcript.length % 20 !== 0) return
+    if (aiRunningRef.current) return
+    aiRunningRef.current = true
+    setAiLoading(true)
+    fetch('/api/ai/format', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lines: transcript.map(l => l.text) }),
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then((data: { formatted?: string } | null) => {
+        if (data?.formatted) setAiFormatted(data.formatted)
+      })
+      .catch(() => {})
+      .finally(() => { setAiLoading(false); aiRunningRef.current = false })
+  }, [transcript.length])
 
   useEffect(() => {
     if (!localStorage.getItem(ONBOARDING_KEY)) setShowOnboarding(true)
@@ -70,6 +94,7 @@ export default function WorkspacePage() {
 
   const handleStart = useCallback(async () => {
     setError(''); setCurrentLine(''); setTranscript([])
+    setAiFormatted(undefined); setAiLoading(false)
     wordIndex.current.clear()
     dismissOnboarding()
     ws.open()
@@ -222,6 +247,8 @@ export default function WorkspacePage() {
             currentLine={currentLine}
             isActive={isActive}
             targetLang={targetLangLabel ? `${targetLangLabel.flag} ${targetLangLabel.label}` : targetLang}
+            aiFormatted={aiFormatted}
+            aiLoading={aiLoading}
             onWordClick={handleWordClick}
           />
         )}
