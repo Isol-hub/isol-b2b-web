@@ -33,9 +33,9 @@ function AiMarkdown({ text, onWordClick }: { text: string; onWordClick?: (w: str
     if (line.startsWith('# ')) {
       elements.push(
         <h1 key={i} style={{
-          fontSize: 28, fontWeight: 700, lineHeight: 1.2,
+          fontSize: 30, fontWeight: 700, lineHeight: 1.2,
           color: 'var(--text)', letterSpacing: '-0.02em',
-          marginBottom: 18,
+          marginBottom: 20,
         }}>{line.slice(2)}</h1>
       )
     } else if (line.startsWith('## ')) {
@@ -43,19 +43,19 @@ function AiMarkdown({ text, onWordClick }: { text: string; onWordClick?: (w: str
         <h2 key={i} style={{
           fontSize: 20, fontWeight: 700, lineHeight: 1.3,
           color: 'var(--text)', letterSpacing: '-0.01em',
-          marginTop: 24, marginBottom: 12,
+          marginTop: 32, marginBottom: 12,
         }}>{line.slice(3)}</h2>
       )
     } else if (line.startsWith('### ')) {
       elements.push(
         <h3 key={i} style={{
-          fontSize: 11, fontWeight: 700, letterSpacing: '0.09em',
+          fontSize: 12, fontWeight: 700, letterSpacing: '0.08em',
           textTransform: 'uppercase', color: 'var(--text-muted)',
-          marginTop: 20, marginBottom: 8,
+          marginTop: 24, marginBottom: 10,
         }}>{line.slice(4)}</h3>
       )
     } else if (line.trim() === '') {
-      elements.push(<div key={i} style={{ height: 14 }} />)
+      elements.push(<div key={i} style={{ height: 16 }} />)
     } else {
       elements.push(
         <p key={i} style={{
@@ -77,7 +77,7 @@ function WordSpan({ word, sentence, onWordClick }: {
     <span
       onClick={() => onWordClick(word.replace(/[^\w]/g, ''), sentence)}
       style={{ cursor: 'pointer', borderRadius: 3, transition: 'background 0.12s', padding: '0 1px' }}
-      onMouseEnter={e => (e.target as HTMLElement).style.background = 'rgba(37,99,235,0.15)'}
+      onMouseEnter={e => (e.target as HTMLElement).style.background = 'rgba(214,178,94,0.15)'}
       onMouseLeave={e => (e.target as HTMLElement).style.background = 'transparent'}
     >{word}</span>
   )
@@ -126,37 +126,35 @@ export default function DocumentView({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
 
-      {/* ━━ SECTION 1 · LIVE CAPTURE ━━━━━━━━━━━━━━━━━━━━━━ */}
+      {/* ━━ LIVE CAPTURE STRIP ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
       <div style={{ flexShrink: 0 }}>
 
-        {/* Header row */}
+        {/* Strip header */}
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          marginBottom: 10,
+          marginBottom: 8,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             {isActive && (
               <span style={{
-                width: 7, height: 7, borderRadius: '50%',
+                width: 6, height: 6, borderRadius: '50%',
                 background: 'var(--live)',
                 animation: 'livePulse 2s ease-in-out infinite',
                 display: 'inline-block', flexShrink: 0,
               }} />
             )}
-            <span className="section-label" style={{
-              color: isActive ? 'var(--text-dim)' : 'var(--text-muted)',
-            }}>
+            <span className="section-label">
               {isActive ? 'Live Capture' : transcript.length > 0 ? 'Capture' : 'Ready'}
             </span>
             {isActive && (
               <>
-                <span style={{ color: 'var(--divider)', fontSize: 16, lineHeight: 1 }}>·</span>
+                <span style={{ color: 'var(--divider)', fontSize: 14 }}>·</span>
                 <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{targetLang}</span>
               </>
             )}
             {(canAi || aiLoading) && (
               <span className="ai-badge">
-                {aiLoading ? '↻ AI' : '✦ AI'}
+                {aiLoading ? '↻ AI active' : '✦ AI active'}
               </span>
             )}
           </div>
@@ -165,41 +163,39 @@ export default function DocumentView({
           </span>
         </div>
 
-        {/* Live strip */}
+        {/* Strip body — minimal, no card box */}
         <div style={{
-          background: 'var(--surface)',
-          border: '1px solid var(--divider)',
-          borderRadius: 10,
-          padding: '14px 20px',
-          minHeight: 54,
+          padding: '10px 2px',
+          borderBottom: '1px solid var(--divider)',
+          minHeight: 40,
           display: 'flex',
           alignItems: 'center',
         }}>
           {currentLine ? (
-            <span style={{ fontSize: 15, color: 'var(--text-dim)', lineHeight: 1.6 }}>
+            <span style={{ fontSize: 14, color: 'var(--text-dim)', lineHeight: 1.6 }}>
               <MatrixText text={currentLine} color="var(--text-dim)" />
               <span className="doc-cursor" />
             </span>
           ) : isActive ? (
-            <span style={{ fontSize: 14, color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}>
+            <span style={{ fontSize: 13, color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}>
               Listening<span className="doc-cursor" />
             </span>
           ) : transcript.length > 0 ? (
-            <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>
+            <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>
               Session ended · {transcript.length} lines captured
             </span>
           ) : (
-            <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>
-              Start a session to begin capturing live speech
+            <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+              Start a session to begin capturing
             </span>
           )}
         </div>
       </div>
 
-      {/* ━━ AI STRUCTURING INDICATOR ━━━━━━━━━━━━━━━━━━━━━━━ */}
+      {/* ━━ AI STRUCTURING DIVIDER ━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 14,
-        padding: '20px 0',
+        padding: '18px 0',
         flexShrink: 0,
       }}>
         <div style={{ flex: 1, height: 1, background: 'var(--divider)' }} />
@@ -207,16 +203,16 @@ export default function DocumentView({
           {aiLoading && (
             <span style={{
               width: 10, height: 10,
-              border: '1.5px solid rgba(34,211,238,0.2)',
-              borderTopColor: 'var(--cyan)',
+              border: '1.5px solid rgba(88,213,201,0.20)',
+              borderTopColor: 'var(--teal)',
               borderRadius: '50%',
               animation: 'spin 0.9s linear infinite',
               display: 'inline-block', flexShrink: 0,
             }} />
           )}
-          <span style={{ fontSize: 11, color: 'var(--text-muted)', letterSpacing: '0.03em' }}>
+          <span style={{ fontSize: 11, color: 'var(--text-muted)', letterSpacing: '0.04em' }}>
             {aiLoading
-              ? 'AI structuring…'
+              ? 'AI structuring'
               : canAi
               ? 'AI structured'
               : 'AI structures on 5+ lines'}
@@ -225,7 +221,7 @@ export default function DocumentView({
         <div style={{ flex: 1, height: 1, background: 'var(--divider)' }} />
       </div>
 
-      {/* ━━ SECTION 2 · DOCUMENT ━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+      {/* ━━ DOCUMENT SURFACE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
 
         {/* Document header */}
@@ -242,10 +238,10 @@ export default function DocumentView({
                 style={{
                   display: 'flex', alignItems: 'center', gap: 5,
                   fontSize: 12, fontWeight: 600,
-                  padding: '4px 11px', borderRadius: 6,
-                  border: `1px solid ${aiMode ? 'rgba(37,99,235,0.45)' : 'var(--border)'}`,
-                  background: aiMode ? 'rgba(37,99,235,0.12)' : 'transparent',
-                  color: aiMode ? '#93C5FD' : 'var(--text-muted)',
+                  padding: '4px 12px', borderRadius: 6,
+                  border: `1px solid ${aiMode ? 'rgba(214,178,94,0.40)' : 'var(--border)'}`,
+                  background: aiMode ? 'rgba(214,178,94,0.10)' : 'transparent',
+                  color: aiMode ? 'var(--accent)' : 'var(--text-muted)',
                   cursor: canAi ? 'pointer' : 'default',
                   transition: 'all 0.2s',
                   opacity: canAi ? 1 : 0.5,
@@ -255,8 +251,8 @@ export default function DocumentView({
                   <>
                     <span style={{
                       width: 9, height: 9,
-                      border: '1.5px solid rgba(147,197,253,0.3)',
-                      borderTopColor: '#93C5FD',
+                      border: '1.5px solid rgba(214,178,94,0.3)',
+                      borderTopColor: 'var(--accent)',
                       borderRadius: '50%',
                       animation: 'spin 0.8s linear infinite',
                       display: 'inline-block',
@@ -269,30 +265,30 @@ export default function DocumentView({
           </div>
         </div>
 
-        {/* Scrollable document surface */}
+        {/* Scrollable document area */}
         <div style={{
           flex: 1, overflowY: 'auto',
           display: 'flex', flexDirection: 'column', alignItems: 'center',
         }}>
+          {/* The document itself — dominant surface */}
           <div style={{
             width: '100%',
-            maxWidth: 760,
+            maxWidth: 820,
             background: 'var(--surface-1)',
-            border: '1px solid var(--border)',
+            border: '1px solid var(--divider)',
             borderRadius: 'var(--radius-xl)',
-            padding: '36px 48px',
-            boxShadow: 'var(--shadow)',
+            padding: '48px 64px',
           }}>
             {isEmpty ? (
               <div style={{
-                height: 180,
+                height: 200,
                 display: 'flex', flexDirection: 'column',
                 alignItems: 'center', justifyContent: 'center',
-                gap: 10, color: 'var(--text-muted)',
+                gap: 12, color: 'var(--text-muted)',
               }}>
-                <span style={{ fontSize: 22, opacity: 0.25 }}>✦</span>
+                <span style={{ fontSize: 20, opacity: 0.18 }}>✦</span>
                 <span style={{ fontSize: 14 }}>The document will appear here as you speak</span>
-                <span style={{ fontSize: 12, opacity: 0.6 }}>Start a session to begin</span>
+                <span style={{ fontSize: 12, opacity: 0.55 }}>Start a session to begin</span>
               </div>
             ) : aiMode && aiFormatted ? (
               <div className="doc-ai-update">

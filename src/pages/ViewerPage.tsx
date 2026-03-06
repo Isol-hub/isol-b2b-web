@@ -129,14 +129,14 @@ export default function ViewerPage() {
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'var(--bg)' }}>
 
-      {/* ━━ TOP NAV ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+      {/* ━━ TOP BAR ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
       <header className="header-glass" style={{
         display: 'flex', alignItems: 'center',
         padding: '0 24px', height: 52, gap: 16,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
           <div className="logo-mark" style={{ width: 26, height: 26 }}>
-            <span style={{ color: '#fff', fontWeight: 800, fontSize: 13 }}>i</span>
+            <span style={{ color: '#111', fontWeight: 800, fontSize: 13 }}>i</span>
           </div>
           <span style={{ fontSize: 14, fontWeight: 700, letterSpacing: '-0.01em' }}>ISOL Studio</span>
           {workspaceSlug && (
@@ -147,9 +147,9 @@ export default function ViewerPage() {
         <span style={{
           fontSize: 11, fontWeight: 700, letterSpacing: '0.08em',
           textTransform: 'uppercase',
-          background: 'rgba(37,99,235,0.12)',
-          border: '1px solid rgba(37,99,235,0.25)',
-          color: '#93C5FD',
+          background: 'rgba(88,213,201,0.08)',
+          border: '1px solid rgba(88,213,201,0.18)',
+          color: 'var(--teal)',
           borderRadius: 6, padding: '3px 9px',
         }}>Viewer</span>
 
@@ -175,7 +175,6 @@ export default function ViewerPage() {
       {/* ━━ BODY ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
 
-        {/* ── MAIN ─────────────────────────────────────────────── */}
         <main style={{
           flex: 1,
           overflowY: 'auto',
@@ -186,7 +185,7 @@ export default function ViewerPage() {
         }}>
           {!joined ? (
 
-            /* ── Pre-join screen ─────────────────────────────── */
+            /* ── Pre-join screen ──────────────────────────── */
             <div style={{
               flex: 1,
               display: 'flex',
@@ -199,9 +198,9 @@ export default function ViewerPage() {
                 {/* Live badge */}
                 <div style={{
                   display: 'inline-flex', alignItems: 'center', gap: 8,
-                  background: 'rgba(16,185,129,0.08)',
-                  border: '1px solid rgba(16,185,129,0.20)',
-                  borderRadius: 20, padding: '5px 14px', marginBottom: 24,
+                  background: 'rgba(60,203,127,0.07)',
+                  border: '1px solid rgba(60,203,127,0.18)',
+                  borderRadius: 20, padding: '5px 14px', marginBottom: 28,
                 }}>
                   <span style={{
                     width: 6, height: 6, borderRadius: '50%',
@@ -214,21 +213,20 @@ export default function ViewerPage() {
                   }}>Session in progress</span>
                 </div>
 
-                {/* Headline */}
                 <h2 style={{
-                  fontSize: 'clamp(24px, 3vw, 32px)',
+                  fontSize: 'clamp(26px, 3vw, 36px)',
                   fontWeight: 700,
-                  lineHeight: 1.2,
+                  lineHeight: 1.15,
                   letterSpacing: '-0.02em',
-                  marginBottom: 12,
+                  marginBottom: 14,
                 }}>
                   You're entering<br />
                   <span className="gradient-text">a live room</span>
                 </h2>
                 <p style={{
-                  fontSize: 15, color: 'var(--text-dim)', lineHeight: 1.65, marginBottom: 32,
+                  fontSize: 15, color: 'var(--text-dim)', lineHeight: 1.65, marginBottom: 36,
                 }}>
-                  Choose your language and join. You'll see the live document and real-time translation as it happens.
+                  Choose your language and follow the live document as it happens.
                 </p>
 
                 {/* Language picker */}
@@ -236,7 +234,7 @@ export default function ViewerPage() {
                   background: 'var(--surface-1)',
                   border: '1px solid var(--border)',
                   borderRadius: 'var(--radius-lg)',
-                  padding: '20px 20px',
+                  padding: '20px',
                   marginBottom: 24,
                 }}>
                   <div style={{ maxWidth: 240 }}>
@@ -257,9 +255,8 @@ export default function ViewerPage() {
 
           ) : (
 
-            /* ── Joined: document view ────────────────────────── */
+            /* ── Joined ───────────────────────────────────── */
             <>
-              {/* Language + export bar */}
               <div style={{
                 display: 'flex', alignItems: 'flex-end', gap: 12, marginBottom: 24, flexShrink: 0,
               }}>
@@ -272,7 +269,7 @@ export default function ViewerPage() {
                     className="btn-icon"
                     style={{ fontSize: 13, marginLeft: 'auto' }}
                   >
-                    Edit & Export →
+                    Export document →
                   </button>
                 )}
               </div>
@@ -294,28 +291,6 @@ export default function ViewerPage() {
           )}
         </main>
 
-        {/* ── RIGHT PANEL: GLOSSARY ─────────────────────────────── */}
-        <aside style={{
-          width: glossaryWord ? 300 : 0,
-          flexShrink: 0,
-          overflow: 'hidden',
-          transition: 'width 0.25s ease',
-          borderLeft: '1px solid var(--divider)',
-          background: 'var(--surface)',
-        }}>
-          {glossaryWord && (
-            <div style={{ width: 300, height: '100%' }}>
-              <GlossaryPanel
-                word={glossaryWord.word}
-                sentences={wordIndex.current.get(glossaryWord.word) ?? [glossaryWord.sentence]}
-                currentSentence={glossaryWord.sentence}
-                targetLang={targetLang}
-                onClose={() => setGlossaryWord(null)}
-              />
-            </div>
-          )}
-        </aside>
-
       </div>
 
       {/* ━━ MODALS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
@@ -326,6 +301,22 @@ export default function ViewerPage() {
           aiFormatted={aiFormatted}
           onClose={() => setShowModal(false)}
         />
+      )}
+
+      {/* Glossary drawer — overlay */}
+      {glossaryWord && (
+        <>
+          <div className="glossary-backdrop" onClick={() => setGlossaryWord(null)} />
+          <div className="glossary-drawer">
+            <GlossaryPanel
+              word={glossaryWord.word}
+              sentences={wordIndex.current.get(glossaryWord.word) ?? [glossaryWord.sentence]}
+              currentSentence={glossaryWord.sentence}
+              targetLang={targetLang}
+              onClose={() => setGlossaryWord(null)}
+            />
+          </div>
+        </>
       )}
 
     </div>

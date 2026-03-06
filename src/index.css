@@ -1,38 +1,38 @@
-/* ISOL Studio — Design System 2.0 */
+/* ISOL Studio — Design System 3.0 */
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
   /* ── Backgrounds ─────────────────────────────── */
-  --bg:         #0B0F19;
-  --surface:    #0F172A;
-  --surface-1:  #111827;
-  --surface-2:  #131D2D;
-  --surface-3:  #1A2332;
+  --bg:         #0F1115;
+  --surface:    #151922;
+  --surface-1:  #1B2130;
+  --surface-2:  #1D2535;
+  --surface-3:  #222A3A;
 
   /* ── Text ────────────────────────────────────── */
-  --text:       #F9FAFB;
-  --text-dim:   #94A3B8;
-  --text-muted: #64748B;
+  --text:       #F3F5F7;
+  --text-dim:   #A6AFBF;
+  --text-muted: #7C8596;
 
   /* ── Accents ─────────────────────────────────── */
-  --accent:       #2563EB;
-  --accent-hover: #1D4ED8;
-  --cyan:         #22D3EE;
-  --live:         #10B981;
-  --warning:      #FACC15;
-  --red:          #EF4444;
+  --accent:       #D6B25E;   /* champagne gold */
+  --accent-hover: #C9A24E;
+  --teal:         #58D5C9;   /* live / AI active */
+  --live:         #3CCB7F;   /* connected / success */
+  --warning:      #F0D78A;   /* sticky note */
+  --red:          #FF6B6B;
   --orange:       #F97316;
 
   /* ── Borders ─────────────────────────────────── */
   --border:        rgba(255,255,255,0.08);
   --divider:       rgba(255,255,255,0.06);
-  --border-accent: rgba(37,99,235,0.30);
+  --border-accent: rgba(214,178,94,0.25);
 
   /* ── Shadows ─────────────────────────────────── */
-  --shadow:    0 12px 40px rgba(0,0,0,0.30);
-  --shadow-sm: 0 4px 16px rgba(0,0,0,0.20);
-  --shadow-lg: 0 24px 64px rgba(0,0,0,0.45);
+  --shadow:    0 8px 32px rgba(0,0,0,0.25);
+  --shadow-sm: 0 2px 12px rgba(0,0,0,0.15);
+  --shadow-lg: 0 20px 60px rgba(0,0,0,0.40);
 
   /* ── Radius ──────────────────────────────────── */
   --radius:    8px;
@@ -42,6 +42,10 @@
   /* ── Typography ──────────────────────────────── */
   --font-ui:  'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-doc: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+
+  /* ── Layout heights ──────────────────────────── */
+  --header-h: 52px;
+  --dock-h:   64px;
 }
 
 html, body, #root {
@@ -60,13 +64,13 @@ input, select { font-family: inherit; outline: none; }
 /* ─── Scrollbar ──────────────────────────────────── */
 ::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.10); border-radius: 2px; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
 
 /* ─── Primary button ─────────────────────────────── */
 .btn-primary {
   background: var(--accent);
-  color: #fff;
-  font-weight: 600;
+  color: #111;
+  font-weight: 700;
   font-size: 14px;
   padding: 0 22px;
   height: 44px;
@@ -105,8 +109,8 @@ input, select { font-family: inherit; outline: none; }
 
 /* ─── Stop button ─────────────────────────────────── */
 .btn-stop {
-  background: rgba(239,68,68,0.07);
-  border: 1px solid rgba(239,68,68,0.18);
+  background: rgba(255,107,107,0.07);
+  border: 1px solid rgba(255,107,107,0.18);
   color: var(--red);
   font-weight: 600;
   font-size: 13px;
@@ -120,7 +124,7 @@ input, select { font-family: inherit; outline: none; }
   align-items: center;
   justify-content: center;
 }
-.btn-stop:hover { background: rgba(239,68,68,0.12); }
+.btn-stop:hover { background: rgba(255,107,107,0.12); }
 
 /* ─── Input ──────────────────────────────────────── */
 .input-field {
@@ -134,8 +138,8 @@ input, select { font-family: inherit; outline: none; }
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 .input-field:focus {
-  border-color: rgba(37,99,235,0.55);
-  box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
+  border-color: rgba(214,178,94,0.45);
+  box-shadow: 0 0 0 3px rgba(214,178,94,0.10);
 }
 .input-field::placeholder { color: var(--text-muted); }
 
@@ -149,7 +153,7 @@ input, select { font-family: inherit; outline: none; }
 
 /* ─── Top nav glass ──────────────────────────────── */
 .header-glass {
-  background: rgba(11,15,25,0.97);
+  background: rgba(15,17,21,0.97);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border-bottom: 1px solid var(--divider);
@@ -162,7 +166,7 @@ input, select { font-family: inherit; outline: none; }
   align-items: center;
   gap: 6px;
   padding: 4px 12px;
-  background: rgba(255,255,255,0.04);
+  background: rgba(255,255,255,0.03);
   border: 1px solid var(--border);
   border-radius: 20px;
 }
@@ -186,7 +190,7 @@ input, select { font-family: inherit; outline: none; }
   color: var(--text-muted);
 }
 
-/* ─── Sidebar group ──────────────────────────────── */
+/* ─── Sidebar group (legacy compat) ─────────────── */
 .sidebar-group {
   display: flex;
   flex-direction: column;
@@ -203,17 +207,17 @@ input, select { font-family: inherit; outline: none; }
 
 /* ─── Control dock ───────────────────────────────── */
 .control-dock {
-  height: 64px;
+  height: var(--dock-h);
   flex-shrink: 0;
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 0 32px;
-  background: rgba(11,15,25,0.98);
+  background: rgba(15,17,21,0.98);
   border-top: 1px solid var(--divider);
 }
 
-/* ─── Dock source buttons (horizontal) ───────────── */
+/* ─── Dock source buttons ────────────────────────── */
 .dock-source-btn {
   display: flex;
   align-items: center;
@@ -221,7 +225,7 @@ input, select { font-family: inherit; outline: none; }
   padding: 7px 13px;
   border-radius: var(--radius);
   border: 1px solid var(--border);
-  background: var(--surface-1);
+  background: transparent;
   color: var(--text-muted);
   font-size: 13px;
   font-weight: 500;
@@ -230,12 +234,12 @@ input, select { font-family: inherit; outline: none; }
   white-space: nowrap;
 }
 .dock-source-btn:hover {
-  border-color: rgba(37,99,235,0.35);
+  border-color: rgba(214,178,94,0.30);
   color: var(--text-dim);
 }
 .dock-source-btn.active {
-  border-color: rgba(37,99,235,0.55);
-  background: rgba(37,99,235,0.10);
+  border-color: rgba(214,178,94,0.50);
+  background: rgba(214,178,94,0.08);
   color: var(--text);
 }
 
@@ -255,9 +259,9 @@ input, select { font-family: inherit; outline: none; }
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.05em;
-  color: #93C5FD;
-  background: rgba(37,99,235,0.10);
-  border: 1px solid rgba(37,99,235,0.20);
+  color: var(--teal);
+  background: rgba(88,213,201,0.08);
+  border: 1px solid rgba(88,213,201,0.18);
   border-radius: 5px;
   padding: 2px 7px;
 }
@@ -280,12 +284,12 @@ input, select { font-family: inherit; outline: none; }
   transition: all 0.18s;
 }
 .source-btn:hover {
-  border-color: rgba(37,99,235,0.35);
+  border-color: rgba(214,178,94,0.30);
   color: var(--text-dim);
 }
 .source-btn.active {
-  border-color: rgba(37,99,235,0.55);
-  background: rgba(37,99,235,0.10);
+  border-color: rgba(214,178,94,0.50);
+  background: rgba(214,178,94,0.08);
   color: var(--text);
 }
 
@@ -316,7 +320,7 @@ input, select { font-family: inherit; outline: none; }
 
 /* ─── Gradient text ──────────────────────────────── */
 .gradient-text {
-  background: linear-gradient(135deg, #60a5fa 0%, #22d3ee 100%);
+  background: linear-gradient(135deg, #D6B25E 0%, #58D5C9 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -324,8 +328,8 @@ input, select { font-family: inherit; outline: none; }
 
 /* ─── Onboarding banner ──────────────────────────── */
 .onboarding-banner {
-  background: rgba(37,99,235,0.05);
-  border-bottom: 1px solid rgba(37,99,235,0.12);
+  background: rgba(214,178,94,0.04);
+  border-bottom: 1px solid rgba(214,178,94,0.10);
 }
 
 /* ─── Subtitle card ──────────────────────────────── */
@@ -335,27 +339,39 @@ input, select { font-family: inherit; outline: none; }
   border-radius: var(--radius-lg);
   transition: border-color 0.3s;
 }
-.subtitle-card.active { border-color: rgba(16,185,129,0.25); }
+.subtitle-card.active { border-color: rgba(60,203,127,0.25); }
 
-/* ─── Sticky note ────────────────────────────────── */
+/* ─── Sticky note / insight card ────────────────── */
 .sticky-note {
-  background: #FACC15;
-  color: #1c1917;
+  background: #F0D78A;
+  color: #1c1608;
   border-radius: 12px;
-  padding: 14px 18px;
+  padding: 16px 20px;
   font-size: 13px;
   line-height: 1.55;
   font-weight: 500;
-  box-shadow: 0 4px 14px rgba(250,204,21,0.15), 0 1px 4px rgba(0,0,0,0.25);
+  box-shadow: 0 4px 18px rgba(240,215,138,0.12), 0 1px 4px rgba(0,0,0,0.30);
 }
 
-/* ─── Knowledge panel (glossary right rail) ──────── */
-.knowledge-panel {
-  height: 100%;
+/* ─── Glossary drawer (overlay, not in layout flow) ─ */
+.glossary-drawer {
+  position: fixed;
+  top: var(--header-h);
+  right: 0;
+  bottom: 0;
+  width: 360px;
+  z-index: 50;
+  background: var(--surface-1);
+  border-left: 1px solid var(--divider);
+  box-shadow: -20px 0 56px rgba(0,0,0,0.35);
+  animation: drawerSlideIn 0.2s ease-out;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  background: var(--surface);
-  border-left: 1px solid var(--divider);
+}
+
+.glossary-backdrop {
+  display: none;
 }
 
 /* ─── Animations ─────────────────────────────────── */
@@ -367,7 +383,7 @@ input, select { font-family: inherit; outline: none; }
 }
 
 @keyframes docFade {
-  from { opacity: 0.6; }
+  from { opacity: 0.5; }
   to   { opacity: 1; }
 }
 
@@ -378,12 +394,17 @@ input, select { font-family: inherit; outline: none; }
 
 @keyframes livePulse {
   0%, 100% { opacity: 1; }
-  50%       { opacity: 0.4; }
+  50%       { opacity: 0.35; }
 }
 
-@keyframes glossarySlideIn {
-  from { opacity: 0; transform: translateX(8px); }
-  to   { opacity: 1; transform: translateX(0); }
+@keyframes drawerSlideIn {
+  from { transform: translateX(28px); opacity: 0; }
+  to   { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes sheetSlideUp {
+  from { transform: translateY(40px); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
 }
 
 @keyframes roomPulse {
@@ -398,12 +419,12 @@ input, select { font-family: inherit; outline: none; }
 
 /* ─── UI element classes ─────────────────────────── */
 
-/* 2px cyan cursor line */
+/* Teal cursor */
 .doc-cursor {
   display: inline-block;
   width: 2px;
   height: 1.1em;
-  background: var(--cyan);
+  background: var(--teal);
   animation: cursorBlink 1s ease-in-out infinite;
   vertical-align: text-bottom;
   border-radius: 1px;
@@ -425,8 +446,27 @@ input, select { font-family: inherit; outline: none; }
   animation: docFade 0.25s ease-out forwards;
 }
 
-/* ─── Mobile responsive ──────────────────────────── */
-@media (max-width: 640px) {
+/* ─── Mobile ─────────────────────────────────────── */
+@media (max-width: 768px) {
+  .glossary-drawer {
+    width: 100%;
+    top: auto;
+    right: 0;
+    bottom: 0;
+    height: 65vh;
+    border-left: none;
+    border-top: 1px solid var(--divider);
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -20px 56px rgba(0,0,0,0.40);
+    animation: sheetSlideUp 0.22s ease-out;
+  }
+  .glossary-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 49;
+    background: rgba(0,0,0,0.55);
+  }
   .control-dock {
     height: auto;
     min-height: 56px;

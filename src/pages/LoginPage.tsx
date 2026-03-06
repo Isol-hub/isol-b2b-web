@@ -61,7 +61,7 @@ export default function LoginPage() {
           {/* Logo */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 52 }}>
             <div className="logo-mark" style={{ width: 36, height: 36 }}>
-              <span style={{ color: '#fff', fontWeight: 800, fontSize: 18 }}>i</span>
+              <span style={{ color: '#111', fontWeight: 800, fontSize: 18 }}>i</span>
             </div>
             <span style={{ fontSize: 16, fontWeight: 700, letterSpacing: '-0.01em' }}>ISOL Studio</span>
           </div>
@@ -99,8 +99,8 @@ export default function LoginPage() {
                 <span style={{
                   fontSize: 18, flexShrink: 0,
                   width: 36, height: 36,
-                  background: 'rgba(37,99,235,0.10)',
-                  border: '1px solid rgba(37,99,235,0.18)',
+                  background: 'rgba(214,178,94,0.10)',
+                  border: '1px solid rgba(214,178,94,0.18)',
                   borderRadius: 'var(--radius)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>{icon}</span>
@@ -164,7 +164,7 @@ export default function LoginPage() {
           {/* Mobile logo */}
           <div className="login-mobile-logo" style={{ marginBottom: 32 }}>
             <div className="logo-mark" style={{ width: 44, height: 44, marginBottom: 12 }}>
-              <span style={{ color: '#fff', fontWeight: 800, fontSize: 20 }}>i</span>
+              <span style={{ color: '#111', fontWeight: 800, fontSize: 20 }}>i</span>
             </div>
             <h1 style={{ fontSize: 18, fontWeight: 700, marginBottom: 4 }}>ISOL Studio</h1>
             <p style={{ fontSize: 13, color: 'var(--text-dim)' }}>Live translation for your team</p>

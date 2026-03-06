@@ -148,14 +148,15 @@ export default function WorkspacePage() {
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'var(--bg)' }}>
 
-      {/* ━━ TOP NAV ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+      {/* ━━ TOP BAR ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
       <header className="header-glass" style={{
         display: 'flex', alignItems: 'center',
-        padding: '0 24px', height: 52, gap: 16,
+        padding: '0 24px', height: 52, gap: 14, flexShrink: 0,
       }}>
+        {/* Brand */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
           <div className="logo-mark" style={{ width: 26, height: 26 }}>
-            <span style={{ color: '#fff', fontWeight: 800, fontSize: 13 }}>i</span>
+            <span style={{ color: '#111', fontWeight: 800, fontSize: 13 }}>i</span>
           </div>
           <span style={{ fontSize: 14, fontWeight: 700, letterSpacing: '-0.01em' }}>ISOL Studio</span>
           {workspaceSlug && (
@@ -163,24 +164,56 @@ export default function WorkspacePage() {
           )}
         </div>
 
-        <div style={{ flex: 1 }} />
-
+        {/* Session metadata — shown when active */}
         {sessionActive && (
-          <div className="status-pill">
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 10,
+            padding: '4px 14px',
+            background: 'rgba(255,255,255,0.03)',
+            border: '1px solid var(--divider)',
+            borderRadius: 20,
+            fontSize: 12, color: 'var(--text-dim)',
+          }}>
             <span style={{
               width: 6, height: 6, borderRadius: '50%',
               background: statusColor,
               transition: 'background 0.3s', flexShrink: 0,
+              animation: isActive ? 'livePulse 2s ease-in-out infinite' : undefined,
             }} />
-            <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>{statusLabel}</span>
+            <span style={{ fontWeight: 500 }}>{statusLabel}</span>
+            {targetLangLabel && (
+              <>
+                <span style={{ color: 'var(--divider)' }}>·</span>
+                <span>{targetLangLabel.flag} {targetLangLabel.label}</span>
+              </>
+            )}
+            {roomCode && (
+              <>
+                <span style={{ color: 'var(--divider)' }}>·</span>
+                <span style={{
+                  fontFamily: 'monospace', fontSize: 11,
+                  letterSpacing: '0.06em', color: 'var(--text-muted)',
+                }}>{roomCode}</span>
+                <button
+                  onClick={handleCopyRoom}
+                  style={{
+                    background: 'none',
+                    color: roomCopied ? 'var(--live)' : 'var(--text-muted)',
+                    fontSize: 11, fontWeight: 600,
+                    padding: '2px 6px', borderRadius: 4,
+                    border: 'none', cursor: 'pointer',
+                    transition: 'color 0.2s',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {roomCopied ? '✓' : 'Copy'}
+                </button>
+              </>
+            )}
           </div>
         )}
 
-        {sessionActive && targetLangLabel && (
-          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-            {targetLangLabel.flag} {targetLangLabel.label}
-          </span>
-        )}
+        <div style={{ flex: 1 }} />
 
         <span style={{
           fontSize: 12, color: 'var(--text-muted)',
@@ -194,7 +227,7 @@ export default function WorkspacePage() {
       {/* ━━ BODY ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
 
-        {/* ── MAIN (canvas + control dock) ──────────────────── */}
+        {/* ── MAIN: canvas + dock ───────────────────────────── */}
         <main style={{
           flex: 1,
           display: 'flex',
@@ -203,7 +236,7 @@ export default function WorkspacePage() {
           minWidth: 0,
         }}>
 
-          {/* Error banner */}
+          {/* Error */}
           {error && (
             <div style={{ padding: '12px 32px 0', flexShrink: 0 }}>
               <ErrorBanner message={error} onDismiss={() => setError('')} />
@@ -214,9 +247,9 @@ export default function WorkspacePage() {
           {!compact && (
             <div style={{ flex: 1, overflowY: 'auto', padding: '28px 32px' }}>
 
-              {/* Sticky note: AI structured version available after session */}
+              {/* Sticky note: AI structured version available post-session */}
               {canAi && !sessionActive && (
-                <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 20 }}>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 24 }}>
                   <div className="sticky-note" style={{ maxWidth: 260 }}>
                     <div style={{
                       display: 'flex', alignItems: 'center', gap: 6,
@@ -224,7 +257,7 @@ export default function WorkspacePage() {
                     }}>
                       <span>✦</span> AI-structured version ready
                     </div>
-                    <p style={{ fontSize: 12, opacity: 0.75, lineHeight: 1.5 }}>
+                    <p style={{ fontSize: 12, opacity: 0.70, lineHeight: 1.5 }}>
                       Toggle "AI Enhanced" in the document to see the clean structured view.
                     </p>
                   </div>
@@ -247,9 +280,8 @@ export default function WorkspacePage() {
           {/* ── Control dock ──────────────────────────────── */}
           <div className="control-dock">
             {!sessionActive ? (
-
-              /* Pre-session controls */
               <>
+                {/* Source */}
                 <div style={{ display: 'flex', gap: 6 }}>
                   <button
                     className={`dock-source-btn${audioSource === 'display' ? ' active' : ''}`}
@@ -267,6 +299,7 @@ export default function WorkspacePage() {
 
                 <div className="dock-divider" />
 
+                {/* Language */}
                 <div className="control-dock-lang" style={{ width: 200 }}>
                   <LanguageSelector value={targetLang} onChange={setTargetLang} disabled={false} />
                 </div>
@@ -280,12 +313,8 @@ export default function WorkspacePage() {
                 )}
 
                 {transcript.length > 0 && (
-                  <button
-                    onClick={() => setShowModal(true)}
-                    className="btn-icon"
-                    style={{ fontSize: 13 }}
-                  >
-                    Export document →
+                  <button onClick={() => setShowModal(true)} className="btn-icon" style={{ fontSize: 13 }}>
+                    Export document
                   </button>
                 )}
 
@@ -297,54 +326,8 @@ export default function WorkspacePage() {
                   Start session →
                 </button>
               </>
-
             ) : (
-
-              /* Active session controls */
               <>
-                {/* Room card */}
-                {ws.sessionId && (
-                  <div style={{
-                    display: 'flex', alignItems: 'center', gap: 8,
-                    background: 'var(--surface-1)',
-                    border: '1px solid var(--border)',
-                    borderRadius: 'var(--radius)',
-                    padding: '6px 10px 6px 12px',
-                    flexShrink: 0,
-                  }}>
-                    <span style={{
-                      width: 6, height: 6, borderRadius: '50%',
-                      background: 'var(--live)',
-                      animation: 'roomPulse 2s ease-in-out infinite',
-                      flexShrink: 0,
-                    }} />
-                    <span style={{
-                      fontSize: 11, fontWeight: 700, color: 'var(--live)',
-                      letterSpacing: '0.07em', textTransform: 'uppercase',
-                    }}>Room</span>
-                    <span style={{
-                      fontFamily: 'monospace', fontSize: 13, fontWeight: 700,
-                      letterSpacing: '0.08em', color: 'var(--text)',
-                    }}>{roomCode}</span>
-                    <button
-                      onClick={handleCopyRoom}
-                      style={{
-                        background: roomCopied ? 'rgba(16,185,129,0.12)' : 'rgba(37,99,235,0.15)',
-                        color: roomCopied ? 'var(--live)' : '#93C5FD',
-                        fontWeight: 600, fontSize: 11,
-                        padding: '4px 10px',
-                        border: 'none', borderRadius: 5,
-                        cursor: 'pointer', transition: 'all 0.2s',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {roomCopied ? '✓ Copied' : 'Copy link'}
-                    </button>
-                  </div>
-                )}
-
-                <div className="dock-divider" />
-
                 <div style={{ flex: 1 }} />
 
                 <button
@@ -356,30 +339,27 @@ export default function WorkspacePage() {
                 </button>
 
                 {transcript.length > 0 && (
-                  <button
-                    onClick={() => setShowModal(true)}
-                    className="btn-icon"
-                    style={{ fontSize: 13 }}
-                  >
+                  <button onClick={() => setShowModal(true)} className="btn-icon" style={{ fontSize: 13 }}>
                     Export →
                   </button>
                 )}
 
+                {/* Stop */}
                 <button
                   onClick={handleStop}
                   style={{
-                    background: 'rgba(239,68,68,0.08)',
-                    border: '1px solid rgba(239,68,68,0.20)',
+                    background: 'rgba(255,107,107,0.08)',
+                    border: '1px solid rgba(255,107,107,0.20)',
                     color: 'var(--red)',
                     fontWeight: 600, fontSize: 13,
                     padding: '0 18px', height: 38,
                     borderRadius: 'var(--radius)',
                     cursor: 'pointer', transition: 'background 0.15s',
                     whiteSpace: 'nowrap', flexShrink: 0,
-                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                    display: 'inline-flex', alignItems: 'center', gap: 7,
                   }}
-                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'rgba(239,68,68,0.14)'}
-                  onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'rgba(239,68,68,0.08)'}
+                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'rgba(255,107,107,0.14)'}
+                  onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'rgba(255,107,107,0.08)'}
                 >
                   <span style={{
                     width: 8, height: 8, borderRadius: 2,
@@ -388,32 +368,9 @@ export default function WorkspacePage() {
                   Stop
                 </button>
               </>
-
             )}
           </div>
         </main>
-
-        {/* ── RIGHT PANEL: GLOSSARY ─────────────────────────────── */}
-        <aside style={{
-          width: glossaryWord ? 300 : 0,
-          flexShrink: 0,
-          overflow: 'hidden',
-          transition: 'width 0.25s ease',
-          borderLeft: '1px solid var(--divider)',
-          background: 'var(--surface)',
-        }}>
-          {glossaryWord && (
-            <div style={{ width: 300, height: '100%' }}>
-              <GlossaryPanel
-                word={glossaryWord.word}
-                sentences={wordIndex.current.get(glossaryWord.word) ?? [glossaryWord.sentence]}
-                currentSentence={glossaryWord.sentence}
-                targetLang={targetLang}
-                onClose={() => setGlossaryWord(null)}
-              />
-            </div>
-          )}
-        </aside>
 
       </div>
 
@@ -436,6 +393,22 @@ export default function WorkspacePage() {
           aiFormatted={aiFormatted}
           onClose={() => setShowModal(false)}
         />
+      )}
+
+      {/* Glossary drawer — overlay, does not compress canvas */}
+      {glossaryWord && (
+        <>
+          <div className="glossary-backdrop" onClick={() => setGlossaryWord(null)} />
+          <div className="glossary-drawer">
+            <GlossaryPanel
+              word={glossaryWord.word}
+              sentences={wordIndex.current.get(glossaryWord.word) ?? [glossaryWord.sentence]}
+              currentSentence={glossaryWord.sentence}
+              targetLang={targetLang}
+              onClose={() => setGlossaryWord(null)}
+            />
+          </div>
+        </>
       )}
 
     </div>

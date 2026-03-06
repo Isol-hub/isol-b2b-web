@@ -15,9 +15,9 @@ interface AiDef {
 }
 
 const REGISTER_COLOR: Record<string, string> = {
-  formal: '#93C5FD',
+  formal: 'var(--teal)',
   informal: '#FCA5A5',
-  technical: '#A5B4FC',
+  technical: 'var(--accent)',
   neutral: 'var(--text-muted)',
 }
 
@@ -51,8 +51,8 @@ export default function GlossaryPanel({ word, sentences, currentSentence, target
     return parts.map((p, i) =>
       re.test(p)
         ? <mark key={i} style={{
-            background: 'rgba(37,99,235,0.20)',
-            color: '#93C5FD',
+            background: 'rgba(214,178,94,0.18)',
+            color: 'var(--accent)',
             borderRadius: 3,
             padding: '0 2px',
           }}>{p}</mark>
@@ -117,8 +117,8 @@ export default function GlossaryPanel({ word, sentences, currentSentence, target
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 0' }}>
             <span style={{
               width: 14, height: 14,
-              border: '1.5px solid rgba(37,99,235,0.2)',
-              borderTopColor: 'var(--accent)',
+              border: '1.5px solid rgba(88,213,201,0.2)',
+              borderTopColor: 'var(--teal)',
               borderRadius: '50%',
               animation: 'spin 0.8s linear infinite',
               display: 'inline-block', flexShrink: 0,
@@ -145,17 +145,17 @@ export default function GlossaryPanel({ word, sentences, currentSentence, target
 
             {aiDef.context && (
               <div style={{
-                background: 'rgba(37,99,235,0.06)',
+                background: 'rgba(88,213,201,0.05)',
                 borderRadius: 10,
                 padding: '14px 16px',
-                border: '1px solid rgba(37,99,235,0.14)',
+                border: '1px solid rgba(88,213,201,0.12)',
               }}>
                 <p style={{
                   fontSize: 10, fontWeight: 700, letterSpacing: '0.09em',
                   textTransform: 'uppercase', color: 'var(--text-muted)',
                   marginBottom: 8,
                 }}>In this context</p>
-                <p style={{ fontSize: 14, color: '#93C5FD', lineHeight: 1.65, fontStyle: 'italic' }}>
+                <p style={{ fontSize: 14, color: 'var(--teal)', lineHeight: 1.65, fontStyle: 'italic' }}>
                   {aiDef.context}
                 </p>
               </div>

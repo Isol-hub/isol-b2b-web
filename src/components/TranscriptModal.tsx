@@ -235,9 +235,9 @@ export default function TranscriptModal({ transcript, targetLang, aiFormatted, o
     border: 'none',
     cursor: 'pointer',
     transition: 'all 0.15s',
-    background: active ? 'rgba(37,99,235,0.20)' : 'transparent',
-    color: active ? '#93C5FD' : 'var(--text-muted)',
-    borderBottom: active ? '2px solid rgba(37,99,235,0.70)' : '2px solid transparent',
+    background: active ? 'rgba(214,178,94,0.12)' : 'transparent',
+    color: active ? 'var(--accent)' : 'var(--text-muted)',
+    borderBottom: active ? '2px solid rgba(214,178,94,0.60)' : '2px solid transparent',
   })
 
   const FORMAT_STYLE = (active: boolean): React.CSSProperties => ({
@@ -245,11 +245,11 @@ export default function TranscriptModal({ transcript, targetLang, aiFormatted, o
     borderRadius: 7,
     fontSize: 12,
     fontWeight: 600,
-    border: `1px solid ${active ? 'rgba(37,99,235,0.50)' : 'var(--border)'}`,
+    border: `1px solid ${active ? 'rgba(214,178,94,0.45)' : 'var(--border)'}`,
     cursor: 'pointer',
     transition: 'all 0.15s',
-    background: active ? 'rgba(37,99,235,0.14)' : 'rgba(255,255,255,0.03)',
-    color: active ? '#93C5FD' : 'var(--text-muted)',
+    background: active ? 'rgba(214,178,94,0.10)' : 'rgba(255,255,255,0.03)',
+    color: active ? 'var(--accent)' : 'var(--text-muted)',
   })
 
   const FORMAT_LABELS: { id: FileFormat; label: string }[] = [
