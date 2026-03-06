@@ -54,11 +54,14 @@ export default function WorkspacePage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ lines: transcript.map(l => l.text) }),
     })
-      .then(r => r.ok ? r.json() : null)
+      .then(r => {
+        if (!r.ok) { r.text().then(t => setError(`AI format error ${r.status}: ${t}`)); return null }
+        return r.json()
+      })
       .then((data: { formatted?: string } | null) => {
         if (data?.formatted) setAiFormatted(data.formatted)
       })
-      .catch(() => {})
+      .catch(e => setError(`AI format failed: ${e.message}`))
       .finally(() => { setAiLoading(false); aiRunningRef.current = false })
   }, [transcript.length])
 
