@@ -127,35 +127,40 @@ export default function ViewerPage() {
   }, [])
 
   return (
-    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'var(--bg)' }}>
 
-      {/* Header */}
+      {/* ━━ TOP NAV ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
       <header className="header-glass" style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '12px 24px', flexShrink: 0,
+        display: 'flex', alignItems: 'center',
+        padding: '0 24px', height: 52, gap: 16,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div className="logo-mark" style={{ width: 28, height: 28 }}>
-            <span style={{ color: '#fff', fontWeight: 800, fontSize: 14 }}>i</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+          <div className="logo-mark" style={{ width: 26, height: 26 }}>
+            <span style={{ color: '#fff', fontWeight: 800, fontSize: 13 }}>i</span>
           </div>
-          <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.06em' }}>ISOL</span>
-          <span style={{ fontSize: 13, color: 'var(--text-dim)' }}>/ {workspaceSlug}</span>
-          <span style={{
-            fontSize: 11, background: 'rgba(124,58,237,0.15)',
-            border: '1px solid rgba(124,58,237,0.30)',
-            color: '#a78bfa', borderRadius: 6, padding: '2px 8px',
-            fontWeight: 600, letterSpacing: '0.06em',
-          }}>
-            VIEWER
-          </span>
+          <span style={{ fontSize: 14, fontWeight: 700, letterSpacing: '-0.01em' }}>ISOL Studio</span>
+          {workspaceSlug && (
+            <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>/ {workspaceSlug}</span>
+          )}
         </div>
+
+        <span style={{
+          fontSize: 11, fontWeight: 700, letterSpacing: '0.08em',
+          textTransform: 'uppercase',
+          background: 'rgba(37,99,235,0.12)',
+          border: '1px solid rgba(37,99,235,0.25)',
+          color: '#93C5FD',
+          borderRadius: 6, padding: '3px 9px',
+        }}>Viewer</span>
+
+        <div style={{ flex: 1 }} />
+
         {joined && (
           <div className="status-pill">
             <span style={{
               width: 6, height: 6, borderRadius: '50%',
               background: statusColor,
-              transition: 'all 0.3s',
-              flexShrink: 0,
+              transition: 'all 0.3s', flexShrink: 0,
             }} />
             <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>
               {ws.state === 'connected' ? 'Live'
@@ -167,86 +172,153 @@ export default function ViewerPage() {
         )}
       </header>
 
-      <main style={{
-        flex: 1,
-        display: 'flex',
-        flexDirection: 'column',
-        maxWidth: 860,
-        margin: '0 auto',
-        width: '100%',
-        padding: '32px 28px',
-        gap: 20,
-        overflowY: 'auto',
-      }}>
-        {!joined ? (
-          /* Join screen */
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 28, maxWidth: 480 }}>
-            <div>
-              <div style={{
-                display: 'inline-flex', alignItems: 'center', gap: 7,
-                background: 'rgba(16,185,129,0.08)',
-                border: '1px solid rgba(16,185,129,0.22)',
-                borderRadius: 20, padding: '4px 14px', marginBottom: 20,
-              }}>
-                <span style={{
-                  width: 6, height: 6, borderRadius: '50%',
-                  background: 'var(--live)',
-                  animation: 'livePulse 2s ease-in-out infinite',
-                }} />
-                <span style={{ fontSize: 11, color: 'var(--live)', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Session in progress</span>
-              </div>
-              <h2 style={{ fontSize: 26, fontWeight: 700, marginBottom: 12, letterSpacing: '-0.02em', lineHeight: 1.25 }}>
-                You've been invited<br /><span className="gradient-text">to a live session</span>
-              </h2>
-              <p style={{ fontSize: 14, color: 'var(--text-dim)', lineHeight: 1.7 }}>
-                Choose your language and join. You'll see live captions as they're spoken, with real-time translation.
-              </p>
-            </div>
+      {/* ━━ BODY ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+      <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
 
-            <div style={{ width: 220 }}>
-              <LanguageSelector value={targetLang} onChange={setTargetLang} disabled={false} />
-            </div>
+        {/* ── MAIN ─────────────────────────────────────────────── */}
+        <main style={{
+          flex: 1,
+          overflowY: 'auto',
+          padding: joined ? '28px 32px' : '0',
+          display: 'flex',
+          flexDirection: 'column',
+          minWidth: 0,
+        }}>
+          {!joined ? (
 
-            <button
-              onClick={handleJoin}
-              className="btn-primary"
-              style={{ alignSelf: 'flex-start', fontSize: 15, padding: '12px 32px' }}
-            >
-              Join session →
-            </button>
-          </div>
-        ) : (
-          <>
-            {/* Language + export bar */}
-            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 14 }}>
-              <div style={{ width: 200 }}>
-                <LanguageSelector value={targetLang} onChange={handleLangChange} disabled={false} />
-              </div>
-              {transcript.length > 0 && (
+            /* ── Pre-join screen ─────────────────────────────── */
+            <div style={{
+              flex: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '48px 28px',
+            }}>
+              <div style={{ maxWidth: 480, width: '100%' }}>
+
+                {/* Live badge */}
+                <div style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 8,
+                  background: 'rgba(16,185,129,0.08)',
+                  border: '1px solid rgba(16,185,129,0.20)',
+                  borderRadius: 20, padding: '5px 14px', marginBottom: 24,
+                }}>
+                  <span style={{
+                    width: 6, height: 6, borderRadius: '50%',
+                    background: 'var(--live)',
+                    animation: 'livePulse 2s ease-in-out infinite',
+                  }} />
+                  <span style={{
+                    fontSize: 11, fontWeight: 700, color: 'var(--live)',
+                    letterSpacing: '0.08em', textTransform: 'uppercase',
+                  }}>Session in progress</span>
+                </div>
+
+                {/* Headline */}
+                <h2 style={{
+                  fontSize: 'clamp(24px, 3vw, 32px)',
+                  fontWeight: 700,
+                  lineHeight: 1.2,
+                  letterSpacing: '-0.02em',
+                  marginBottom: 12,
+                }}>
+                  You're entering<br />
+                  <span className="gradient-text">a live room</span>
+                </h2>
+                <p style={{
+                  fontSize: 15, color: 'var(--text-dim)', lineHeight: 1.65, marginBottom: 32,
+                }}>
+                  Choose your language and join. You'll see the live document and real-time translation as it happens.
+                </p>
+
+                {/* Language picker */}
+                <div style={{
+                  background: 'var(--surface-1)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 'var(--radius-lg)',
+                  padding: '20px 20px',
+                  marginBottom: 24,
+                }}>
+                  <div style={{ maxWidth: 240 }}>
+                    <LanguageSelector value={targetLang} onChange={setTargetLang} disabled={false} />
+                  </div>
+                </div>
+
                 <button
-                  onClick={() => setShowModal(true)}
-                  className="btn-icon"
-                  style={{ fontSize: 13, padding: '9px 16px', marginLeft: 'auto' }}
+                  onClick={handleJoin}
+                  className="btn-primary"
+                  style={{ fontSize: 15, padding: '0 32px', height: 48 }}
                 >
-                  Edit & Export →
+                  Join the room →
                 </button>
-              )}
+
+              </div>
             </div>
 
-            <DocumentView
-              transcript={transcript}
-              currentLine={currentLine}
-              isActive={isActive}
-              targetLang={targetLang}
-              aiFormatted={aiFormatted}
-              aiFormattedAt={aiFormattedAt}
-              aiLoading={aiLoading}
-              onWordClick={handleWordClick}
-            />
-          </>
-        )}
-      </main>
+          ) : (
 
+            /* ── Joined: document view ────────────────────────── */
+            <>
+              {/* Language + export bar */}
+              <div style={{
+                display: 'flex', alignItems: 'flex-end', gap: 12, marginBottom: 24, flexShrink: 0,
+              }}>
+                <div style={{ width: 200 }}>
+                  <LanguageSelector value={targetLang} onChange={handleLangChange} disabled={false} />
+                </div>
+                {transcript.length > 0 && (
+                  <button
+                    onClick={() => setShowModal(true)}
+                    className="btn-icon"
+                    style={{ fontSize: 13, marginLeft: 'auto' }}
+                  >
+                    Edit & Export →
+                  </button>
+                )}
+              </div>
+
+              <div style={{ flex: 1 }}>
+                <DocumentView
+                  transcript={transcript}
+                  currentLine={currentLine}
+                  isActive={isActive}
+                  targetLang={targetLang}
+                  aiFormatted={aiFormatted}
+                  aiFormattedAt={aiFormattedAt}
+                  aiLoading={aiLoading}
+                  onWordClick={handleWordClick}
+                />
+              </div>
+            </>
+
+          )}
+        </main>
+
+        {/* ── RIGHT PANEL: GLOSSARY ─────────────────────────────── */}
+        <aside style={{
+          width: glossaryWord ? 300 : 0,
+          flexShrink: 0,
+          overflow: 'hidden',
+          transition: 'width 0.25s ease',
+          borderLeft: '1px solid var(--divider)',
+          background: 'var(--surface)',
+        }}>
+          {glossaryWord && (
+            <div style={{ width: 300, height: '100%' }}>
+              <GlossaryPanel
+                word={glossaryWord.word}
+                sentences={wordIndex.current.get(glossaryWord.word) ?? [glossaryWord.sentence]}
+                currentSentence={glossaryWord.sentence}
+                targetLang={targetLang}
+                onClose={() => setGlossaryWord(null)}
+              />
+            </div>
+          )}
+        </aside>
+
+      </div>
+
+      {/* ━━ MODALS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
       {showModal && (
         <TranscriptModal
           transcript={transcript}
@@ -256,15 +328,6 @@ export default function ViewerPage() {
         />
       )}
 
-      {glossaryWord && (
-        <GlossaryPanel
-          word={glossaryWord.word}
-          sentences={wordIndex.current.get(glossaryWord.word) ?? [glossaryWord.sentence]}
-          currentSentence={glossaryWord.sentence}
-          targetLang={targetLang}
-          onClose={() => setGlossaryWord(null)}
-        />
-      )}
     </div>
   )
 }

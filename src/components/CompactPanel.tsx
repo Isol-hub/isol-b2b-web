@@ -50,7 +50,7 @@ export default function CompactPanel({ current, previous, wsState, audioState, o
         position: 'fixed',
         left: pos.left, top: pos.top,
         width: size.width, height: size.height,
-        background: 'rgba(7,7,18,0.92)',
+        background: 'rgba(11,15,25,0.94)',
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
         border: '1px solid var(--border)',
@@ -58,7 +58,7 @@ export default function CompactPanel({ current, previous, wsState, audioState, o
         overflow: 'hidden',
         zIndex: 9999,
         display: 'flex', flexDirection: 'column',
-        boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+        boxShadow: 'var(--shadow-lg)',
         resize: 'both', minWidth: 280, minHeight: 100,
       }}
       onMouseMove={() => {
@@ -72,12 +72,14 @@ export default function CompactPanel({ current, previous, wsState, audioState, o
         style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: '7px 12px', cursor: 'grab',
-          borderBottom: '1px solid var(--border)',
+          borderBottom: '1px solid var(--divider)',
           userSelect: 'none',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-          <span style={{ fontSize: 11, color: 'var(--text-dim)', fontWeight: 700, letterSpacing: '0.08em' }}>ISOL</span>
+          <span style={{ fontSize: 12, color: 'var(--text-dim)', fontWeight: 700, letterSpacing: '0.06em' }}>
+            ISOL Studio
+          </span>
           <span style={{
             width: 5, height: 5, borderRadius: '50%',
             background: dotColor,
@@ -86,9 +88,13 @@ export default function CompactPanel({ current, previous, wsState, audioState, o
         </div>
         <button
           onClick={onClose}
-          style={{ background: 'none', color: 'var(--text-dim)', fontSize: 16, lineHeight: 1, padding: '2px 6px', borderRadius: 4, transition: 'color 0.15s' }}
+          style={{
+            background: 'none', color: 'var(--text-muted)',
+            fontSize: 16, lineHeight: 1, padding: '2px 6px', borderRadius: 4,
+            transition: 'color 0.15s',
+          }}
           onMouseEnter={e => (e.target as HTMLElement).style.color = 'var(--text)'}
-          onMouseLeave={e => (e.target as HTMLElement).style.color = 'var(--text-dim)'}
+          onMouseLeave={e => (e.target as HTMLElement).style.color = 'var(--text-muted)'}
         >×</button>
       </div>
 

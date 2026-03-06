@@ -134,48 +134,73 @@ export default function WorkspacePage() {
   const statusLabel = ws.state === 'error' || audio.state === 'error' ? 'Error'
     : ws.state === 'reconnecting' ? 'Reconnecting…'
     : ws.state === 'connecting' ? 'Connecting…'
-    : audio.state === 'requesting' ? 'Requesting permission…'
-    : isActive ? `Live · ${targetLangLabel?.flag ?? ''} ${targetLangLabel?.label ?? targetLang}`
+    : audio.state === 'requesting' ? 'Requesting…'
+    : isActive ? 'Live'
     : 'Ready'
 
   return (
-    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'var(--bg)' }}>
 
-      {/* Header */}
+      {/* ━━ TOP NAV ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
       <header className="header-glass" style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '12px 24px', flexShrink: 0,
+        display: 'flex', alignItems: 'center',
+        padding: '0 24px', height: 52, gap: 16,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div className="logo-mark" style={{ width: 28, height: 28 }}>
-            <span style={{ color: '#fff', fontWeight: 800, fontSize: 14 }}>i</span>
+        {/* Brand */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+          <div className="logo-mark" style={{ width: 26, height: 26 }}>
+            <span style={{ color: '#fff', fontWeight: 800, fontSize: 13 }}>i</span>
           </div>
-          <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.06em' }}>ISOL</span>
-          <span style={{ fontSize: 13, color: 'var(--text-dim)' }}>/ {workspaceSlug}</span>
+          <span style={{ fontSize: 14, fontWeight: 700, letterSpacing: '-0.01em' }}>ISOL Studio</span>
+          {workspaceSlug && (
+            <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>/ {workspaceSlug}</span>
+          )}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+
+        <div style={{ flex: 1 }} />
+
+        {/* Live status */}
+        {sessionActive && (
           <div className="status-pill">
             <span style={{
               width: 6, height: 6, borderRadius: '50%',
               background: statusColor,
-              transition: 'all 0.3s',
+              transition: 'background 0.3s',
               flexShrink: 0,
             }} />
             <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>{statusLabel}</span>
           </div>
-          <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>{session.email}</span>
-          <button onClick={handleLogout} className="btn-icon" style={{ fontSize: 12, padding: '6px 12px' }}>Sign out</button>
-        </div>
+        )}
+
+        {/* Lang */}
+        {sessionActive && targetLangLabel && (
+          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+            {targetLangLabel.flag} {targetLangLabel.label}
+          </span>
+        )}
+
+        {/* User + sign out */}
+        <span style={{
+          fontSize: 12, color: 'var(--text-muted)',
+          maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        }}>{session.email}</span>
+        <button onClick={handleLogout} className="btn-icon" style={{ fontSize: 12, padding: '5px 12px' }}>
+          Sign out
+        </button>
       </header>
 
       {/* Onboarding banner */}
       {showOnboarding && (
-        <div className="onboarding-banner" style={{ padding: '10px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', flexShrink: 0 }}>
+        <div className="onboarding-banner" style={{
+          padding: '10px 24px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          gap: 16, flexWrap: 'wrap', flexShrink: 0,
+        }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
             {[
               { n: '1', text: 'Choose audio source' },
               { n: '2', text: 'Pick target language' },
-              { n: '3', text: 'Start — share audio when prompted' },
+              { n: '3', text: 'Start and share your screen audio' },
             ].map(({ n, text }) => (
               <div key={n} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{
@@ -188,152 +213,195 @@ export default function WorkspacePage() {
               </div>
             ))}
           </div>
-          <button onClick={dismissOnboarding} style={{
-            background: 'rgba(255,255,255,0.05)',
-            color: 'var(--text-dim)', fontSize: 12,
-            padding: '4px 12px', borderRadius: 'var(--radius)',
-            border: '1px solid var(--border)',
-          }}>Got it</button>
+          <button
+            onClick={dismissOnboarding}
+            style={{
+              background: 'rgba(255,255,255,0.05)',
+              color: 'var(--text-muted)', fontSize: 12,
+              padding: '4px 12px', borderRadius: 'var(--radius)',
+              border: '1px solid var(--border)',
+            }}
+          >Got it</button>
         </div>
       )}
 
-      {/* Two-zone layout */}
+      {/* ━━ BODY: 3-COLUMN ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
 
-        {/* Left sidebar */}
+        {/* ── LEFT SIDEBAR ─────────────────────────────────────── */}
         <aside style={{
-          width: 256,
+          width: 220,
           flexShrink: 0,
-          borderRight: '1px solid var(--border)',
-          padding: '24px 20px',
+          borderRight: '1px solid var(--divider)',
+          padding: '24px 16px',
           display: 'flex',
           flexDirection: 'column',
           gap: 20,
           overflowY: 'auto',
+          background: 'var(--surface)',
         }}>
+
           {!sessionActive ? (
             <>
-              {/* Audio source */}
-              <div>
-                <p style={{ fontSize: 11, color: 'var(--text-dim)', marginBottom: 10, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase' }}>
-                  Audio source
-                </p>
-                <div style={{ display: 'flex', gap: 8 }}>
+              {/* CAPTURE */}
+              <div className="sidebar-group">
+                <p className="sidebar-group-label">Capture</p>
+                <div style={{ display: 'flex', gap: 6 }}>
                   <button
                     className={`source-btn${audioSource === 'display' ? ' active' : ''}`}
                     onClick={() => setAudioSource('display')}
                   >
-                    <span style={{ fontSize: 20 }}>🖥</span>
-                    <span style={{ fontWeight: 600 }}>Screen</span>
+                    <span style={{ fontSize: 18 }}>🖥</span>
+                    <span>Screen</span>
                   </button>
                   <button
                     className={`source-btn${audioSource === 'microphone' ? ' active' : ''}`}
                     onClick={() => setAudioSource('microphone')}
                   >
-                    <span style={{ fontSize: 20 }}>🎤</span>
-                    <span style={{ fontWeight: 600 }}>Mic</span>
+                    <span style={{ fontSize: 18 }}>🎤</span>
+                    <span>Mic</span>
                   </button>
                 </div>
                 {isUnsupported && (
-                  <p style={{ fontSize: 12, color: 'var(--orange)', marginTop: 10, lineHeight: 1.5 }}>
+                  <p style={{ fontSize: 12, color: 'var(--orange)', lineHeight: 1.5, marginTop: 2 }}>
                     Screen audio not supported. Use Mic or Chrome/Edge.
                   </p>
                 )}
               </div>
 
-              {/* Language */}
-              <LanguageSelector value={targetLang} onChange={setTargetLang} disabled={false} />
+              {/* LANGUAGE */}
+              <div className="sidebar-group">
+                <LanguageSelector value={targetLang} onChange={setTargetLang} disabled={false} />
+              </div>
 
-              {/* Start */}
-              <button
-                onClick={handleStart}
-                disabled={isUnsupported}
-                className="btn-primary"
-                style={{ width: '100%', justifyContent: 'center' }}
-              >
-                Start session →
-              </button>
+              {/* START */}
+              <div className="sidebar-group">
+                <button
+                  onClick={handleStart}
+                  disabled={isUnsupported}
+                  className="btn-primary"
+                  style={{ width: '100%' }}
+                >
+                  Start session →
+                </button>
+              </div>
             </>
           ) : (
             <>
-              {/* Language (disabled while active) */}
-              <LanguageSelector value={targetLang} onChange={setTargetLang} disabled={true} />
+              {/* LANGUAGE (disabled during session) */}
+              <div className="sidebar-group">
+                <LanguageSelector value={targetLang} onChange={setTargetLang} disabled={true} />
+              </div>
 
-              {/* Stop */}
-              <button
-                onClick={handleStop}
-                style={{
-                  background: 'rgba(239,68,68,0.08)',
-                  border: '1px solid rgba(239,68,68,0.20)',
-                  color: 'var(--red)',
-                  fontWeight: 600, fontSize: 13,
-                  padding: '10px 18px', borderRadius: 'var(--radius)', cursor: 'pointer',
-                  width: '100%',
-                }}
-              >
-                Stop session
-              </button>
+              {/* ROOM */}
+              {ws.sessionId && workspaceSlug && (
+                <div className="sidebar-group">
+                  <p className="sidebar-group-label">Room</p>
+                  <RoomPanel sessionId={ws.sessionId} workspaceSlug={workspaceSlug} />
+                </div>
+              )}
+
+              {/* STOP */}
+              <div className="sidebar-group">
+                <button onClick={handleStop} className="btn-stop">
+                  Stop session
+                </button>
+              </div>
             </>
           )}
 
-          {/* Compact view toggle */}
-          <button onClick={() => setCompact(c => !c)} className="btn-icon" style={{ width: '100%', textAlign: 'center' }}>
+          {/* COMPACT VIEW */}
+          <button
+            onClick={() => setCompact(c => !c)}
+            className="btn-icon"
+            style={{ width: '100%', justifyContent: 'center', fontSize: 12 }}
+          >
             {compact ? 'Show document' : '⊟ Compact view'}
           </button>
 
-          {/* Export (post-session) */}
+          {/* EXPORT (post-session) */}
           {!sessionActive && transcript.length > 0 && (
-            <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
-              <p style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 10 }}>
+            <div style={{ borderTop: '1px solid var(--divider)', paddingTop: 16 }}>
+              <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 10 }}>
                 {transcript.length} lines captured
               </p>
-              <button onClick={() => setShowModal(true)} className="btn-primary" style={{ width: '100%' }}>
+              <button
+                onClick={() => setShowModal(true)}
+                className="btn-primary"
+                style={{ width: '100%' }}
+              >
                 Edit & Export →
               </button>
             </div>
           )}
 
-          {/* Room panel (when session active) */}
-          {sessionActive && ws.sessionId && workspaceSlug && (
-            <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
-              <RoomPanel sessionId={ws.sessionId} workspaceSlug={workspaceSlug} />
+          {/* Bottom spacer */}
+          <div style={{ flex: 1 }} />
+        </aside>
+
+        {/* ── MAIN CONTENT ─────────────────────────────────────── */}
+        <main style={{
+          flex: 1,
+          padding: '28px 32px',
+          display: 'flex',
+          flexDirection: 'column',
+          overflowY: 'auto',
+          minWidth: 0,
+        }}>
+          {error && (
+            <div style={{ marginBottom: 16, flexShrink: 0 }}>
+              <ErrorBanner message={error} onDismiss={() => setError('')} />
+            </div>
+          )}
+
+          {!compact && (
+            <div style={{ flex: 1 }}>
+              <DocumentView
+                transcript={transcript}
+                currentLine={currentLine}
+                isActive={isActive}
+                targetLang={targetLangLabel ? `${targetLangLabel.flag} ${targetLangLabel.label}` : targetLang}
+                aiFormatted={aiFormatted}
+                aiFormattedAt={aiFormattedAt}
+                aiLoading={aiLoading}
+                onWordClick={handleWordClick}
+              />
+            </div>
+          )}
+        </main>
+
+        {/* ── RIGHT PANEL: KNOWLEDGE / GLOSSARY ────────────────── */}
+        <aside style={{
+          width: glossaryWord ? 300 : 0,
+          flexShrink: 0,
+          overflow: 'hidden',
+          transition: 'width 0.25s ease',
+          borderLeft: '1px solid var(--divider)',
+          background: 'var(--surface)',
+        }}>
+          {glossaryWord && (
+            <div style={{ width: 300, height: '100%' }}>
+              <GlossaryPanel
+                word={glossaryWord.word}
+                sentences={wordIndex.current.get(glossaryWord.word) ?? [glossaryWord.sentence]}
+                currentSentence={glossaryWord.sentence}
+                targetLang={targetLang}
+                onClose={() => setGlossaryWord(null)}
+              />
             </div>
           )}
         </aside>
 
-        {/* Right: document area */}
-        <main style={{
-          flex: 1,
-          padding: '24px 32px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 16,
-          overflowY: 'auto',
-          minWidth: 0,
-        }}>
-          {error && <ErrorBanner message={error} onDismiss={() => setError('')} />}
-
-          {!compact && (
-            <DocumentView
-              transcript={transcript}
-              currentLine={currentLine}
-              isActive={isActive}
-              targetLang={targetLangLabel ? `${targetLangLabel.flag} ${targetLangLabel.label}` : targetLang}
-              aiFormatted={aiFormatted}
-              aiFormattedAt={aiFormattedAt}
-              aiLoading={aiLoading}
-              onWordClick={handleWordClick}
-            />
-          )}
-        </main>
       </div>
 
-      {/* Compact floating panel */}
+      {/* ━━ FLOATING OVERLAYS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+
       {compact && (
         <CompactPanel
           current={currentLine}
           previous={transcript[transcript.length - 1]?.text ?? ''}
-          wsState={ws.state} audioState={audio.state}
+          wsState={ws.state}
+          audioState={audio.state}
           onClose={() => setCompact(false)}
         />
       )}
@@ -347,15 +415,6 @@ export default function WorkspacePage() {
         />
       )}
 
-      {glossaryWord && (
-        <GlossaryPanel
-          word={glossaryWord.word}
-          sentences={wordIndex.current.get(glossaryWord.word) ?? [glossaryWord.sentence]}
-          currentSentence={glossaryWord.sentence}
-          targetLang={targetLang}
-          onClose={() => setGlossaryWord(null)}
-        />
-      )}
     </div>
   )
 }

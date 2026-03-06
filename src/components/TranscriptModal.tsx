@@ -161,16 +161,11 @@ async function downloadDocx(content: string, filename: string) {
     }
   }
 
-  const doc = new Document({
-    sections: [{ children }],
-  })
-
+  const doc = new Document({ sections: [{ children }] })
   const blob = await Packer.toBlob(doc)
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
-  a.href = url
-  a.download = filename
-  a.click()
+  a.href = url; a.download = filename; a.click()
   URL.revokeObjectURL(url)
 }
 
@@ -233,19 +228,28 @@ export default function TranscriptModal({ transcript, targetLang, aiFormatted, o
   }, [content, transcript, format, mode])
 
   const TAB_STYLE = (active: boolean): React.CSSProperties => ({
-    padding: '7px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600,
-    border: 'none', cursor: 'pointer', transition: 'all 0.15s',
-    background: active ? 'rgba(124,58,237,0.25)' : 'transparent',
-    color: active ? '#c4b5fd' : 'rgba(238,242,255,0.45)',
-    borderBottom: active ? '2px solid rgba(167,139,250,0.7)' : '2px solid transparent',
+    padding: '7px 14px',
+    borderRadius: 7,
+    fontSize: 13,
+    fontWeight: 600,
+    border: 'none',
+    cursor: 'pointer',
+    transition: 'all 0.15s',
+    background: active ? 'rgba(37,99,235,0.20)' : 'transparent',
+    color: active ? '#93C5FD' : 'var(--text-muted)',
+    borderBottom: active ? '2px solid rgba(37,99,235,0.70)' : '2px solid transparent',
   })
 
   const FORMAT_STYLE = (active: boolean): React.CSSProperties => ({
-    padding: '5px 11px', borderRadius: 7, fontSize: 11, fontWeight: 700,
-    border: `1px solid ${active ? 'rgba(167,139,250,0.5)' : 'rgba(255,255,255,0.08)'}`,
-    cursor: 'pointer', transition: 'all 0.15s',
-    background: active ? 'rgba(124,58,237,0.15)' : 'rgba(255,255,255,0.04)',
-    color: active ? '#c4b5fd' : 'rgba(238,242,255,0.40)',
+    padding: '5px 12px',
+    borderRadius: 7,
+    fontSize: 12,
+    fontWeight: 600,
+    border: `1px solid ${active ? 'rgba(37,99,235,0.50)' : 'var(--border)'}`,
+    cursor: 'pointer',
+    transition: 'all 0.15s',
+    background: active ? 'rgba(37,99,235,0.14)' : 'rgba(255,255,255,0.03)',
+    color: active ? '#93C5FD' : 'var(--text-muted)',
   })
 
   const FORMAT_LABELS: { id: FileFormat; label: string }[] = [
@@ -260,50 +264,73 @@ export default function TranscriptModal({ transcript, targetLang, aiFormatted, o
   const binaryFormat = format === 'pdf' || format === 'docx' || format === 'ics'
 
   return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 10000,
-      background: 'rgba(7,7,26,0.85)',
-      backdropFilter: 'blur(16px)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      padding: 24,
-    }} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+    <div
+      style={{
+        position: 'fixed', inset: 0, zIndex: 10000,
+        background: 'rgba(7,10,18,0.88)',
+        backdropFilter: 'blur(20px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: 24,
+      }}
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}
+    >
       <div style={{
-        width: '100%', maxWidth: 760,
-        background: 'rgba(255,255,255,0.04)',
-        border: '1px solid rgba(167,139,250,0.20)',
-        borderRadius: 20,
-        backdropFilter: 'blur(32px)',
-        boxShadow: '0 24px 80px rgba(0,0,0,0.6), 0 0 40px rgba(124,58,237,0.12)',
+        width: '100%', maxWidth: 780,
+        background: 'var(--surface-1)',
+        border: '1px solid var(--border)',
+        borderRadius: 'var(--radius-xl)',
+        boxShadow: 'var(--shadow-lg)',
         display: 'flex', flexDirection: 'column',
-        maxHeight: '90vh',
-        overflow: 'hidden',
+        maxHeight: '90vh', overflow: 'hidden',
       }}>
+
         {/* Modal header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 24px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '20px 28px',
+          borderBottom: '1px solid var(--divider)',
+        }}>
           <div>
-            <h2 style={{ fontSize: 17, fontWeight: 700, marginBottom: 2 }}>Edit & Export Transcript</h2>
-            <p style={{ fontSize: 12, color: 'var(--text-dim)' }}>{transcript.length} lines · {targetLang.toUpperCase()}</p>
+            <h2 style={{ fontSize: 17, fontWeight: 700, marginBottom: 3, letterSpacing: '-0.01em' }}>
+              Edit & Export
+            </h2>
+            <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+              {transcript.length} lines · {targetLang.toUpperCase()}
+            </p>
           </div>
-          <button onClick={onClose} style={{ background: 'none', color: 'var(--text-dim)', fontSize: 22, padding: '2px 8px', borderRadius: 8 }}>×</button>
+          <button
+            onClick={onClose}
+            style={{
+              background: 'none', color: 'var(--text-muted)',
+              fontSize: 22, padding: '2px 8px', borderRadius: 6,
+              transition: 'color 0.15s',
+            }}
+            onMouseEnter={e => (e.target as HTMLElement).style.color = 'var(--text)'}
+            onMouseLeave={e => (e.target as HTMLElement).style.color = 'var(--text-muted)'}
+          >×</button>
         </div>
 
-        {/* Mode tabs */}
-        <div style={{ display: 'flex', gap: 4, padding: '12px 24px 0', borderBottom: '1px solid rgba(255,255,255,0.06)', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-          {aiFormatted && (
-            <button style={{
-              ...TAB_STYLE(mode === 'ai'),
-              background: mode === 'ai' ? 'rgba(124,58,237,0.30)' : 'transparent',
-              borderBottom: mode === 'ai' ? '2px solid #a78bfa' : '2px solid transparent',
-            }} onClick={() => switchMode('ai')}>
-              ✦ AI Enhanced
-            </button>
-          )}
-          {(['raw', 'dialogue', 'notes'] as ViewMode[]).map(m => (
-            <button key={m} style={TAB_STYLE(mode === m)} onClick={() => switchMode(m)}>
-              {m === 'raw' ? '📄 Raw' : m === 'dialogue' ? '💬 Dialogue' : '📝 Notes'}
-            </button>
-          ))}
-          <div style={{ marginLeft: 'auto', display: 'flex', gap: 5, alignItems: 'center', paddingBottom: 8, flexWrap: 'wrap' }}>
+        {/* Mode tabs + format selector */}
+        <div style={{
+          display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between',
+          padding: '12px 28px 0',
+          borderBottom: '1px solid var(--divider)',
+          flexWrap: 'wrap', gap: 8,
+        }}>
+          <div style={{ display: 'flex', gap: 2 }}>
+            {aiFormatted && (
+              <button style={TAB_STYLE(mode === 'ai')} onClick={() => switchMode('ai')}>
+                ✦ AI Enhanced
+              </button>
+            )}
+            {(['raw', 'dialogue', 'notes'] as ViewMode[]).map(m => (
+              <button key={m} style={TAB_STYLE(mode === m)} onClick={() => switchMode(m)}>
+                {m === 'raw' ? 'Raw' : m === 'dialogue' ? 'Dialogue' : 'Notes'}
+              </button>
+            ))}
+          </div>
+
+          <div style={{ display: 'flex', gap: 5, paddingBottom: 10, flexWrap: 'wrap' }}>
             {FORMAT_LABELS.map(({ id, label }) => (
               <button key={id} style={FORMAT_STYLE(format === id)} onClick={() => setFormat(id)}>
                 {label}
@@ -313,24 +340,29 @@ export default function TranscriptModal({ transcript, targetLang, aiFormatted, o
         </div>
 
         {/* Mode description */}
-        <div style={{ padding: '10px 24px', borderBottom: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)' }}>
-          <p style={{ fontSize: 12, color: 'rgba(238,242,255,0.40)', lineHeight: 1.5 }}>
-            {mode === 'ai' && 'AI-formatted text with punctuation, titles and paragraph structure. Edit before exporting.'}
-            {mode === 'raw' && 'Timestamped lines exactly as captured. Edit freely before downloading.'}
-            {mode === 'dialogue' && 'Speakers detected automatically from pauses (A, B, C…). Edit names before exporting.'}
-            {mode === 'notes' && 'Content reorganized into sections by topic pauses. Add titles, highlights, action items.'}
-            {format === 'ics' && ' · Calendar file opens in Apple Calendar, Google Calendar, Outlook.'}
+        <div style={{
+          padding: '10px 28px',
+          background: 'rgba(255,255,255,0.02)',
+          borderBottom: '1px solid var(--divider)',
+        }}>
+          <p style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5 }}>
+            {mode === 'ai' && 'AI-formatted text with punctuation, titles and structure. Edit freely before exporting.'}
+            {mode === 'raw' && 'Timestamped lines exactly as captured. Edit before downloading.'}
+            {mode === 'dialogue' && 'Speakers detected from pauses (A, B, C…). Rename speakers before exporting.'}
+            {mode === 'notes' && 'Sections by topic pauses. Add titles, highlights, and action items.'}
+            {format === 'ics' && ' · Opens in Apple Calendar, Google Calendar, and Outlook.'}
           </p>
         </div>
 
-        {/* Editable content — hidden for binary/calendar formats */}
+        {/* Editable area */}
         {binaryFormat ? (
           <div style={{
-            flex: 1, minHeight: 160,
-            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-            gap: 10, color: 'rgba(238,242,255,0.35)',
+            flex: 1, minHeight: 180,
+            display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center',
+            gap: 12, color: 'var(--text-muted)',
           }}>
-            <span style={{ fontSize: 36 }}>
+            <span style={{ fontSize: 40, opacity: 0.4 }}>
               {format === 'pdf' ? '📄' : format === 'docx' ? '📝' : '📅'}
             </span>
             <span style={{ fontSize: 14 }}>
@@ -339,8 +371,8 @@ export default function TranscriptModal({ transcript, targetLang, aiFormatted, o
                 : `Click Download to generate the ${format.toUpperCase()} file`}
             </span>
             {format === 'ics' && (
-              <span style={{ fontSize: 12, color: 'rgba(238,242,255,0.25)', textAlign: 'center', maxWidth: 320 }}>
-                The session time and full transcript will be added to your calendar event.
+              <span style={{ fontSize: 12, color: 'var(--text-muted)', opacity: 0.7, textAlign: 'center', maxWidth: 320 }}>
+                Session time and full transcript will be included in the calendar event.
               </span>
             )}
           </div>
@@ -352,14 +384,14 @@ export default function TranscriptModal({ transcript, targetLang, aiFormatted, o
               flex: 1,
               background: 'transparent',
               border: 'none',
-              padding: '20px 24px',
-              color: 'rgba(238,242,255,0.85)',
+              padding: '22px 28px',
+              color: 'var(--text-dim)',
               fontSize: 14,
-              fontFamily: mode === 'raw' ? 'monospace' : "'Georgia', serif",
-              lineHeight: 1.8,
+              fontFamily: mode === 'raw' ? 'monospace' : 'var(--font-ui)',
+              lineHeight: 1.75,
               resize: 'none',
               outline: 'none',
-              minHeight: 320,
+              minHeight: 280,
               overflowY: 'auto',
             }}
             spellCheck={false}
@@ -369,34 +401,58 @@ export default function TranscriptModal({ transcript, targetLang, aiFormatted, o
         {/* Footer */}
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '14px 24px',
-          borderTop: '1px solid rgba(255,255,255,0.07)',
+          padding: '16px 28px',
+          borderTop: '1px solid var(--divider)',
           gap: 12,
         }}>
           <button
             onClick={() => setEdited(null)}
             disabled={edited === null || binaryFormat}
             style={{
-              background: 'none', color: 'var(--text-dim)', fontSize: 13,
-              textDecoration: 'underline', opacity: (edited === null || binaryFormat) ? 0.3 : 1,
+              background: 'none',
+              color: 'var(--text-muted)',
+              fontSize: 13,
+              textDecoration: 'underline',
+              opacity: (edited === null || binaryFormat) ? 0.3 : 1,
             }}
           >
             Reset edits
           </button>
+
           <div style={{ display: 'flex', gap: 10 }}>
-            <button onClick={onClose} className="btn-icon" style={{ fontSize: 13, padding: '9px 18px' }}>Cancel</button>
-            <button onClick={handleDownload} disabled={downloading} style={{
-              background: 'linear-gradient(135deg,#7c3aed,#0ea5e9)',
-              color: '#fff', fontWeight: 700, fontSize: 14,
-              padding: '10px 28px', borderRadius: 12, border: 'none',
-              cursor: downloading ? 'default' : 'pointer',
-              opacity: downloading ? 0.7 : 1,
-              boxShadow: '0 0 24px rgba(124,58,237,0.35)',
-              display: 'flex', alignItems: 'center', gap: 8,
-            }}>
+            <button onClick={onClose} className="btn-icon" style={{ fontSize: 13 }}>
+              Cancel
+            </button>
+            <button
+              onClick={handleDownload}
+              disabled={downloading}
+              style={{
+                background: 'var(--accent)',
+                color: '#fff',
+                fontWeight: 700,
+                fontSize: 14,
+                padding: '0 28px',
+                height: 44,
+                borderRadius: 'var(--radius)',
+                border: 'none',
+                cursor: downloading ? 'default' : 'pointer',
+                opacity: downloading ? 0.7 : 1,
+                transition: 'background 0.15s',
+                display: 'flex', alignItems: 'center', gap: 8,
+              }}
+              onMouseEnter={e => { if (!downloading) (e.currentTarget as HTMLElement).style.background = 'var(--accent-hover)' }}
+              onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'var(--accent)'}
+            >
               {downloading ? (
                 <>
-                  <span style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite', display: 'inline-block' }} />
+                  <span style={{
+                    width: 14, height: 14,
+                    border: '2px solid rgba(255,255,255,0.3)',
+                    borderTopColor: '#fff',
+                    borderRadius: '50%',
+                    animation: 'spin 0.8s linear infinite',
+                    display: 'inline-block',
+                  }} />
                   Generating…
                 </>
               ) : (
@@ -405,6 +461,7 @@ export default function TranscriptModal({ transcript, targetLang, aiFormatted, o
             </button>
           </div>
         </div>
+
       </div>
     </div>
   )

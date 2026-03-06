@@ -1,32 +1,47 @@
+/* ISOL Studio — Design System 2.0 */
+
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  /* ── Colors ──────────────────────────────────────────────── */
-  --bg:            #070712;
-  --surface:       #0F1020;
-  --surface-2:     #151629;
-  --border:        rgba(255,255,255,0.07);
-  --border-accent: rgba(124,58,237,0.28);
+  /* ── Backgrounds ─────────────────────────────── */
+  --bg:         #0B0F19;
+  --surface:    #0F172A;
+  --surface-1:  #111827;
+  --surface-2:  #131D2D;
+  --surface-3:  #1A2332;
 
-  --accent:        #7C3AED;
-  --accent-hover:  #6D28D9;
-  --live:          #10B981;
+  /* ── Text ────────────────────────────────────── */
+  --text:       #F9FAFB;
+  --text-dim:   #94A3B8;
+  --text-muted: #64748B;
 
-  --text:          #F8FAFC;
-  --text-dim:      #9CA3AF;
-  --text-muted:    rgba(248,250,252,0.28);
+  /* ── Accents ─────────────────────────────────── */
+  --accent:       #2563EB;
+  --accent-hover: #1D4ED8;
+  --cyan:         #22D3EE;
+  --live:         #10B981;
+  --warning:      #FACC15;
+  --red:          #EF4444;
+  --orange:       #F97316;
 
-  --red:           #EF4444;
-  --orange:        #F59E0B;
-  --green:         #10B981;
+  /* ── Borders ─────────────────────────────────── */
+  --border:        rgba(255,255,255,0.08);
+  --divider:       rgba(255,255,255,0.06);
+  --border-accent: rgba(37,99,235,0.30);
 
-  /* ── Typography ──────────────────────────────────────────── */
-  --font-ui:  'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-doc: 'Lora', Georgia, 'Times New Roman', serif;
+  /* ── Shadows ─────────────────────────────────── */
+  --shadow:    0 12px 40px rgba(0,0,0,0.30);
+  --shadow-sm: 0 4px 16px rgba(0,0,0,0.20);
+  --shadow-lg: 0 24px 64px rgba(0,0,0,0.45);
 
-  /* ── Radius ──────────────────────────────────────────────── */
+  /* ── Radius ──────────────────────────────────── */
   --radius:    8px;
-  --radius-lg: 12px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+
+  /* ── Typography ──────────────────────────────── */
+  --font-ui:  'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-doc: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 html, body, #root {
@@ -42,22 +57,33 @@ html, body, #root {
 button { cursor: pointer; font-family: inherit; border: none; outline: none; }
 input, select { font-family: inherit; outline: none; }
 
-/* ─── Buttons ────────────────────────────────────────────── */
+/* ─── Scrollbar ──────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.10); border-radius: 2px; }
+
+/* ─── Primary button ─────────────────────────────── */
 .btn-primary {
   background: var(--accent);
   color: #fff;
   font-weight: 600;
   font-size: 14px;
-  padding: 10px 22px;
+  padding: 0 22px;
+  height: 44px;
   border-radius: var(--radius);
   border: none;
   transition: background 0.15s, opacity 0.15s;
-  letter-spacing: 0.01em;
+  letter-spacing: -0.01em;
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
 .btn-primary:hover:not(:disabled) { background: var(--accent-hover); }
 .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
 
+/* ─── Icon / secondary button ────────────────────── */
 .btn-icon {
   background: transparent;
   color: var(--text-dim);
@@ -66,58 +92,82 @@ input, select { font-family: inherit; outline: none; }
   border-radius: var(--radius);
   border: 1px solid var(--border);
   transition: background 0.15s, color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
 }
 .btn-icon:hover {
   background: rgba(255,255,255,0.04);
   color: var(--text);
-  border-color: rgba(255,255,255,0.11);
+  border-color: rgba(255,255,255,0.12);
 }
 
-/* ─── Input ──────────────────────────────────────────────── */
+/* ─── Stop button ─────────────────────────────────── */
+.btn-stop {
+  background: rgba(239,68,68,0.07);
+  border: 1px solid rgba(239,68,68,0.18);
+  color: var(--red);
+  font-weight: 600;
+  font-size: 13px;
+  padding: 0 18px;
+  height: 44px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  width: 100%;
+  transition: background 0.15s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.btn-stop:hover { background: rgba(239,68,68,0.12); }
+
+/* ─── Input ──────────────────────────────────────── */
 .input-field {
-  background: var(--surface);
+  background: var(--surface-1);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 10px 14px;
+  padding: 11px 14px;
   color: var(--text);
   font-size: 14px;
   width: 100%;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 .input-field:focus {
-  border-color: rgba(124,58,237,0.50);
-  box-shadow: 0 0 0 3px rgba(124,58,237,0.10);
+  border-color: rgba(37,99,235,0.55);
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
 }
 .input-field::placeholder { color: var(--text-muted); }
 
-/* ─── Card ───────────────────────────────────────────────── */
+/* ─── Card ───────────────────────────────────────── */
 .card {
-  background: var(--surface);
+  background: var(--surface-1);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: 24px;
 }
 
-/* ─── Header ─────────────────────────────────────────────── */
+/* ─── Top nav glass ──────────────────────────────── */
 .header-glass {
-  background: rgba(7,7,18,0.95);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--border);
+  background: rgba(11,15,25,0.97);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--divider);
+  flex-shrink: 0;
 }
 
-/* ─── Status pill ────────────────────────────────────────── */
+/* ─── Status pill ────────────────────────────────── */
 .status-pill {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 6px;
   padding: 4px 12px;
-  background: var(--surface);
+  background: rgba(255,255,255,0.04);
   border: 1px solid var(--border);
   border-radius: 20px;
 }
 
-/* ─── Logo mark ──────────────────────────────────────────── */
+/* ─── Logo mark ──────────────────────────────────── */
 .logo-mark {
   background: var(--accent);
   border-radius: 7px;
@@ -127,34 +177,73 @@ input, select { font-family: inherit; outline: none; }
   flex-shrink: 0;
 }
 
-/* ─── Audio source selector ──────────────────────────────── */
+/* ─── Section label ──────────────────────────────── */
+.section-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* ─── Sidebar group ──────────────────────────────── */
+.sidebar-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sidebar-group-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+
+/* ─── AI badge ───────────────────────────────────── */
+.ai-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #93C5FD;
+  background: rgba(37,99,235,0.10);
+  border: 1px solid rgba(37,99,235,0.20);
+  border-radius: 5px;
+  padding: 2px 7px;
+}
+
+/* ─── Audio source selector ──────────────────────── */
 .source-btn {
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  padding: 14px 10px;
+  gap: 5px;
+  padding: 12px 8px;
   border-radius: var(--radius);
   border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--text-dim);
+  background: var(--surface-1);
+  color: var(--text-muted);
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
-  transition: border-color 0.2s, background 0.2s, color 0.2s;
+  transition: all 0.18s;
 }
 .source-btn:hover {
-  border-color: rgba(124,58,237,0.30);
-  color: var(--text);
+  border-color: rgba(37,99,235,0.35);
+  color: var(--text-dim);
 }
 .source-btn.active {
-  border-color: rgba(124,58,237,0.50);
-  background: rgba(124,58,237,0.10);
+  border-color: rgba(37,99,235,0.55);
+  background: rgba(37,99,235,0.10);
   color: var(--text);
 }
 
-/* ─── Login page ─────────────────────────────────────────── */
+/* ─── Login layout ───────────────────────────────── */
 .login-hero {
   flex: 1;
   display: flex;
@@ -170,7 +259,7 @@ input, select { font-family: inherit; outline: none; }
 }
 .login-divider {
   width: 1px;
-  background: var(--border);
+  background: var(--divider);
   align-self: stretch;
 }
 @media (max-width: 768px) {
@@ -179,80 +268,113 @@ input, select { font-family: inherit; outline: none; }
   .login-divider { display: none; }
 }
 
-/* ─── Gradient text ──────────────────────────────────────── */
+/* ─── Gradient text ──────────────────────────────── */
 .gradient-text {
-  background: linear-gradient(135deg, #a78bfa 0%, #60a5fa 100%);
+  background: linear-gradient(135deg, #60a5fa 0%, #22d3ee 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
-/* ─── Onboarding banner ──────────────────────────────────── */
+/* ─── Onboarding banner ──────────────────────────── */
 .onboarding-banner {
-  background: rgba(124,58,237,0.06);
-  border-bottom: 1px solid rgba(124,58,237,0.15);
+  background: rgba(37,99,235,0.05);
+  border-bottom: 1px solid rgba(37,99,235,0.12);
 }
 
-/* ─── Subtitle card ──────────────────────────────────────── */
+/* ─── Subtitle card ──────────────────────────────── */
 .subtitle-card {
-  background: var(--surface);
+  background: var(--surface-1);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   transition: border-color 0.3s;
 }
 .subtitle-card.active { border-color: rgba(16,185,129,0.25); }
 
-/* ─── Spinner ────────────────────────────────────────────── */
+/* ─── Sticky note ────────────────────────────────── */
+.sticky-note {
+  background: #FACC15;
+  color: #1c1917;
+  border-radius: 12px;
+  padding: 14px 18px;
+  font-size: 13px;
+  line-height: 1.55;
+  font-weight: 500;
+  box-shadow: 0 4px 14px rgba(250,204,21,0.15), 0 1px 4px rgba(0,0,0,0.25);
+}
+
+/* ─── Knowledge panel (glossary right rail) ──────── */
+.knowledge-panel {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border-left: 1px solid var(--divider);
+}
+
+/* ─── Animations ─────────────────────────────────── */
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* ─── Transcript line reveal (200ms opacity) ─────────────── */
 @keyframes lineReveal {
-  from { opacity: 0; }
+  from { opacity: 0; transform: translateY(2px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes docFade {
+  from { opacity: 0.6; }
   to   { opacity: 1; }
 }
 
-/* ─── Cursor blink ───────────────────────────────────────── */
 @keyframes cursorBlink {
-  0%, 100% { opacity: 0.7; }
+  0%, 100% { opacity: 1; }
   50%       { opacity: 0; }
 }
-.doc-cursor {
-  display: inline-block;
-  color: var(--accent);
-  animation: cursorBlink 1s step-end infinite;
-  margin-left: 2px;
-  font-weight: 300;
-}
 
-/* ─── Live dot pulse ─────────────────────────────────────── */
 @keyframes livePulse {
   0%, 100% { opacity: 1; }
   50%       { opacity: 0.4; }
 }
 
-/* ─── Glossary slide in ──────────────────────────────────── */
 @keyframes glossarySlideIn {
-  from { opacity: 0; transform: translateY(12px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; transform: translateX(8px); }
+  to   { opacity: 1; transform: translateX(0); }
 }
 
-/* ─── Room pulse ─────────────────────────────────────────── */
 @keyframes roomPulse {
   0%, 100% { opacity: 1; }
   50%       { opacity: 0.45; }
 }
 
-/* ─── Matrix char (simplified opacity fade) ──────────────── */
 @keyframes charReveal {
-  from { opacity: 0.15; }
+  from { opacity: 0; }
   to   { opacity: 1; }
 }
+
+/* ─── UI element classes ─────────────────────────── */
+
+/* 2px cyan cursor line */
+.doc-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1.1em;
+  background: var(--cyan);
+  animation: cursorBlink 1s ease-in-out infinite;
+  vertical-align: text-bottom;
+  border-radius: 1px;
+  margin-left: 2px;
+  font-size: 0;
+  line-height: 0;
+}
+
 .matrix-char {
-  animation: charReveal 0.25s ease-out forwards;
+  animation: charReveal 0.18s ease-out forwards;
   display: inline;
 }
 
-/* ─── Document line fade-in ──────────────────────────────── */
 .transcript-line {
   animation: lineReveal 0.2s ease-out forwards;
+}
+
+.doc-ai-update {
+  animation: docFade 0.25s ease-out forwards;
 }

@@ -14,6 +14,13 @@ interface AiDef {
   register: string
 }
 
+const REGISTER_COLOR: Record<string, string> = {
+  formal: '#93C5FD',
+  informal: '#FCA5A5',
+  technical: '#A5B4FC',
+  neutral: 'var(--text-muted)',
+}
+
 export default function GlossaryPanel({ word, sentences, currentSentence, targetLang = 'en', onClose }: Props) {
   const [aiDef, setAiDef] = useState<AiDef | null>(null)
   const [aiLoading, setAiLoading] = useState(true)
@@ -43,95 +50,134 @@ export default function GlossaryPanel({ word, sentences, currentSentence, target
     const parts = text.split(re)
     return parts.map((p, i) =>
       re.test(p)
-        ? <mark key={i} style={{ background: 'rgba(124,58,237,0.20)', color: '#a78bfa', borderRadius: 3, padding: '0 2px' }}>{p}</mark>
+        ? <mark key={i} style={{
+            background: 'rgba(37,99,235,0.20)',
+            color: '#93C5FD',
+            borderRadius: 3,
+            padding: '0 2px',
+          }}>{p}</mark>
         : p
     )
-  }
-
-  const REGISTER_COLOR: Record<string, string> = {
-    formal: '#60a5fa',
-    informal: '#fb923c',
-    technical: '#a78bfa',
-    neutral: 'var(--text-dim)',
   }
 
   const otherSentences = sentences.filter(s => s !== currentSentence).slice(-3)
 
   return (
     <div style={{
-      position: 'fixed', bottom: 28, right: 28, zIndex: 9000,
-      width: 340,
-      background: 'var(--surface)',
-      border: '1px solid var(--border-accent)',
-      borderRadius: 'var(--radius-lg)',
-      boxShadow: '0 12px 40px rgba(0,0,0,0.5)',
-      overflow: 'hidden',
+      display: 'flex',
+      flexDirection: 'column',
+      height: '100%',
       animation: 'glossarySlideIn 0.2s ease-out',
     }}>
+
       {/* Header */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '11px 16px',
-        borderBottom: '1px solid var(--border)',
-        background: 'rgba(124,58,237,0.06)',
+        padding: '16px 20px',
+        borderBottom: '1px solid var(--divider)',
+        flexShrink: 0,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-          <span style={{ fontSize: 11, color: 'var(--text-dim)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Glossary</span>
-          <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)' }}>{word}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{
+            fontSize: 10, fontWeight: 700, letterSpacing: '0.09em',
+            textTransform: 'uppercase', color: 'var(--text-muted)',
+          }}>Context</span>
+          <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>{word}</span>
           {aiDef && (
             <span style={{
-              fontSize: 10, fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase',
+              fontSize: 10, fontWeight: 700, letterSpacing: '0.05em',
+              textTransform: 'uppercase',
               color: REGISTER_COLOR[aiDef.register] ?? REGISTER_COLOR.neutral,
-              background: 'rgba(255,255,255,0.06)',
+              background: 'rgba(255,255,255,0.05)',
               borderRadius: 5, padding: '2px 6px',
             }}>{aiDef.register}</span>
           )}
         </div>
-        <button onClick={onClose} style={{ background: 'none', color: 'var(--text-dim)', fontSize: 18, padding: '0 4px', borderRadius: 4 }}>×</button>
+        <button
+          onClick={onClose}
+          style={{
+            background: 'none', color: 'var(--text-muted)',
+            fontSize: 18, padding: '2px 6px', borderRadius: 4,
+            transition: 'color 0.15s',
+          }}
+          onMouseEnter={e => (e.target as HTMLElement).style.color = 'var(--text)'}
+          onMouseLeave={e => (e.target as HTMLElement).style.color = 'var(--text-muted)'}
+        >×</button>
       </div>
 
-      <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+      {/* Scrollable content */}
+      <div style={{
+        flex: 1, overflowY: 'auto',
+        padding: '20px',
+        display: 'flex', flexDirection: 'column', gap: 20,
+      }}>
 
         {/* AI definition */}
         {aiLoading ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 0' }}>
             <span style={{
-              width: 13, height: 13, border: '1.5px solid rgba(124,58,237,0.25)',
-              borderTopColor: 'var(--accent)', borderRadius: '50%',
-              animation: 'spin 0.8s linear infinite', display: 'inline-block', flexShrink: 0,
+              width: 14, height: 14,
+              border: '1.5px solid rgba(37,99,235,0.2)',
+              borderTopColor: 'var(--accent)',
+              borderRadius: '50%',
+              animation: 'spin 0.8s linear infinite',
+              display: 'inline-block', flexShrink: 0,
             }} />
-            <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>Looking up definition…</span>
+            <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Looking up definition…</span>
           </div>
         ) : aiDef ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <div>
-              <p style={{ fontSize: 10, color: 'var(--text-dim)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 5 }}>
-                Definition
-              </p>
-              <p style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.6 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{
+              background: 'var(--surface-2)',
+              borderRadius: 10,
+              padding: '14px 16px',
+              border: '1px solid var(--divider)',
+            }}>
+              <p style={{
+                fontSize: 10, fontWeight: 700, letterSpacing: '0.09em',
+                textTransform: 'uppercase', color: 'var(--text-muted)',
+                marginBottom: 8,
+              }}>Definition</p>
+              <p style={{ fontSize: 14, color: 'var(--text)', lineHeight: 1.65 }}>
                 {aiDef.definition}
               </p>
             </div>
+
             {aiDef.context && (
-              <div>
-                <p style={{ fontSize: 10, color: 'var(--text-dim)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 5 }}>
-                  In this context
-                </p>
-                <p style={{ fontSize: 13, color: '#a78bfa', lineHeight: 1.6, fontStyle: 'italic' }}>
+              <div style={{
+                background: 'rgba(37,99,235,0.06)',
+                borderRadius: 10,
+                padding: '14px 16px',
+                border: '1px solid rgba(37,99,235,0.14)',
+              }}>
+                <p style={{
+                  fontSize: 10, fontWeight: 700, letterSpacing: '0.09em',
+                  textTransform: 'uppercase', color: 'var(--text-muted)',
+                  marginBottom: 8,
+                }}>In this context</p>
+                <p style={{ fontSize: 14, color: '#93C5FD', lineHeight: 1.65, fontStyle: 'italic' }}>
                   {aiDef.context}
                 </p>
               </div>
             )}
-            <div style={{ height: 1, background: 'var(--border)' }} />
           </div>
         ) : null}
 
-        {/* Current context */}
+        {/* Sentence context */}
         <div>
-          <p style={{ fontSize: 10, color: 'var(--text-dim)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>
-            Sentence context
-          </p>
-          <p style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.6, fontFamily: 'var(--font-doc)' }}>
+          <p style={{
+            fontSize: 10, fontWeight: 700, letterSpacing: '0.09em',
+            textTransform: 'uppercase', color: 'var(--text-muted)',
+            marginBottom: 10,
+          }}>Sentence</p>
+          <p style={{
+            fontSize: 13, color: 'var(--text-dim)',
+            lineHeight: 1.65,
+            padding: '12px 14px',
+            background: 'var(--surface)',
+            borderRadius: 8,
+            border: '1px solid var(--divider)',
+          }}>
             "{highlight(currentSentence, word)}"
           </p>
         </div>
@@ -139,15 +185,16 @@ export default function GlossaryPanel({ word, sentences, currentSentence, target
         {/* Other occurrences */}
         {otherSentences.length > 0 && (
           <div>
-            <p style={{ fontSize: 10, color: 'var(--text-dim)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
-              Also appeared in
-            </p>
+            <p style={{
+              fontSize: 10, fontWeight: 700, letterSpacing: '0.09em',
+              textTransform: 'uppercase', color: 'var(--text-muted)',
+              marginBottom: 10,
+            }}>Also appeared in</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {otherSentences.map((s, i) => (
                 <p key={i} style={{
-                  fontSize: 12, color: 'var(--text-dim)', lineHeight: 1.5,
-                  fontFamily: 'var(--font-doc)',
-                  borderLeft: '2px solid rgba(124,58,237,0.25)',
+                  fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.55,
+                  borderLeft: '2px solid var(--border-accent)',
                   paddingLeft: 10, margin: 0,
                 }}>
                   "{highlight(s, word)}"

@@ -52,9 +52,9 @@ export default function LoginPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', background: 'var(--bg)' }}>
 
-      {/* ── Left: hero ──────────────────────────────────────────────────── */}
+      {/* ── Left: hero ─────────────────────────────────────────── */}
       <div className="login-hero">
         <div style={{ maxWidth: 460 }}>
 
@@ -63,20 +63,19 @@ export default function LoginPage() {
             <div className="logo-mark" style={{ width: 36, height: 36 }}>
               <span style={{ color: '#fff', fontWeight: 800, fontSize: 18 }}>i</span>
             </div>
-            <span style={{ fontSize: 15, fontWeight: 700, letterSpacing: '0.08em', color: 'var(--text)' }}>ISOL</span>
+            <span style={{ fontSize: 16, fontWeight: 700, letterSpacing: '-0.01em' }}>ISOL Studio</span>
           </div>
 
           {/* Headline */}
           <h1 style={{
-            fontSize: 'clamp(28px, 3vw, 48px)',
+            fontSize: 'clamp(28px, 3vw, 46px)',
             fontWeight: 700,
             lineHeight: 1.15,
             letterSpacing: '-0.03em',
             marginBottom: 16,
-            fontFamily: 'var(--font-ui)',
           }}>
-            Every meeting,<br />
-            <span className="gradient-text">in every language.</span>
+            Speech becomes<br />
+            <span className="gradient-text">a live document.</span>
           </h1>
 
           <p style={{
@@ -86,11 +85,11 @@ export default function LoginPage() {
             marginBottom: 44,
             maxWidth: 380,
           }}>
-            Real-time captions and translation for your team — no app, no delay.
+            Real-time captions, translation, and AI structuring for your team — no app, no delay.
           </p>
 
           {/* Features */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             {[
               { icon: '🌐', text: 'Understand every word, even in foreign-language calls' },
               { icon: '⚡', text: 'Under 2 seconds latency, streamed live' },
@@ -100,8 +99,8 @@ export default function LoginPage() {
                 <span style={{
                   fontSize: 18, flexShrink: 0,
                   width: 36, height: 36,
-                  background: 'var(--surface)',
-                  border: '1px solid var(--border)',
+                  background: 'rgba(37,99,235,0.10)',
+                  border: '1px solid rgba(37,99,235,0.18)',
                   borderRadius: 'var(--radius)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>{icon}</span>
@@ -115,7 +114,7 @@ export default function LoginPage() {
           {/* Live preview card */}
           <div style={{
             marginTop: 44,
-            background: 'var(--surface)',
+            background: 'var(--surface-1)',
             border: '1px solid var(--border)',
             borderRadius: 'var(--radius-lg)',
             padding: '18px 22px',
@@ -126,12 +125,21 @@ export default function LoginPage() {
                 background: 'var(--live)',
                 animation: 'livePulse 2s ease-in-out infinite',
               }} />
-              <span style={{ fontSize: 11, color: 'var(--text-dim)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Live preview</span>
+              <span style={{
+                fontSize: 11, color: 'var(--text-muted)',
+                fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase',
+              }}>Live preview</span>
             </div>
-            <p style={{ fontSize: 15, color: 'var(--text-muted)', lineHeight: 1.5, marginBottom: 6, fontFamily: 'var(--font-doc)' }}>
+            <p style={{
+              fontSize: 14, color: 'var(--text-muted)',
+              lineHeight: 1.5, marginBottom: 8,
+            }}>
               …il bilancio del Q4 è stato migliore del previsto
             </p>
-            <p style={{ fontSize: 19, fontWeight: 400, color: 'var(--text)', lineHeight: 1.5, fontFamily: 'var(--font-doc)' }}>
+            <p style={{
+              fontSize: 18, fontWeight: 500,
+              color: 'var(--text)', lineHeight: 1.5,
+            }}>
               Q4 results exceeded expectations.
             </p>
           </div>
@@ -141,7 +149,7 @@ export default function LoginPage() {
       {/* Divider */}
       <div className="login-divider" />
 
-      {/* ── Right: form ─────────────────────────────────────────────────── */}
+      {/* ── Right: form ────────────────────────────────────────── */}
       <div style={{
         flex: '0 0 auto',
         width: '100%',
@@ -158,7 +166,7 @@ export default function LoginPage() {
             <div className="logo-mark" style={{ width: 44, height: 44, marginBottom: 12 }}>
               <span style={{ color: '#fff', fontWeight: 800, fontSize: 20 }}>i</span>
             </div>
-            <h1 style={{ fontSize: 18, fontWeight: 700, marginBottom: 4 }}>ISOL Meeting Captions</h1>
+            <h1 style={{ fontSize: 18, fontWeight: 700, marginBottom: 4 }}>ISOL Studio</h1>
             <p style={{ fontSize: 13, color: 'var(--text-dim)' }}>Live translation for your team</p>
           </div>
 
@@ -175,7 +183,11 @@ export default function LoginPage() {
             {step === 'email' ? (
               <form onSubmit={requestOtp} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: 11, color: 'var(--text-dim)', marginBottom: 7, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase' }}>
+                  <label style={{
+                    display: 'block', fontSize: 11, color: 'var(--text-muted)',
+                    marginBottom: 7, fontWeight: 700,
+                    letterSpacing: '0.09em', textTransform: 'uppercase',
+                  }}>
                     Work email
                   </label>
                   <input
@@ -212,7 +224,7 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => { setStep('email'); setOtp(''); setError('') }}
-                  style={{ background: 'none', color: 'var(--text-dim)', fontSize: 13 }}
+                  style={{ background: 'none', color: 'var(--text-muted)', fontSize: 13 }}
                 >
                   ← Use a different email
                 </button>
@@ -220,7 +232,10 @@ export default function LoginPage() {
             )}
           </div>
 
-          <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--text-muted)', marginTop: 20, lineHeight: 1.6 }}>
+          <p style={{
+            textAlign: 'center', fontSize: 12, color: 'var(--text-muted)',
+            marginTop: 20, lineHeight: 1.6,
+          }}>
             Audio is streamed for live captioning and never stored.
           </p>
         </div>
