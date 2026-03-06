@@ -29,6 +29,8 @@ export default function WorkspacePage() {
   const [transcript, setTranscript] = useState<TranscriptLine[]>([])
   const [showModal, setShowModal] = useState(false)
   const [roomCopied, setRoomCopied] = useState(false)
+  const [showShareHint, setShowShareHint] = useState(false)
+  const shareHintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [aiMode, setAiMode] = useState(false)
 
   const [glossaryWord, setGlossaryWord] = useState<{ word: string; sentence: string } | null>(null)
@@ -109,6 +111,17 @@ export default function WorkspacePage() {
 
   const ws = useWebSocket({ url: wssUrl, targetLang, onMessage: handleMessage })
   const audio = useAudioCapture({ chunkMs: 200, onChunk: ws.sendChunk, onError: setError })
+
+  // Show share hint for 10 s the first time a sessionId appears, dismiss on copy
+  const prevSessionIdRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (ws.sessionId && !prevSessionIdRef.current) {
+      setShowShareHint(true)
+      if (shareHintTimerRef.current) clearTimeout(shareHintTimerRef.current)
+      shareHintTimerRef.current = setTimeout(() => setShowShareHint(false), 10000)
+    }
+    prevSessionIdRef.current = ws.sessionId ?? null
+  }, [ws.sessionId])
 
   const fetchSessions = useCallback(async () => {
     if (!workspaceSlug) return
@@ -222,6 +235,9 @@ export default function WorkspacePage() {
   const handleStop = useCallback(() => {
     audio.stop(); ws.close()
     setSessionActive(false); setCurrentLine('')
+    if (shareHintTimerRef.current) clearTimeout(shareHintTimerRef.current)
+    setShowShareHint(false)
+    prevSessionIdRef.current = null
     // Fire-and-forget session save
     setTranscript(prev => {
       saveSession(prev, aiFormatted, sessionStartRef.current)
@@ -302,6 +318,9 @@ export default function WorkspacePage() {
     navigator.clipboard.writeText(shareUrl).then(() => {
       setRoomCopied(true)
       setTimeout(() => setRoomCopied(false), 2400)
+      // Dismiss hint once user has copied
+      if (shareHintTimerRef.current) clearTimeout(shareHintTimerRef.current)
+      setShowShareHint(false)
     })
   }
 
@@ -510,10 +529,12 @@ export default function WorkspacePage() {
                   </button>
                 </div>
 
-                {/* Helpful hint */}
-                <StickyNote>
-                  Share this link with participants — they'll join the live room and see captions in their language.
-                </StickyNote>
+                {/* Hint — shown only the first 10 s after sessionId appears, dismissed on copy */}
+                {showShareHint && (
+                  <StickyNote>
+                    Share this link with participants — they'll join the live room and see captions in their language.
+                  </StickyNote>
+                )}
               </div>
             </>
           )}
