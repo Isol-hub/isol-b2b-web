@@ -93,10 +93,23 @@ export default function ViewerPage() {
     setGlossaryWord({ word: word.toLowerCase(), sentence })
   }, [])
 
+  // When targetLang changes after joining, reconnect so the new language is sent
+  // to the backend. We do this in an effect (not inline) so that useWebSocket has
+  // already rebuilt `open` with the new targetLang before we call it.
+  const joinedRef = useRef(false)
+  useEffect(() => { joinedRef.current = joined }, [joined])
+  const langInitRef = useRef(false)
+  useEffect(() => {
+    if (!langInitRef.current) { langInitRef.current = true; return }
+    if (!joinedRef.current) return
+    ws.close()
+    const t = setTimeout(() => ws.open(), 150)
+    return () => clearTimeout(t)
+  }, [targetLang])   // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleLangChange = useCallback((lang: string) => {
     setTargetLang(lang)
-    if (joined) { ws.close(); setTimeout(() => ws.open(), 100) }
-  }, [joined, ws])
+  }, [])
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
