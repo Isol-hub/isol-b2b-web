@@ -10,6 +10,7 @@ import TranscriptModal from '../components/TranscriptModal'
 import GlossaryPanel from '../components/GlossaryPanel'
 import LanguageSelector from '../components/LanguageSelector'
 import ErrorBanner from '../components/ErrorBanner'
+import StickyNote from '../components/StickyNote'
 import { LANGUAGES } from '../lib/languages'
 
 interface TranscriptLine { text: string; time: Date }
@@ -42,11 +43,22 @@ export default function WorkspacePage() {
   const sessionStartRef = useRef<number>(0)
 
   // Session history
-  interface SessionMeta { id: number; started_at: number; target_lang: string; line_count: number }
+  interface SessionMeta { id: number; started_at: number; target_lang: string; line_count: number; title?: string }
   interface SessionDetail { session: Record<string, unknown>; lines: Array<{ line_index: number; text: string }> }
   const [sessions, setSessions] = useState<SessionMeta[]>([])
   const [viewingSession, setViewingSession] = useState<SessionDetail | null>(null)
   const [sessionDetailLoading, setSessionDetailLoading] = useState(false)
+  const [editingTitle, setEditingTitle] = useState('')
+
+  // Sync title input when session detail opens
+  useEffect(() => {
+    if (viewingSession) {
+      setEditingTitle((viewingSession.session.title as string) ?? '')
+    }
+  }, [viewingSession])
+
+  // Workspace glossary
+  const [glossaryTerms, setGlossaryTerms] = useState<Set<string>>(new Set())
 
   // Auto-enable AI mode when formatting arrives
   useEffect(() => {
@@ -107,12 +119,41 @@ export default function WorkspacePage() {
         headers: { Authorization: `Bearer ${token}` },
       })
       if (!res.ok) return
-      const data = await res.json() as { sessions: Array<{ id: number; started_at: number; target_lang: string; line_count: number }> }
+      const data = await res.json() as { sessions: SessionMeta[] }
       setSessions(data.sessions ?? [])
     } catch { /* silent */ }
   }, [workspaceSlug])
 
   useEffect(() => { fetchSessions() }, [fetchSessions])
+
+  const fetchGlossary = useCallback(async () => {
+    if (!workspaceSlug) return
+    const token = getToken()
+    if (!token) return
+    try {
+      const res = await fetch(`/api/glossary?workspace_slug=${workspaceSlug}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) return
+      const data = await res.json() as { terms: Array<{ term: string }> }
+      setGlossaryTerms(new Set(data.terms.map(t => t.term)))
+    } catch { /* silent */ }
+  }, [workspaceSlug])
+
+  useEffect(() => { fetchGlossary() }, [fetchGlossary])
+
+  const handleSaveGlossaryWord = useCallback(async (word: string) => {
+    const token = getToken()
+    if (!token || !workspaceSlug) return
+    try {
+      await fetch('/api/glossary', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ workspace_slug: workspaceSlug, term: word }),
+      })
+      setGlossaryTerms(prev => new Set([...prev, word]))
+    } catch { /* silent */ }
+  }, [workspaceSlug])
 
   const openSession = useCallback(async (id: number) => {
     const token = getToken()
@@ -123,10 +164,24 @@ export default function WorkspacePage() {
         headers: { Authorization: `Bearer ${token}` },
       })
       if (!res.ok) return
-      const data = await res.json() as { session: Record<string, unknown>; lines: Array<{ line_index: number; text: string }> }
+      const data = await res.json() as SessionDetail
       setViewingSession(data)
     } catch { /* silent */ }
     finally { setSessionDetailLoading(false) }
+  }, [])
+
+  const patchSessionTitle = useCallback(async (id: number, title: string) => {
+    const token = getToken()
+    if (!token) return
+    try {
+      await fetch(`/api/sessions/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ title: title.trim() || null }),
+      })
+      setSessions(prev => prev.map(s => s.id === id ? { ...s, title: title.trim() || undefined } : s))
+      setViewingSession(prev => prev ? { ...prev, session: { ...prev.session, title: title.trim() || null } } : prev)
+    } catch { /* silent */ }
   }, [])
 
   const saveSession = useCallback(async (
@@ -409,18 +464,15 @@ export default function WorkspacePage() {
             )}
           </div>
 
-          {/* ROOM — shown only when session active and sessionId known */}
+          {/* SHARE — shown only when session active and sessionId known */}
           {sessionActive && ws.sessionId && (
             <>
               <div className="rail-divider" />
               <div>
-                <p className="rail-label">Room</p>
+                <p className="rail-label">Share</p>
 
-                {/* Room code row */}
-                <div style={{
-                  display: 'flex', alignItems: 'center', gap: 7,
-                  marginBottom: 10,
-                }}>
+                {/* Room code */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 10 }}>
                   <span style={{
                     width: 6, height: 6, borderRadius: '50%',
                     background: 'var(--live)',
@@ -433,26 +485,35 @@ export default function WorkspacePage() {
                   }}>{roomCode}</span>
                 </div>
 
-                {/* Copy link button */}
-                <button
-                  onClick={handleCopyRoom}
-                  style={{
-                    width: '100%',
-                    background: roomCopied
-                      ? 'rgba(34,197,94,0.08)'
-                      : 'rgba(0,0,0,0.03)',
-                    border: `1px solid ${roomCopied ? 'rgba(34,197,94,0.22)' : 'var(--border)'}`,
-                    color: roomCopied ? 'var(--live)' : 'var(--text-dim)',
-                    fontWeight: 600, fontSize: 12,
-                    padding: '7px 12px',
-                    borderRadius: 'var(--radius)',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
-                  }}
-                >
-                  {roomCopied ? '✓ Copied' : '↗ Copy invite link'}
-                </button>
+                {/* URL input + copy button */}
+                <div style={{ position: 'relative', marginBottom: 12 }}>
+                  <input
+                    className="input-field"
+                    value={shareUrl}
+                    readOnly
+                    onFocus={e => e.target.select()}
+                    style={{ fontSize: 11, paddingRight: 56, cursor: 'text' }}
+                  />
+                  <button
+                    onClick={handleCopyRoom}
+                    style={{
+                      position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)',
+                      background: roomCopied ? 'rgba(34,197,94,0.10)' : 'rgba(99,102,241,0.08)',
+                      border: `1px solid ${roomCopied ? 'rgba(34,197,94,0.20)' : 'rgba(99,102,241,0.20)'}`,
+                      color: roomCopied ? 'var(--live)' : 'var(--accent)',
+                      borderRadius: 5, padding: '3px 9px',
+                      fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                      transition: 'all 0.2s',
+                    }}
+                  >
+                    {roomCopied ? '✓' : 'Copy'}
+                  </button>
+                </div>
+
+                {/* Helpful hint */}
+                <StickyNote>
+                  Share this link with participants — they'll join the live room and see captions in their language.
+                </StickyNote>
               </div>
             </>
           )}
@@ -498,7 +559,7 @@ export default function WorkspacePage() {
                         onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
                       >
                         <div style={{ fontSize: 11, color: 'var(--text-dim)', fontWeight: 600, marginBottom: 2 }}>
-                          {date.toLocaleDateString()} {date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          {s.title ?? `${date.toLocaleDateString()} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
                         </div>
                         <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
                           {lang ? `${lang.flag} ${lang.label}` : s.target_lang} · {s.line_count} lines
@@ -598,6 +659,42 @@ export default function WorkspacePage() {
 
       </div>
 
+      {/* ━━ MOBILE BOTTOM BAR ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+      <div className="mobile-bottom-bar">
+        {!sessionActive ? (
+          <button
+            onClick={handleStart}
+            disabled={isUnsupported}
+            className="btn-primary"
+            style={{ flex: 1 }}
+          >
+            Start session →
+          </button>
+        ) : (
+          <button onClick={handleStop} className="btn-stop" style={{ flex: 1 }}>
+            <span style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--red)', flexShrink: 0, marginRight: 4 }} />
+            Stop
+          </button>
+        )}
+        <button
+          onClick={() => transcript.length > 0 && setShowModal(true)}
+          className="btn-icon"
+          disabled={transcript.length === 0}
+          style={{ flexShrink: 0 }}
+        >
+          ↑ Export
+        </button>
+        {ws.sessionId && (
+          <button
+            onClick={handleCopyRoom}
+            className="btn-icon"
+            style={{ flexShrink: 0, color: roomCopied ? 'var(--live)' : undefined }}
+          >
+            {roomCopied ? '✓' : '↗ Share'}
+          </button>
+        )}
+      </div>
+
       {/* ━━ OVERLAYS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
 
       {compact && (
@@ -642,13 +739,36 @@ export default function WorkspacePage() {
           }}>
             {/* Modal header */}
             <div style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              display: 'flex', alignItems: 'center', gap: 12,
               padding: '18px 24px',
               borderBottom: '1px solid var(--divider)',
               flexShrink: 0,
             }}>
-              <div>
-                <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 2 }}>Session transcript</h3>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                {/* Editable session title */}
+                <input
+                  value={editingTitle}
+                  onChange={e => setEditingTitle(e.target.value)}
+                  onFocus={e => (e.target.style.borderBottomColor = 'var(--border-accent)')}
+                  onBlur={e => {
+                    e.target.style.borderBottomColor = 'transparent'
+                    if (viewingSession) patchSessionTitle(viewingSession.session.id as number, editingTitle)
+                  }}
+                  onKeyDown={e => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+                  placeholder={viewingSession
+                    ? `Session ${new Date(viewingSession.session.started_at as number).toLocaleDateString()}`
+                    : 'Session title'}
+                  style={{
+                    fontSize: 15, fontWeight: 700,
+                    background: 'none', border: 'none',
+                    borderBottom: '1px solid transparent',
+                    padding: '1px 0', marginBottom: 2,
+                    color: 'var(--text)', fontFamily: 'inherit',
+                    width: '100%', cursor: 'text',
+                    transition: 'border-color 0.15s',
+                    outline: 'none',
+                  }}
+                />
                 {viewingSession && (
                   <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>
                     {new Date(viewingSession.session.started_at as number).toLocaleString()} ·{' '}
@@ -658,7 +778,7 @@ export default function WorkspacePage() {
               </div>
               <button
                 onClick={() => setViewingSession(null)}
-                style={{ background: 'none', color: 'var(--text-muted)', fontSize: 20, padding: '2px 8px', borderRadius: 4 }}
+                style={{ background: 'none', color: 'var(--text-muted)', fontSize: 20, padding: '2px 8px', borderRadius: 4, flexShrink: 0 }}
               >×</button>
             </div>
             {/* Content */}
@@ -710,6 +830,8 @@ export default function WorkspacePage() {
               currentSentence={glossaryWord.sentence}
               targetLang={targetLang}
               onClose={() => setGlossaryWord(null)}
+              isSaved={glossaryTerms.has(glossaryWord.word)}
+              onSave={handleSaveGlossaryWord}
             />
           </div>
         </>

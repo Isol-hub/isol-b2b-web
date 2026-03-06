@@ -6,6 +6,8 @@ interface Props {
   currentSentence: string
   targetLang?: string
   onClose: () => void
+  isSaved?: boolean
+  onSave?: (word: string) => void
 }
 
 interface AiDef {
@@ -21,7 +23,7 @@ const REGISTER_COLOR: Record<string, string> = {
   neutral: 'var(--text-muted)',
 }
 
-export default function GlossaryPanel({ word, sentences, currentSentence, targetLang = 'en', onClose }: Props) {
+export default function GlossaryPanel({ word, sentences, currentSentence, targetLang = 'en', onClose, isSaved, onSave }: Props) {
   const [aiDef, setAiDef] = useState<AiDef | null>(null)
   const [aiLoading, setAiLoading] = useState(true)
 
@@ -77,7 +79,7 @@ export default function GlossaryPanel({ word, sentences, currentSentence, target
         borderBottom: '1px solid var(--divider)',
         flexShrink: 0,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <span style={{
             fontSize: 10, fontWeight: 700, letterSpacing: '0.09em',
             textTransform: 'uppercase', color: 'var(--text-muted)',
@@ -91,6 +93,24 @@ export default function GlossaryPanel({ word, sentences, currentSentence, target
               background: 'rgba(0,0,0,0.04)',
               borderRadius: 5, padding: '2px 6px',
             }}>{aiDef.register}</span>
+          )}
+          {/* Save to workspace glossary — only shown after AI definition loads */}
+          {onSave && !aiLoading && (
+            <button
+              onClick={() => !isSaved && onSave(word)}
+              disabled={isSaved}
+              style={{
+                background: isSaved ? 'rgba(34,197,94,0.08)' : 'rgba(99,102,241,0.08)',
+                border: `1px solid ${isSaved ? 'rgba(34,197,94,0.20)' : 'rgba(99,102,241,0.20)'}`,
+                color: isSaved ? 'var(--live)' : 'var(--accent)',
+                fontSize: 10, fontWeight: 700, letterSpacing: '0.04em',
+                padding: '2px 8px', borderRadius: 5,
+                cursor: isSaved ? 'default' : 'pointer',
+                transition: 'all 0.2s',
+              }}
+            >
+              {isSaved ? '✓ Saved' : '+ Save'}
+            </button>
           )}
         </div>
         <button
