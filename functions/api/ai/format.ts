@@ -50,7 +50,7 @@ ${rawText}`,
     if (!response.ok) {
       const err = await response.text()
       console.error('Anthropic error:', err)
-      return Response.json({ error: 'AI formatting failed' }, { status: 500, headers: CORS })
+      return Response.json({ error: `Anthropic ${response.status}: ${err}` }, { status: 500, headers: CORS })
     }
 
     const data = await response.json<{ content: { type: string; text: string }[] }>()
