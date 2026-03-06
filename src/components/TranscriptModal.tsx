@@ -292,7 +292,7 @@ export default function TranscriptModal({ transcript, targetLang, aiFormatted, o
         }}>
           <div>
             <h2 style={{ fontSize: 17, fontWeight: 700, marginBottom: 3, letterSpacing: '-0.01em' }}>
-              Edit & Export
+              Export document
             </h2>
             <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
               {transcript.length} lines · {targetLang.toUpperCase()}

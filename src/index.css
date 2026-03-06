@@ -201,6 +201,52 @@ input, select { font-family: inherit; outline: none; }
   margin-bottom: 2px;
 }
 
+/* ─── Control dock ───────────────────────────────── */
+.control-dock {
+  height: 64px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 32px;
+  background: rgba(11,15,25,0.98);
+  border-top: 1px solid var(--divider);
+}
+
+/* ─── Dock source buttons (horizontal) ───────────── */
+.dock-source-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 13px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface-1);
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.18s;
+  white-space: nowrap;
+}
+.dock-source-btn:hover {
+  border-color: rgba(37,99,235,0.35);
+  color: var(--text-dim);
+}
+.dock-source-btn.active {
+  border-color: rgba(37,99,235,0.55);
+  background: rgba(37,99,235,0.10);
+  color: var(--text);
+}
+
+/* ─── Dock divider ───────────────────────────────── */
+.dock-divider {
+  width: 1px;
+  height: 28px;
+  background: var(--divider);
+  flex-shrink: 0;
+}
+
 /* ─── AI badge ───────────────────────────────────── */
 .ai-badge {
   display: inline-flex;
@@ -377,4 +423,19 @@ input, select { font-family: inherit; outline: none; }
 
 .doc-ai-update {
   animation: docFade 0.25s ease-out forwards;
+}
+
+/* ─── Mobile responsive ──────────────────────────── */
+@media (max-width: 640px) {
+  .control-dock {
+    height: auto;
+    min-height: 56px;
+    flex-wrap: wrap;
+    padding: 10px 16px;
+    gap: 8px;
+  }
+  .control-dock-lang {
+    order: -1;
+    width: 100%;
+  }
 }

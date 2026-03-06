@@ -6,7 +6,6 @@ import { useWebSocket } from '../hooks/useWebSocket'
 import type { SubtitleMessage } from '../hooks/useWebSocket'
 import DocumentView from '../components/DocumentView'
 import CompactPanel from '../components/CompactPanel'
-import RoomPanel from '../components/RoomPanel'
 import TranscriptModal from '../components/TranscriptModal'
 import GlossaryPanel from '../components/GlossaryPanel'
 import LanguageSelector from '../components/LanguageSelector'
@@ -14,8 +13,6 @@ import ErrorBanner from '../components/ErrorBanner'
 import { LANGUAGES } from '../lib/languages'
 
 interface TranscriptLine { text: string; time: Date }
-
-const ONBOARDING_KEY = 'isol_onboarded_v1'
 
 export default function WorkspacePage() {
   const { workspaceSlug } = useParams<{ workspaceSlug: string }>()
@@ -30,7 +27,7 @@ export default function WorkspacePage() {
   const [audioSource, setAudioSource] = useState<AudioSource>('display')
   const [transcript, setTranscript] = useState<TranscriptLine[]>([])
   const [showModal, setShowModal] = useState(false)
-  const [showOnboarding, setShowOnboarding] = useState(false)
+  const [roomCopied, setRoomCopied] = useState(false)
 
   const [glossaryWord, setGlossaryWord] = useState<{ word: string; sentence: string } | null>(null)
 
@@ -68,15 +65,6 @@ export default function WorkspacePage() {
     }, 2000)
   }, [transcript.length])
 
-  useEffect(() => {
-    if (!localStorage.getItem(ONBOARDING_KEY)) setShowOnboarding(true)
-  }, [])
-
-  const dismissOnboarding = useCallback(() => {
-    setShowOnboarding(false)
-    localStorage.setItem(ONBOARDING_KEY, '1')
-  }, [])
-
   const wssUrl = import.meta.env.VITE_WSS_URL ?? 'wss://api.isol.live/audio'
 
   const handleMessage = useCallback((msg: SubtitleMessage) => {
@@ -100,11 +88,10 @@ export default function WorkspacePage() {
     setError(''); setCurrentLine(''); setTranscript([])
     setAiFormatted(undefined); setAiFormattedAt(undefined); setAiLoading(false)
     wordIndex.current.clear()
-    dismissOnboarding()
     ws.open()
     await audio.start(audioSource)
     setSessionActive(true)
-  }, [ws, audio, audioSource, dismissOnboarding])
+  }, [ws, audio, audioSource])
 
   const handleStop = useCallback(() => {
     audio.stop(); ws.close()
@@ -125,6 +112,7 @@ export default function WorkspacePage() {
   const isUnsupported = audioSource === 'display' && !('getDisplayMedia' in navigator.mediaDevices)
   const targetLangLabel = LANGUAGES.find(l => l.code === targetLang)
   const isActive = audio.state === 'active' && ws.state === 'connected'
+  const canAi = !!(aiFormatted)
 
   const statusColor = ws.state === 'error' || audio.state === 'error' ? 'var(--red)'
     : ws.state === 'reconnecting' ? 'var(--orange)'
@@ -138,6 +126,25 @@ export default function WorkspacePage() {
     : isActive ? 'Live'
     : 'Ready'
 
+  const shareUrl = ws.sessionId
+    ? `${window.location.origin}/join/${workspaceSlug}/${ws.sessionId}`
+    : ''
+
+  const roomCode = ws.sessionId
+    ? (() => {
+        const raw = ws.sessionId.replace(/-/g, '').slice(-8).toUpperCase()
+        return `${raw.slice(0, 4)}-${raw.slice(4)}`
+      })()
+    : ''
+
+  const handleCopyRoom = () => {
+    if (!shareUrl) return
+    navigator.clipboard.writeText(shareUrl).then(() => {
+      setRoomCopied(true)
+      setTimeout(() => setRoomCopied(false), 2000)
+    })
+  }
+
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'var(--bg)' }}>
 
@@ -146,7 +153,6 @@ export default function WorkspacePage() {
         display: 'flex', alignItems: 'center',
         padding: '0 24px', height: 52, gap: 16,
       }}>
-        {/* Brand */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
           <div className="logo-mark" style={{ width: 26, height: 26 }}>
             <span style={{ color: '#fff', fontWeight: 800, fontSize: 13 }}>i</span>
@@ -159,27 +165,23 @@ export default function WorkspacePage() {
 
         <div style={{ flex: 1 }} />
 
-        {/* Live status */}
         {sessionActive && (
           <div className="status-pill">
             <span style={{
               width: 6, height: 6, borderRadius: '50%',
               background: statusColor,
-              transition: 'background 0.3s',
-              flexShrink: 0,
+              transition: 'background 0.3s', flexShrink: 0,
             }} />
             <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>{statusLabel}</span>
           </div>
         )}
 
-        {/* Lang */}
         {sessionActive && targetLangLabel && (
           <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
             {targetLangLabel.flag} {targetLangLabel.label}
           </span>
         )}
 
-        {/* User + sign out */}
         <span style={{
           fontSize: 12, color: 'var(--text-muted)',
           maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
@@ -189,173 +191,46 @@ export default function WorkspacePage() {
         </button>
       </header>
 
-      {/* Onboarding banner */}
-      {showOnboarding && (
-        <div className="onboarding-banner" style={{
-          padding: '10px 24px',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          gap: 16, flexWrap: 'wrap', flexShrink: 0,
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
-            {[
-              { n: '1', text: 'Choose audio source' },
-              { n: '2', text: 'Pick target language' },
-              { n: '3', text: 'Start and share your screen audio' },
-            ].map(({ n, text }) => (
-              <div key={n} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{
-                  width: 18, height: 18, borderRadius: '50%',
-                  background: 'var(--accent)',
-                  color: '#fff', fontSize: 10, fontWeight: 700,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                }}>{n}</span>
-                <span style={{ fontSize: 13, color: 'var(--text-dim)' }}>{text}</span>
-              </div>
-            ))}
-          </div>
-          <button
-            onClick={dismissOnboarding}
-            style={{
-              background: 'rgba(255,255,255,0.05)',
-              color: 'var(--text-muted)', fontSize: 12,
-              padding: '4px 12px', borderRadius: 'var(--radius)',
-              border: '1px solid var(--border)',
-            }}
-          >Got it</button>
-        </div>
-      )}
-
-      {/* ━━ BODY: 3-COLUMN ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+      {/* ━━ BODY ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
 
-        {/* ── LEFT SIDEBAR ─────────────────────────────────────── */}
-        <aside style={{
-          width: 220,
-          flexShrink: 0,
-          borderRight: '1px solid var(--divider)',
-          padding: '24px 16px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 20,
-          overflowY: 'auto',
-          background: 'var(--surface)',
-        }}>
-
-          {!sessionActive ? (
-            <>
-              {/* CAPTURE */}
-              <div className="sidebar-group">
-                <p className="sidebar-group-label">Capture</p>
-                <div style={{ display: 'flex', gap: 6 }}>
-                  <button
-                    className={`source-btn${audioSource === 'display' ? ' active' : ''}`}
-                    onClick={() => setAudioSource('display')}
-                  >
-                    <span style={{ fontSize: 18 }}>🖥</span>
-                    <span>Screen</span>
-                  </button>
-                  <button
-                    className={`source-btn${audioSource === 'microphone' ? ' active' : ''}`}
-                    onClick={() => setAudioSource('microphone')}
-                  >
-                    <span style={{ fontSize: 18 }}>🎤</span>
-                    <span>Mic</span>
-                  </button>
-                </div>
-                {isUnsupported && (
-                  <p style={{ fontSize: 12, color: 'var(--orange)', lineHeight: 1.5, marginTop: 2 }}>
-                    Screen audio not supported. Use Mic or Chrome/Edge.
-                  </p>
-                )}
-              </div>
-
-              {/* LANGUAGE */}
-              <div className="sidebar-group">
-                <LanguageSelector value={targetLang} onChange={setTargetLang} disabled={false} />
-              </div>
-
-              {/* START */}
-              <div className="sidebar-group">
-                <button
-                  onClick={handleStart}
-                  disabled={isUnsupported}
-                  className="btn-primary"
-                  style={{ width: '100%' }}
-                >
-                  Start session →
-                </button>
-              </div>
-            </>
-          ) : (
-            <>
-              {/* LANGUAGE (disabled during session) */}
-              <div className="sidebar-group">
-                <LanguageSelector value={targetLang} onChange={setTargetLang} disabled={true} />
-              </div>
-
-              {/* ROOM */}
-              {ws.sessionId && workspaceSlug && (
-                <div className="sidebar-group">
-                  <p className="sidebar-group-label">Room</p>
-                  <RoomPanel sessionId={ws.sessionId} workspaceSlug={workspaceSlug} />
-                </div>
-              )}
-
-              {/* STOP */}
-              <div className="sidebar-group">
-                <button onClick={handleStop} className="btn-stop">
-                  Stop session
-                </button>
-              </div>
-            </>
-          )}
-
-          {/* COMPACT VIEW */}
-          <button
-            onClick={() => setCompact(c => !c)}
-            className="btn-icon"
-            style={{ width: '100%', justifyContent: 'center', fontSize: 12 }}
-          >
-            {compact ? 'Show document' : '⊟ Compact view'}
-          </button>
-
-          {/* EXPORT (post-session) */}
-          {!sessionActive && transcript.length > 0 && (
-            <div style={{ borderTop: '1px solid var(--divider)', paddingTop: 16 }}>
-              <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 10 }}>
-                {transcript.length} lines captured
-              </p>
-              <button
-                onClick={() => setShowModal(true)}
-                className="btn-primary"
-                style={{ width: '100%' }}
-              >
-                Edit & Export →
-              </button>
-            </div>
-          )}
-
-          {/* Bottom spacer */}
-          <div style={{ flex: 1 }} />
-        </aside>
-
-        {/* ── MAIN CONTENT ─────────────────────────────────────── */}
+        {/* ── MAIN (canvas + control dock) ──────────────────── */}
         <main style={{
           flex: 1,
-          padding: '28px 32px',
           display: 'flex',
           flexDirection: 'column',
-          overflowY: 'auto',
+          overflow: 'hidden',
           minWidth: 0,
         }}>
+
+          {/* Error banner */}
           {error && (
-            <div style={{ marginBottom: 16, flexShrink: 0 }}>
+            <div style={{ padding: '12px 32px 0', flexShrink: 0 }}>
               <ErrorBanner message={error} onDismiss={() => setError('')} />
             </div>
           )}
 
+          {/* ── Canvas ────────────────────────────────────── */}
           {!compact && (
-            <div style={{ flex: 1 }}>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '28px 32px' }}>
+
+              {/* Sticky note: AI structured version available after session */}
+              {canAi && !sessionActive && (
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 20 }}>
+                  <div className="sticky-note" style={{ maxWidth: 260 }}>
+                    <div style={{
+                      display: 'flex', alignItems: 'center', gap: 6,
+                      fontWeight: 700, fontSize: 12, marginBottom: 6,
+                    }}>
+                      <span>✦</span> AI-structured version ready
+                    </div>
+                    <p style={{ fontSize: 12, opacity: 0.75, lineHeight: 1.5 }}>
+                      Toggle "AI Enhanced" in the document to see the clean structured view.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               <DocumentView
                 transcript={transcript}
                 currentLine={currentLine}
@@ -368,9 +243,157 @@ export default function WorkspacePage() {
               />
             </div>
           )}
+
+          {/* ── Control dock ──────────────────────────────── */}
+          <div className="control-dock">
+            {!sessionActive ? (
+
+              /* Pre-session controls */
+              <>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <button
+                    className={`dock-source-btn${audioSource === 'display' ? ' active' : ''}`}
+                    onClick={() => setAudioSource('display')}
+                  >
+                    <span style={{ fontSize: 15 }}>🖥</span> Screen
+                  </button>
+                  <button
+                    className={`dock-source-btn${audioSource === 'microphone' ? ' active' : ''}`}
+                    onClick={() => setAudioSource('microphone')}
+                  >
+                    <span style={{ fontSize: 15 }}>🎤</span> Mic
+                  </button>
+                </div>
+
+                <div className="dock-divider" />
+
+                <div className="control-dock-lang" style={{ width: 200 }}>
+                  <LanguageSelector value={targetLang} onChange={setTargetLang} disabled={false} />
+                </div>
+
+                <div style={{ flex: 1 }} />
+
+                {isUnsupported && (
+                  <span style={{ fontSize: 12, color: 'var(--orange)', flexShrink: 0 }}>
+                    Use Chrome/Edge or switch to Mic
+                  </span>
+                )}
+
+                {transcript.length > 0 && (
+                  <button
+                    onClick={() => setShowModal(true)}
+                    className="btn-icon"
+                    style={{ fontSize: 13 }}
+                  >
+                    Export document →
+                  </button>
+                )}
+
+                <button
+                  onClick={handleStart}
+                  disabled={isUnsupported}
+                  className="btn-primary"
+                >
+                  Start session →
+                </button>
+              </>
+
+            ) : (
+
+              /* Active session controls */
+              <>
+                {/* Room card */}
+                {ws.sessionId && (
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    background: 'var(--surface-1)',
+                    border: '1px solid var(--border)',
+                    borderRadius: 'var(--radius)',
+                    padding: '6px 10px 6px 12px',
+                    flexShrink: 0,
+                  }}>
+                    <span style={{
+                      width: 6, height: 6, borderRadius: '50%',
+                      background: 'var(--live)',
+                      animation: 'roomPulse 2s ease-in-out infinite',
+                      flexShrink: 0,
+                    }} />
+                    <span style={{
+                      fontSize: 11, fontWeight: 700, color: 'var(--live)',
+                      letterSpacing: '0.07em', textTransform: 'uppercase',
+                    }}>Room</span>
+                    <span style={{
+                      fontFamily: 'monospace', fontSize: 13, fontWeight: 700,
+                      letterSpacing: '0.08em', color: 'var(--text)',
+                    }}>{roomCode}</span>
+                    <button
+                      onClick={handleCopyRoom}
+                      style={{
+                        background: roomCopied ? 'rgba(16,185,129,0.12)' : 'rgba(37,99,235,0.15)',
+                        color: roomCopied ? 'var(--live)' : '#93C5FD',
+                        fontWeight: 600, fontSize: 11,
+                        padding: '4px 10px',
+                        border: 'none', borderRadius: 5,
+                        cursor: 'pointer', transition: 'all 0.2s',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {roomCopied ? '✓ Copied' : 'Copy link'}
+                    </button>
+                  </div>
+                )}
+
+                <div className="dock-divider" />
+
+                <div style={{ flex: 1 }} />
+
+                <button
+                  onClick={() => setCompact(c => !c)}
+                  className="btn-icon"
+                  style={{ fontSize: 13 }}
+                >
+                  {compact ? '⊞ Show document' : '⊟ Compact'}
+                </button>
+
+                {transcript.length > 0 && (
+                  <button
+                    onClick={() => setShowModal(true)}
+                    className="btn-icon"
+                    style={{ fontSize: 13 }}
+                  >
+                    Export →
+                  </button>
+                )}
+
+                <button
+                  onClick={handleStop}
+                  style={{
+                    background: 'rgba(239,68,68,0.08)',
+                    border: '1px solid rgba(239,68,68,0.20)',
+                    color: 'var(--red)',
+                    fontWeight: 600, fontSize: 13,
+                    padding: '0 18px', height: 38,
+                    borderRadius: 'var(--radius)',
+                    cursor: 'pointer', transition: 'background 0.15s',
+                    whiteSpace: 'nowrap', flexShrink: 0,
+                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                  }}
+                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'rgba(239,68,68,0.14)'}
+                  onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'rgba(239,68,68,0.08)'}
+                >
+                  <span style={{
+                    width: 8, height: 8, borderRadius: 2,
+                    background: 'var(--red)', flexShrink: 0,
+                  }} />
+                  Stop
+                </button>
+              </>
+
+            )}
+          </div>
         </main>
 
-        {/* ── RIGHT PANEL: KNOWLEDGE / GLOSSARY ────────────────── */}
+        {/* ── RIGHT PANEL: GLOSSARY ─────────────────────────────── */}
         <aside style={{
           width: glossaryWord ? 300 : 0,
           flexShrink: 0,
