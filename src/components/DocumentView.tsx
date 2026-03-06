@@ -14,6 +14,8 @@ interface Props {
   aiFormatted?: string
   aiFormattedAt?: number
   aiLoading?: boolean
+  aiMode: boolean
+  onAiModeChange: (mode: boolean) => void
   onWordClick?: (word: string, sentence: string) => void
 }
 
@@ -49,7 +51,7 @@ function AiMarkdown({ text, onWordClick }: { text: string; onWordClick?: (w: str
     } else if (line.startsWith('### ')) {
       elements.push(
         <h3 key={i} style={{
-          fontSize: 12, fontWeight: 700, letterSpacing: '0.08em',
+          fontSize: 11, fontWeight: 700, letterSpacing: '0.09em',
           textTransform: 'uppercase', color: 'var(--text-muted)',
           marginTop: 24, marginBottom: 10,
         }}>{line.slice(4)}</h3>
@@ -59,8 +61,8 @@ function AiMarkdown({ text, onWordClick }: { text: string; onWordClick?: (w: str
     } else {
       elements.push(
         <p key={i} style={{
-          margin: '0 0 16px', fontSize: 18,
-          color: 'var(--text)', lineHeight: 1.75, fontWeight: 400,
+          margin: '0 0 18px', fontSize: 18,
+          color: 'var(--text)', lineHeight: 1.78, fontWeight: 400,
         }}>{renderWords(line, line, onWordClick)}</p>
       )
     }
@@ -77,7 +79,7 @@ function WordSpan({ word, sentence, onWordClick }: {
     <span
       onClick={() => onWordClick(word.replace(/[^\w]/g, ''), sentence)}
       style={{ cursor: 'pointer', borderRadius: 3, transition: 'background 0.12s', padding: '0 1px' }}
-      onMouseEnter={e => (e.target as HTMLElement).style.background = 'rgba(214,178,94,0.15)'}
+      onMouseEnter={e => (e.target as HTMLElement).style.background = 'rgba(217,164,65,0.15)'}
       onMouseLeave={e => (e.target as HTMLElement).style.background = 'transparent'}
     >{word}</span>
   )
@@ -99,12 +101,13 @@ function renderWords(
 
 export default function DocumentView({
   transcript, currentLine, isActive, targetLang,
-  aiFormatted, aiFormattedAt, aiLoading, onWordClick,
+  aiFormatted, aiFormattedAt, aiLoading,
+  aiMode, onAiModeChange,
+  onWordClick,
 }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null)
   const [sessionStart] = useState(() => new Date())
   const [now, setNow] = useState(new Date())
-  const [aiMode, setAiMode] = useState(false)
 
   useEffect(() => {
     if (!isActive) return
@@ -116,68 +119,57 @@ export default function DocumentView({
     bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
   }, [transcript.length, currentLine, aiMode, aiFormatted])
 
-  useEffect(() => {
-    if (aiFormatted && !aiMode) setAiMode(true)
-  }, [aiFormatted])
-
   const isEmpty = transcript.length === 0 && !currentLine
   const canAi = !!(aiFormatted)
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
 
-      {/* ━━ LIVE CAPTURE STRIP ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-      <div style={{ flexShrink: 0 }}>
+      {/* ━━ LIVE STREAM STRIP ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+      <div style={{
+        flexShrink: 0,
+        padding: '14px 32px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+        borderBottom: '1px solid var(--divider)',
+        minHeight: 48,
+      }}>
 
-        {/* Strip header */}
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          marginBottom: 8,
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            {isActive && (
-              <span style={{
-                width: 6, height: 6, borderRadius: '50%',
-                background: 'var(--live)',
-                animation: 'livePulse 2s ease-in-out infinite',
-                display: 'inline-block', flexShrink: 0,
-              }} />
-            )}
-            <span className="section-label">
-              {isActive ? 'Live Capture' : transcript.length > 0 ? 'Capture' : 'Ready'}
-            </span>
-            {isActive && (
-              <>
-                <span style={{ color: 'var(--divider)', fontSize: 14 }}>·</span>
-                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{targetLang}</span>
-              </>
-            )}
-            {(canAi || aiLoading) && (
-              <span className="ai-badge">
-                {aiLoading ? '↻ AI active' : '✦ AI active'}
-              </span>
-            )}
-          </div>
-          <span style={{ fontSize: 12, color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>
-            {isActive ? elapsed(sessionStart, now) : transcript.length > 0 ? `${transcript.length} lines` : ''}
-          </span>
-        </div>
+        {/* Live pulse */}
+        {isActive && (
+          <span style={{
+            width: 7, height: 7, borderRadius: '50%',
+            background: 'var(--live)',
+            animation: 'livePulse 2s ease-in-out infinite',
+            flexShrink: 0,
+          }} />
+        )}
 
-        {/* Strip body — minimal, no card box */}
-        <div style={{
-          padding: '10px 2px',
-          borderBottom: '1px solid var(--divider)',
-          minHeight: 40,
-          display: 'flex',
-          alignItems: 'center',
+        {/* Label */}
+        <span style={{
+          fontSize: 10, fontWeight: 700, letterSpacing: '0.10em',
+          textTransform: 'uppercase',
+          color: isActive ? 'var(--live)' : 'var(--text-muted)',
+          flexShrink: 0,
         }}>
+          {isActive ? 'Live' : transcript.length > 0 ? 'Capture' : 'Ready'}
+        </span>
+
+        {/* Separator */}
+        {(isActive || transcript.length > 0) && (
+          <span style={{ width: 1, height: 14, background: 'var(--divider)', flexShrink: 0 }} />
+        )}
+
+        {/* Flowing line */}
+        <div style={{ flex: 1, minWidth: 0 }}>
           {currentLine ? (
-            <span style={{ fontSize: 14, color: 'var(--text-dim)', lineHeight: 1.6 }}>
+            <span style={{ fontSize: 14, color: 'var(--text-dim)', lineHeight: 1.55 }}>
               <MatrixText text={currentLine} color="var(--text-dim)" />
               <span className="doc-cursor" />
             </span>
           ) : isActive ? (
-            <span style={{ fontSize: 13, color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}>
+            <span style={{ fontSize: 13, color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center' }}>
               Listening<span className="doc-cursor" />
             </span>
           ) : transcript.length > 0 ? (
@@ -190,135 +182,121 @@ export default function DocumentView({
             </span>
           )}
         </div>
+
+        {/* Right meta */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+          {isActive && (
+            <>
+              <span style={{ fontSize: 11, color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>
+                {elapsed(sessionStart, now)}
+              </span>
+              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{targetLang}</span>
+            </>
+          )}
+          {(canAi || aiLoading) && (
+            <span className="ai-badge">
+              {aiLoading ? '↻ AI' : '✦ AI'}
+            </span>
+          )}
+        </div>
       </div>
 
-      {/* ━━ AI STRUCTURING DIVIDER ━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+      {/* ━━ AI STRUCTURING DIVIDER ━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
       <div style={{
-        display: 'flex', alignItems: 'center', gap: 14,
-        padding: '18px 0',
         flexShrink: 0,
+        display: 'flex', alignItems: 'center', gap: 12,
+        padding: '10px 32px',
+        borderBottom: '1px solid var(--divider)',
       }}>
         <div style={{ flex: 1, height: 1, background: 'var(--divider)' }} />
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
           {aiLoading && (
             <span style={{
-              width: 10, height: 10,
-              border: '1.5px solid rgba(88,213,201,0.20)',
+              width: 9, height: 9,
+              border: '1.5px solid rgba(88,213,201,0.18)',
               borderTopColor: 'var(--teal)',
               borderRadius: '50%',
               animation: 'spin 0.9s linear infinite',
               display: 'inline-block', flexShrink: 0,
             }} />
           )}
-          <span style={{ fontSize: 11, color: 'var(--text-muted)', letterSpacing: '0.04em' }}>
-            {aiLoading
-              ? 'AI structuring'
-              : canAi
-              ? 'AI structured'
-              : 'AI structures on 5+ lines'}
+          <span style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.06em', textTransform: 'uppercase', fontWeight: 600 }}>
+            {aiLoading ? 'AI structuring' : canAi ? 'AI structured' : 'AI structures on 5+ lines'}
           </span>
+          {canAi && (
+            <button
+              onClick={() => onAiModeChange(!aiMode)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 4,
+                fontSize: 11, fontWeight: 600,
+                padding: '3px 10px', borderRadius: 20,
+                border: `1px solid ${aiMode ? 'rgba(217,164,65,0.40)' : 'var(--border)'}`,
+                background: aiMode ? 'rgba(217,164,65,0.10)' : 'transparent',
+                color: aiMode ? 'var(--accent)' : 'var(--text-muted)',
+                cursor: 'pointer',
+                transition: 'all 0.18s',
+              }}
+            >
+              ✦ {aiMode ? 'AI Enhanced' : 'Enable AI'}
+            </button>
+          )}
         </div>
         <div style={{ flex: 1, height: 1, background: 'var(--divider)' }} />
       </div>
 
-      {/* ━━ DOCUMENT SURFACE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-
-        {/* Document header */}
+      {/* ━━ DOCUMENT SURFACE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+      <div style={{
+        flex: 1,
+        overflowY: 'auto',
+        background: 'var(--surface-1)',
+      }}>
         <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          marginBottom: 16, flexShrink: 0,
+          maxWidth: 860,
+          margin: '0 auto',
+          padding: '48px 64px calc(48px + 80px)',  /* extra bottom for toolbar */
         }}>
-          <span className="section-label">Document</span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            {(canAi || (aiLoading && !canAi)) && (
-              <button
-                onClick={() => setAiMode(m => !m)}
-                disabled={!canAi}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 5,
-                  fontSize: 12, fontWeight: 600,
-                  padding: '4px 12px', borderRadius: 6,
-                  border: `1px solid ${aiMode ? 'rgba(214,178,94,0.40)' : 'var(--border)'}`,
-                  background: aiMode ? 'rgba(214,178,94,0.10)' : 'transparent',
-                  color: aiMode ? 'var(--accent)' : 'var(--text-muted)',
-                  cursor: canAi ? 'pointer' : 'default',
-                  transition: 'all 0.2s',
-                  opacity: canAi ? 1 : 0.5,
-                }}
-              >
-                {aiLoading && !canAi ? (
-                  <>
-                    <span style={{
-                      width: 9, height: 9,
-                      border: '1.5px solid rgba(214,178,94,0.3)',
-                      borderTopColor: 'var(--accent)',
-                      borderRadius: '50%',
-                      animation: 'spin 0.8s linear infinite',
-                      display: 'inline-block',
-                    }} />
-                    AI…
-                  </>
-                ) : <>✦ AI Enhanced</>}
-              </button>
-            )}
-          </div>
+          {isEmpty ? (
+            <div style={{
+              paddingTop: 80,
+              display: 'flex', flexDirection: 'column',
+              alignItems: 'center', justifyContent: 'center',
+              gap: 14, color: 'var(--text-muted)',
+              textAlign: 'center',
+            }}>
+              <span style={{ fontSize: 28, opacity: 0.15 }}>✦</span>
+              <span style={{ fontSize: 15, fontWeight: 500 }}>The document will appear here as you speak</span>
+              <span style={{ fontSize: 13, opacity: 0.60 }}>
+                Start a session from the left rail to begin
+              </span>
+            </div>
+          ) : aiMode && aiFormatted ? (
+            <div className="doc-ai-update">
+              <AiMarkdown text={aiFormatted} onWordClick={onWordClick} />
+              {(aiFormattedAt !== undefined ? transcript.slice(aiFormattedAt) : []).map((line, i) => (
+                <p key={i} className="transcript-line" style={{
+                  margin: '0 0 18px', fontSize: 18,
+                  color: 'var(--text)', lineHeight: 1.78,
+                }}>
+                  {renderWords(line.text, line.text, onWordClick)}
+                </p>
+              ))}
+              {isActive && !currentLine && <span className="doc-cursor" />}
+            </div>
+          ) : (
+            <div>
+              {transcript.map((line, i) => (
+                <p key={i} className="transcript-line" style={{
+                  margin: '0 0 18px', fontSize: 18,
+                  color: 'var(--text)', lineHeight: 1.78,
+                }}>
+                  {renderWords(line.text, line.text, onWordClick)}
+                </p>
+              ))}
+              {isActive && !currentLine && <span className="doc-cursor" />}
+            </div>
+          )}
         </div>
-
-        {/* Scrollable document area */}
-        <div style={{
-          flex: 1, overflowY: 'auto',
-          display: 'flex', flexDirection: 'column', alignItems: 'center',
-        }}>
-          {/* The document itself — dominant surface */}
-          <div style={{
-            width: '100%',
-            maxWidth: 820,
-            background: 'var(--surface-1)',
-            border: '1px solid var(--divider)',
-            borderRadius: 'var(--radius-xl)',
-            padding: '48px 64px',
-          }}>
-            {isEmpty ? (
-              <div style={{
-                height: 200,
-                display: 'flex', flexDirection: 'column',
-                alignItems: 'center', justifyContent: 'center',
-                gap: 12, color: 'var(--text-muted)',
-              }}>
-                <span style={{ fontSize: 20, opacity: 0.18 }}>✦</span>
-                <span style={{ fontSize: 14 }}>The document will appear here as you speak</span>
-                <span style={{ fontSize: 12, opacity: 0.55 }}>Start a session to begin</span>
-              </div>
-            ) : aiMode && aiFormatted ? (
-              <div className="doc-ai-update">
-                <AiMarkdown text={aiFormatted} onWordClick={onWordClick} />
-                {(aiFormattedAt !== undefined ? transcript.slice(aiFormattedAt) : []).map((line, i) => (
-                  <p key={i} className="transcript-line" style={{
-                    margin: '0 0 16px', fontSize: 18,
-                    color: 'var(--text)', lineHeight: 1.75,
-                  }}>
-                    {renderWords(line.text, line.text, onWordClick)}
-                  </p>
-                ))}
-                {isActive && !currentLine && <span className="doc-cursor" />}
-              </div>
-            ) : (
-              <div>
-                {transcript.map((line, i) => (
-                  <p key={i} className="transcript-line" style={{
-                    margin: '0 0 16px', fontSize: 18,
-                    color: 'var(--text)', lineHeight: 1.75,
-                  }}>
-                    {renderWords(line.text, line.text, onWordClick)}
-                  </p>
-                ))}
-                {isActive && !currentLine && <span className="doc-cursor" />}
-              </div>
-            )}
-          </div>
-          <div ref={bottomRef} style={{ height: 32 }} />
-        </div>
+        <div ref={bottomRef} />
       </div>
 
     </div>

@@ -25,8 +25,13 @@ export default function ViewerPage() {
   const [aiFormatted, setAiFormatted] = useState<string | undefined>()
   const [aiFormattedAt, setAiFormattedAt] = useState<number | undefined>()
   const [aiLoading, setAiLoading] = useState(false)
+  const [aiMode, setAiMode] = useState(false)
   const aiRunningRef = useRef(false)
   const aiDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    if (aiFormatted && !aiMode) setAiMode(true)
+  }, [aiFormatted])
 
   useEffect(() => {
     if (transcript.length < 5) return
@@ -283,6 +288,8 @@ export default function ViewerPage() {
                   aiFormatted={aiFormatted}
                   aiFormattedAt={aiFormattedAt}
                   aiLoading={aiLoading}
+                  aiMode={aiMode}
+                  onAiModeChange={setAiMode}
                   onWordClick={handleWordClick}
                 />
               </div>

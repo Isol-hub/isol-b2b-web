@@ -28,6 +28,7 @@ export default function WorkspacePage() {
   const [transcript, setTranscript] = useState<TranscriptLine[]>([])
   const [showModal, setShowModal] = useState(false)
   const [roomCopied, setRoomCopied] = useState(false)
+  const [aiMode, setAiMode] = useState(false)
 
   const [glossaryWord, setGlossaryWord] = useState<{ word: string; sentence: string } | null>(null)
 
@@ -38,6 +39,11 @@ export default function WorkspacePage() {
   const aiDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const wordIndex = useRef<Map<string, string[]>>(new Map())
+
+  // Auto-enable AI mode when formatting arrives
+  useEffect(() => {
+    if (aiFormatted && !aiMode) setAiMode(true)
+  }, [aiFormatted])
 
   useEffect(() => {
     if (transcript.length < 5) return
@@ -86,7 +92,7 @@ export default function WorkspacePage() {
 
   const handleStart = useCallback(async () => {
     setError(''); setCurrentLine(''); setTranscript([])
-    setAiFormatted(undefined); setAiFormattedAt(undefined); setAiLoading(false)
+    setAiFormatted(undefined); setAiFormattedAt(undefined); setAiLoading(false); setAiMode(false)
     wordIndex.current.clear()
     ws.open()
     await audio.start(audioSource)
@@ -117,7 +123,7 @@ export default function WorkspacePage() {
   const statusColor = ws.state === 'error' || audio.state === 'error' ? 'var(--red)'
     : ws.state === 'reconnecting' ? 'var(--orange)'
     : isActive ? 'var(--live)'
-    : 'rgba(255,255,255,0.2)'
+    : 'rgba(255,255,255,0.18)'
 
   const statusLabel = ws.state === 'error' || audio.state === 'error' ? 'Error'
     : ws.state === 'reconnecting' ? 'Reconnecting…'
@@ -141,85 +147,97 @@ export default function WorkspacePage() {
     if (!shareUrl) return
     navigator.clipboard.writeText(shareUrl).then(() => {
       setRoomCopied(true)
-      setTimeout(() => setRoomCopied(false), 2000)
+      setTimeout(() => setRoomCopied(false), 2400)
     })
   }
 
   return (
-    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'var(--bg)' }}>
+    <div style={{
+      height: '100vh',
+      display: 'flex',
+      flexDirection: 'column',
+      overflow: 'hidden',
+      background: 'var(--bg)',
+    }}>
 
-      {/* ━━ TOP BAR ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+      {/* ━━ SYSTEM BAR ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
       <header className="header-glass" style={{
-        display: 'flex', alignItems: 'center',
-        padding: '0 24px', height: 52, gap: 14, flexShrink: 0,
+        height: 'var(--header-h)',
+        display: 'flex',
+        alignItems: 'center',
+        padding: '0 20px',
+        gap: 12,
+        flexShrink: 0,
       }}>
         {/* Brand */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-          <div className="logo-mark" style={{ width: 26, height: 26 }}>
-            <span style={{ color: '#111', fontWeight: 800, fontSize: 13 }}>i</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div className="logo-mark" style={{ width: 24, height: 24 }}>
+            <span style={{ color: '#111', fontWeight: 800, fontSize: 12 }}>i</span>
           </div>
-          <span style={{ fontSize: 14, fontWeight: 700, letterSpacing: '-0.01em' }}>ISOL Studio</span>
-          {workspaceSlug && (
-            <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>/ {workspaceSlug}</span>
-          )}
+          <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: '-0.01em' }}>ISOL Studio</span>
         </div>
 
-        {/* Session metadata — shown when active */}
+        {workspaceSlug && (
+          <>
+            <span style={{ color: 'var(--divider)', fontSize: 14 }}>·</span>
+            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{workspaceSlug}</span>
+          </>
+        )}
+
+        {/* Session metadata strip */}
         {sessionActive && (
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 10,
-            padding: '4px 14px',
-            background: 'rgba(255,255,255,0.03)',
-            border: '1px solid var(--divider)',
-            borderRadius: 20,
-            fontSize: 12, color: 'var(--text-dim)',
-          }}>
-            <span style={{
-              width: 6, height: 6, borderRadius: '50%',
-              background: statusColor,
-              transition: 'background 0.3s', flexShrink: 0,
-              animation: isActive ? 'livePulse 2s ease-in-out infinite' : undefined,
-            }} />
-            <span style={{ fontWeight: 500 }}>{statusLabel}</span>
+          <>
+            <span style={{ color: 'var(--divider)', fontSize: 14, marginLeft: 4 }}>·</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
+              <span style={{
+                width: 6, height: 6, borderRadius: '50%',
+                background: statusColor, flexShrink: 0,
+                transition: 'background 0.3s',
+                animation: isActive ? 'livePulse 2s ease-in-out infinite' : undefined,
+              }} />
+              <span style={{ color: isActive ? 'var(--live)' : 'var(--text-muted)', fontWeight: 600 }}>
+                {statusLabel}
+              </span>
+            </div>
             {targetLangLabel && (
               <>
-                <span style={{ color: 'var(--divider)' }}>·</span>
-                <span>{targetLangLabel.flag} {targetLangLabel.label}</span>
+                <span style={{ color: 'var(--divider)', fontSize: 14 }}>·</span>
+                <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>
+                  {targetLangLabel.flag} {targetLangLabel.label}
+                </span>
               </>
             )}
             {roomCode && (
               <>
-                <span style={{ color: 'var(--divider)' }}>·</span>
+                <span style={{ color: 'var(--divider)', fontSize: 14 }}>·</span>
                 <span style={{
                   fontFamily: 'monospace', fontSize: 11,
-                  letterSpacing: '0.06em', color: 'var(--text-muted)',
+                  letterSpacing: '0.07em', color: 'var(--text-muted)',
                 }}>{roomCode}</span>
                 <button
                   onClick={handleCopyRoom}
                   style={{
-                    background: 'none',
+                    background: 'none', border: 'none',
                     color: roomCopied ? 'var(--live)' : 'var(--text-muted)',
-                    fontSize: 11, fontWeight: 600,
-                    padding: '2px 6px', borderRadius: 4,
-                    border: 'none', cursor: 'pointer',
+                    fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                    padding: '1px 6px', borderRadius: 4,
                     transition: 'color 0.2s',
-                    whiteSpace: 'nowrap',
                   }}
                 >
                   {roomCopied ? '✓' : 'Copy'}
                 </button>
               </>
             )}
-          </div>
+          </>
         )}
 
         <div style={{ flex: 1 }} />
 
         <span style={{
-          fontSize: 12, color: 'var(--text-muted)',
-          maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          fontSize: 11, color: 'var(--text-muted)',
+          maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         }}>{session.email}</span>
-        <button onClick={handleLogout} className="btn-icon" style={{ fontSize: 12, padding: '5px 12px' }}>
+        <button onClick={handleLogout} className="btn-icon" style={{ fontSize: 11, padding: '4px 10px', height: 28 }}>
           Sign out
         </button>
       </header>
@@ -227,43 +245,147 @@ export default function WorkspacePage() {
       {/* ━━ BODY ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
 
-        {/* ── MAIN: canvas + dock ───────────────────────────── */}
-        <main style={{
-          flex: 1,
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden',
-          minWidth: 0,
-        }}>
+        {/* ── LEFT RAIL ──────────────────────────────────────── */}
+        <aside className="workspace-rail" style={{ padding: '20px 14px' }}>
+
+          {/* CAPTURE */}
+          <div>
+            <p className="rail-label">Capture</p>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button
+                className={`source-btn${audioSource === 'display' ? ' active' : ''}`}
+                onClick={() => !sessionActive && setAudioSource('display')}
+                disabled={sessionActive}
+                style={{ opacity: sessionActive ? 0.4 : 1 }}
+              >
+                <span style={{ fontSize: 14 }}>🖥</span>
+                <span>Screen</span>
+              </button>
+              <button
+                className={`source-btn${audioSource === 'microphone' ? ' active' : ''}`}
+                onClick={() => !sessionActive && setAudioSource('microphone')}
+                disabled={sessionActive}
+                style={{ opacity: sessionActive ? 0.4 : 1 }}
+              >
+                <span style={{ fontSize: 14 }}>🎤</span>
+                <span>Mic</span>
+              </button>
+            </div>
+            {isUnsupported && (
+              <p style={{ fontSize: 11, color: 'var(--orange)', lineHeight: 1.5, marginTop: 8 }}>
+                Screen audio requires Chrome or Edge.
+              </p>
+            )}
+          </div>
+
+          <div className="rail-divider" />
+
+          {/* LANGUAGE */}
+          <div>
+            <p className="rail-label">Language</p>
+            <LanguageSelector value={targetLang} onChange={setTargetLang} disabled={sessionActive} />
+          </div>
+
+          <div className="rail-divider" />
+
+          {/* SESSION */}
+          <div>
+            <p className="rail-label">Session</p>
+            {!sessionActive ? (
+              <button
+                onClick={handleStart}
+                disabled={isUnsupported}
+                className="btn-primary"
+              >
+                Start session →
+              </button>
+            ) : (
+              <button onClick={handleStop} className="btn-stop">
+                <span style={{
+                  width: 8, height: 8, borderRadius: 2,
+                  background: 'var(--red)', flexShrink: 0, marginRight: 4,
+                }} />
+                Stop session
+              </button>
+            )}
+          </div>
+
+          {/* ROOM — shown only when session active and sessionId known */}
+          {sessionActive && ws.sessionId && (
+            <>
+              <div className="rail-divider" />
+              <div>
+                <p className="rail-label">Room</p>
+
+                {/* Room code row */}
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 7,
+                  marginBottom: 10,
+                }}>
+                  <span style={{
+                    width: 6, height: 6, borderRadius: '50%',
+                    background: 'var(--live)',
+                    animation: 'roomPulse 2s ease-in-out infinite',
+                    flexShrink: 0,
+                  }} />
+                  <span style={{
+                    fontFamily: 'monospace', fontSize: 13, fontWeight: 700,
+                    letterSpacing: '0.08em', color: 'var(--text)',
+                  }}>{roomCode}</span>
+                </div>
+
+                {/* Copy link button */}
+                <button
+                  onClick={handleCopyRoom}
+                  style={{
+                    width: '100%',
+                    background: roomCopied
+                      ? 'rgba(95,207,139,0.10)'
+                      : 'rgba(255,255,255,0.04)',
+                    border: `1px solid ${roomCopied ? 'rgba(95,207,139,0.22)' : 'var(--border)'}`,
+                    color: roomCopied ? 'var(--live)' : 'var(--text-dim)',
+                    fontWeight: 600, fontSize: 12,
+                    padding: '7px 12px',
+                    borderRadius: 'var(--radius)',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+                  }}
+                >
+                  {roomCopied ? '✓ Copied' : '↗ Copy invite link'}
+                </button>
+              </div>
+            </>
+          )}
+
+          <div style={{ flex: 1 }} />
+
+          {/* Compact mode toggle */}
+          {sessionActive && (
+            <button
+              onClick={() => setCompact(c => !c)}
+              className="btn-icon"
+              style={{ width: '100%', justifyContent: 'center', fontSize: 11 }}
+            >
+              {compact ? '⊞ Show document' : '⊟ Compact'}
+            </button>
+          )}
+
+        </aside>
+
+        {/* ── MAIN CANVAS ────────────────────────────────────── */}
+        <main className="workspace-canvas">
 
           {/* Error */}
           {error && (
-            <div style={{ padding: '12px 32px 0', flexShrink: 0 }}>
+            <div style={{ padding: '10px 24px 0', flexShrink: 0 }}>
               <ErrorBanner message={error} onDismiss={() => setError('')} />
             </div>
           )}
 
-          {/* ── Canvas ────────────────────────────────────── */}
+          {/* Canvas content */}
           {!compact && (
-            <div style={{ flex: 1, overflowY: 'auto', padding: '28px 32px' }}>
-
-              {/* Sticky note: AI structured version available post-session */}
-              {canAi && !sessionActive && (
-                <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 24 }}>
-                  <div className="sticky-note" style={{ maxWidth: 260 }}>
-                    <div style={{
-                      display: 'flex', alignItems: 'center', gap: 6,
-                      fontWeight: 700, fontSize: 12, marginBottom: 6,
-                    }}>
-                      <span>✦</span> AI-structured version ready
-                    </div>
-                    <p style={{ fontSize: 12, opacity: 0.70, lineHeight: 1.5 }}>
-                      Toggle "AI Enhanced" in the document to see the clean structured view.
-                    </p>
-                  </div>
-                </div>
-              )}
-
+            <div style={{ flex: 1, overflow: 'hidden' }}>
               <DocumentView
                 transcript={transcript}
                 currentLine={currentLine}
@@ -272,109 +394,71 @@ export default function WorkspacePage() {
                 aiFormatted={aiFormatted}
                 aiFormattedAt={aiFormattedAt}
                 aiLoading={aiLoading}
+                aiMode={aiMode}
+                onAiModeChange={setAiMode}
                 onWordClick={handleWordClick}
               />
             </div>
           )}
 
-          {/* ── Control dock ──────────────────────────────── */}
-          <div className="control-dock">
-            {!sessionActive ? (
-              <>
-                {/* Source */}
-                <div style={{ display: 'flex', gap: 6 }}>
-                  <button
-                    className={`dock-source-btn${audioSource === 'display' ? ' active' : ''}`}
-                    onClick={() => setAudioSource('display')}
-                  >
-                    <span style={{ fontSize: 15 }}>🖥</span> Screen
-                  </button>
-                  <button
-                    className={`dock-source-btn${audioSource === 'microphone' ? ' active' : ''}`}
-                    onClick={() => setAudioSource('microphone')}
-                  >
-                    <span style={{ fontSize: 15 }}>🎤</span> Mic
-                  </button>
-                </div>
+          {/* ── FLOATING TOOLBAR ────────────────────────────── */}
+          <div className="workspace-toolbar">
 
-                <div className="dock-divider" />
+            {/* AI Enhanced */}
+            <button
+              onClick={() => canAi && setAiMode(m => !m)}
+              className={`toolbar-btn${aiMode && canAi ? ' active' : ''}`}
+              disabled={!canAi}
+              title={canAi ? undefined : 'Available after 5+ lines are captured'}
+            >
+              <span>✦</span>
+              AI Enhanced
+            </button>
 
-                {/* Language */}
-                <div className="control-dock-lang" style={{ width: 200 }}>
-                  <LanguageSelector value={targetLang} onChange={setTargetLang} disabled={false} />
-                </div>
+            <div className="toolbar-sep" />
 
-                <div style={{ flex: 1 }} />
+            {/* Glossary */}
+            <button
+              onClick={() => glossaryWord && setGlossaryWord(null)}
+              className={`toolbar-btn${glossaryWord ? ' active' : ''}`}
+              disabled={!glossaryWord}
+              title={glossaryWord ? undefined : 'Click any word in the document to look it up'}
+            >
+              <span style={{ fontSize: 11 }}>◉</span>
+              Glossary
+            </button>
 
-                {isUnsupported && (
-                  <span style={{ fontSize: 12, color: 'var(--orange)', flexShrink: 0 }}>
-                    Use Chrome/Edge or switch to Mic
-                  </span>
-                )}
+            <div className="toolbar-sep" />
 
-                {transcript.length > 0 && (
-                  <button onClick={() => setShowModal(true)} className="btn-icon" style={{ fontSize: 13 }}>
-                    Export document
-                  </button>
-                )}
+            {/* Export */}
+            <button
+              onClick={() => transcript.length > 0 && setShowModal(true)}
+              className="toolbar-btn"
+              disabled={transcript.length === 0}
+            >
+              <span>↑</span>
+              Export
+            </button>
 
-                <button
-                  onClick={handleStart}
-                  disabled={isUnsupported}
-                  className="btn-primary"
-                >
-                  Start session →
-                </button>
-              </>
-            ) : (
-              <>
-                <div style={{ flex: 1 }} />
+            <div className="toolbar-sep" />
 
-                <button
-                  onClick={() => setCompact(c => !c)}
-                  className="btn-icon"
-                  style={{ fontSize: 13 }}
-                >
-                  {compact ? '⊞ Show document' : '⊟ Compact'}
-                </button>
+            {/* Share */}
+            <button
+              onClick={handleCopyRoom}
+              className={`toolbar-btn${roomCopied ? ' live-active' : ''}`}
+              disabled={!ws.sessionId}
+              title={ws.sessionId ? undefined : 'Start a session to get a share link'}
+            >
+              {roomCopied ? <><span>✓</span> Copied</> : <><span>↗</span> Share</>}
+            </button>
 
-                {transcript.length > 0 && (
-                  <button onClick={() => setShowModal(true)} className="btn-icon" style={{ fontSize: 13 }}>
-                    Export →
-                  </button>
-                )}
-
-                {/* Stop */}
-                <button
-                  onClick={handleStop}
-                  style={{
-                    background: 'rgba(255,107,107,0.08)',
-                    border: '1px solid rgba(255,107,107,0.20)',
-                    color: 'var(--red)',
-                    fontWeight: 600, fontSize: 13,
-                    padding: '0 18px', height: 38,
-                    borderRadius: 'var(--radius)',
-                    cursor: 'pointer', transition: 'background 0.15s',
-                    whiteSpace: 'nowrap', flexShrink: 0,
-                    display: 'inline-flex', alignItems: 'center', gap: 7,
-                  }}
-                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'rgba(255,107,107,0.14)'}
-                  onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'rgba(255,107,107,0.08)'}
-                >
-                  <span style={{
-                    width: 8, height: 8, borderRadius: 2,
-                    background: 'var(--red)', flexShrink: 0,
-                  }} />
-                  Stop
-                </button>
-              </>
-            )}
           </div>
+
         </main>
 
       </div>
 
-      {/* ━━ FLOATING OVERLAYS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+      {/* ━━ OVERLAYS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
 
       {compact && (
         <CompactPanel
@@ -395,7 +479,7 @@ export default function WorkspacePage() {
         />
       )}
 
-      {/* Glossary drawer — overlay, does not compress canvas */}
+      {/* Glossary drawer */}
       {glossaryWord && (
         <>
           <div className="glossary-backdrop" onClick={() => setGlossaryWord(null)} />
