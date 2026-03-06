@@ -56,7 +56,6 @@ export default function ViewerPage() {
 
   const wssUrl = import.meta.env.VITE_WSS_URL ?? 'wss://api.isol.live/audio'
 
-  // Always hold the latest targetLang in a ref so handleMessage (memoized) sees it
   const targetLangRef = useRef(targetLang)
   useEffect(() => { targetLangRef.current = targetLang }, [targetLang])
 
@@ -64,7 +63,6 @@ export default function ViewerPage() {
     if (msg.line_final) {
       const time = new Date()
       const lang = targetLangRef.current
-      // Translate line_final to viewer's language (backend only sends host's lang)
       const textToTranslate = msg.original_text || msg.line_final
       fetch('/api/ai/translate', {
         method: 'POST',
@@ -106,16 +104,13 @@ export default function ViewerPage() {
   const isActive = ws.state === 'connected'
   const statusColor = ws.state === 'error' ? 'var(--red)'
     : ws.state === 'reconnecting' ? 'var(--orange)'
-    : isActive ? 'var(--green)'
-    : 'rgba(238,242,255,0.25)'
+    : isActive ? 'var(--live)'
+    : 'rgba(255,255,255,0.2)'
 
   const handleWordClick = useCallback((word: string, sentence: string) => {
     setGlossaryWord({ word: word.toLowerCase(), sentence })
   }, [])
 
-  // When targetLang changes after joining, reconnect so the new language is sent
-  // to the backend. We do this in an effect (not inline) so that useWebSocket has
-  // already rebuilt `open` with the new targetLang before we call it.
   const joinedRef = useRef(false)
   useEffect(() => { joinedRef.current = joined }, [joined])
   const langInitRef = useRef(false)
@@ -132,42 +127,75 @@ export default function ViewerPage() {
   }, [])
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      <header className="header-glass" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 28px', position: 'sticky', top: 0, zIndex: 100 }}>
+    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+
+      {/* Header */}
+      <header className="header-glass" style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '12px 24px', flexShrink: 0,
+      }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div className="logo-mark" style={{ width: 30, height: 30 }}>
-            <span style={{ color: '#fff', fontWeight: 900, fontSize: 15 }}>i</span>
+          <div className="logo-mark" style={{ width: 28, height: 28 }}>
+            <span style={{ color: '#fff', fontWeight: 800, fontSize: 14 }}>i</span>
           </div>
           <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.06em' }}>ISOL</span>
-          <span style={{ fontSize: 13, color: 'var(--text-dim)', marginLeft: 2 }}>/ {workspaceSlug}</span>
-          <span style={{ fontSize: 11, background: 'rgba(124,58,237,0.20)', border: '1px solid rgba(124,58,237,0.35)', color: '#c4b5fd', borderRadius: 6, padding: '2px 8px', fontWeight: 600, letterSpacing: '0.06em' }}>
+          <span style={{ fontSize: 13, color: 'var(--text-dim)' }}>/ {workspaceSlug}</span>
+          <span style={{
+            fontSize: 11, background: 'rgba(124,58,237,0.15)',
+            border: '1px solid rgba(124,58,237,0.30)',
+            color: '#a78bfa', borderRadius: 6, padding: '2px 8px',
+            fontWeight: 600, letterSpacing: '0.06em',
+          }}>
             VIEWER
           </span>
         </div>
         {joined && (
           <div className="status-pill">
-            <span style={{ width: 7, height: 7, borderRadius: '50%', background: statusColor, boxShadow: isActive ? `0 0 8px ${statusColor}` : 'none', flexShrink: 0, transition: 'all 0.3s' }} />
+            <span style={{
+              width: 6, height: 6, borderRadius: '50%',
+              background: statusColor,
+              transition: 'all 0.3s',
+              flexShrink: 0,
+            }} />
             <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>
-              {ws.state === 'connected' ? 'Live' : ws.state === 'connecting' ? 'Connecting…' : ws.state === 'reconnecting' ? 'Reconnecting…' : 'Waiting…'}
+              {ws.state === 'connected' ? 'Live'
+                : ws.state === 'connecting' ? 'Connecting…'
+                : ws.state === 'reconnecting' ? 'Reconnecting…'
+                : 'Waiting…'}
             </span>
           </div>
         )}
       </header>
 
-      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', maxWidth: 880, margin: '0 auto', width: '100%', padding: '32px 28px', gap: 20 }}>
+      <main style={{
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        maxWidth: 860,
+        margin: '0 auto',
+        width: '100%',
+        padding: '32px 28px',
+        gap: 20,
+        overflowY: 'auto',
+      }}>
         {!joined ? (
           /* Join screen */
           <div style={{ display: 'flex', flexDirection: 'column', gap: 28, maxWidth: 480 }}>
             <div>
               <div style={{
-                display: 'inline-flex', alignItems: 'center', gap: 8,
-                background: 'rgba(74,222,128,0.10)', border: '1px solid rgba(74,222,128,0.25)',
-                borderRadius: 20, padding: '5px 14px', marginBottom: 16,
+                display: 'inline-flex', alignItems: 'center', gap: 7,
+                background: 'rgba(16,185,129,0.08)',
+                border: '1px solid rgba(16,185,129,0.22)',
+                borderRadius: 20, padding: '4px 14px', marginBottom: 20,
               }}>
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#4ade80', boxShadow: '0 0 6px #4ade80', animation: 'roomPulse 2s infinite' }} />
-                <span style={{ fontSize: 11, color: '#4ade80', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Session in progress</span>
+                <span style={{
+                  width: 6, height: 6, borderRadius: '50%',
+                  background: 'var(--live)',
+                  animation: 'livePulse 2s ease-in-out infinite',
+                }} />
+                <span style={{ fontSize: 11, color: 'var(--live)', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Session in progress</span>
               </div>
-              <h2 style={{ fontSize: 26, fontWeight: 800, marginBottom: 10, letterSpacing: '-0.02em' }}>
+              <h2 style={{ fontSize: 26, fontWeight: 700, marginBottom: 12, letterSpacing: '-0.02em', lineHeight: 1.25 }}>
                 You've been invited<br /><span className="gradient-text">to a live session</span>
               </h2>
               <p style={{ fontSize: 14, color: 'var(--text-dim)', lineHeight: 1.7 }}>
@@ -175,32 +203,31 @@ export default function ViewerPage() {
               </p>
             </div>
 
-            <div style={{ width: 240 }}>
+            <div style={{ width: 220 }}>
               <LanguageSelector value={targetLang} onChange={setTargetLang} disabled={false} />
             </div>
 
             <button
               onClick={handleJoin}
-              style={{
-                background: 'linear-gradient(135deg, #7c3aed, #0ea5e9)',
-                color: '#fff', fontWeight: 700, fontSize: 15,
-                padding: '13px 36px', borderRadius: 13, border: 'none',
-                cursor: 'pointer', alignSelf: 'flex-start',
-                boxShadow: '0 0 28px rgba(124,58,237,0.40)',
-              }}
+              className="btn-primary"
+              style={{ alignSelf: 'flex-start', fontSize: 15, padding: '12px 32px' }}
             >
               Join session →
             </button>
           </div>
         ) : (
           <>
-            {/* Language selector (can change after joining) */}
+            {/* Language + export bar */}
             <div style={{ display: 'flex', alignItems: 'flex-end', gap: 14 }}>
               <div style={{ width: 200 }}>
                 <LanguageSelector value={targetLang} onChange={handleLangChange} disabled={false} />
               </div>
               {transcript.length > 0 && (
-                <button onClick={() => setShowModal(true)} className="btn-icon" style={{ fontSize: 13, padding: '10px 18px', marginLeft: 'auto' }}>
+                <button
+                  onClick={() => setShowModal(true)}
+                  className="btn-icon"
+                  style={{ fontSize: 13, padding: '9px 16px', marginLeft: 'auto' }}
+                >
                   Edit & Export →
                 </button>
               )}

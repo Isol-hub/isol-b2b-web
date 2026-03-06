@@ -19,10 +19,10 @@ export default function SubtitleView({ current, previous, compact }: Props) {
     <div style={{
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       height: compact ? 80 : 160,
-      color: 'rgba(238,242,255,0.22)', fontSize: 14, gap: 10,
+      color: 'var(--text-muted)', fontSize: 13, gap: 10,
       flexDirection: 'column',
     }}>
-      <span style={{ fontSize: compact ? 20 : 28, opacity: 0.4 }}>✦</span>
+      <span style={{ fontSize: compact ? 18 : 24, opacity: 0.4 }}>✦</span>
       <span>Subtitles will appear here…</span>
     </div>
   )
@@ -36,10 +36,10 @@ export default function SubtitleView({ current, previous, compact }: Props) {
         <p style={{
           fontSize: prevSize,
           lineHeight: 1.5,
-          color: 'rgba(238,242,255,0.22)',
+          color: 'var(--text-muted)',
           fontWeight: 400,
           margin: 0,
-          transition: 'opacity 0.5s',
+          transition: 'opacity 0.4s',
         }}>
           {previous}
         </p>
@@ -50,7 +50,7 @@ export default function SubtitleView({ current, previous, compact }: Props) {
         color: 'var(--text)',
         fontWeight: 600,
         margin: 0,
-        animation: 'subtitleFadeIn 0.3s ease-out',
+        animation: 'lineReveal 0.25s ease-out',
         letterSpacing: '-0.01em',
       }}>
         {current}

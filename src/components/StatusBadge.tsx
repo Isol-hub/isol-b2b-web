@@ -13,8 +13,8 @@ export default function StatusBadge({ wsState, audioState }: Props) {
 
   const color = isError ? 'var(--red)'
     : isReconnecting ? 'var(--orange)'
-    : isActive ? 'var(--green)'
-    : 'var(--text-dim)'
+    : isActive ? 'var(--live)'
+    : 'rgba(255,255,255,0.2)'
 
   const label = isError ? 'Error'
     : isReconnecting ? 'Reconnecting…'
@@ -29,7 +29,7 @@ export default function StatusBadge({ wsState, audioState }: Props) {
         width: 7, height: 7,
         borderRadius: '50%',
         background: color,
-        boxShadow: isActive ? `0 0 6px ${color}` : 'none',
+        transition: 'background 0.3s',
         flexShrink: 0,
       }} />
       <span style={{ fontSize: 13, color: 'var(--text-dim)' }}>{label}</span>

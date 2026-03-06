@@ -32,26 +32,21 @@ export default function WorkspacePage() {
   const [showModal, setShowModal] = useState(false)
   const [showOnboarding, setShowOnboarding] = useState(false)
 
-  // Glossary state
   const [glossaryWord, setGlossaryWord] = useState<{ word: string; sentence: string } | null>(null)
 
-  // AI formatting state
   const [aiFormatted, setAiFormatted] = useState<string | undefined>()
   const [aiFormattedAt, setAiFormattedAt] = useState<number | undefined>()
   const [aiLoading, setAiLoading] = useState(false)
   const aiRunningRef = useRef(false)
   const aiDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Build word→sentences index from transcript
   const wordIndex = useRef<Map<string, string[]>>(new Map())
 
-  // Trigger AI formatting with debounce — every 5+ new lines, wait 2s of silence
   useEffect(() => {
     if (transcript.length < 5) return
     if (aiDebounceRef.current) clearTimeout(aiDebounceRef.current)
     aiDebounceRef.current = setTimeout(() => {
       if (aiRunningRef.current) return
-      // Only re-run if there are new lines since last format
       if (aiFormattedAt !== undefined && transcript.length <= aiFormattedAt) return
       aiRunningRef.current = true
       setAiLoading(true)
@@ -88,8 +83,6 @@ export default function WorkspacePage() {
     if (msg.line_final) {
       const entry: TranscriptLine = { text: msg.line_final, time: new Date() }
       setTranscript(prev => [...prev, entry])
-
-      // Index words for glossary
       msg.line_final.split(/\s+/).forEach(raw => {
         const w = raw.toLowerCase().replace(/[^\w]/g, '')
         if (w.length < 3) return
@@ -124,8 +117,7 @@ export default function WorkspacePage() {
   }, [handleStop, navigate])
 
   const handleWordClick = useCallback((word: string, sentence: string) => {
-    const w = word.toLowerCase()
-    setGlossaryWord({ word: w, sentence })
+    setGlossaryWord({ word: word.toLowerCase(), sentence })
   }, [])
 
   if (!session) { navigate('/login', { replace: true }); return null }
@@ -136,163 +128,205 @@ export default function WorkspacePage() {
 
   const statusColor = ws.state === 'error' || audio.state === 'error' ? 'var(--red)'
     : ws.state === 'reconnecting' ? 'var(--orange)'
-    : isActive ? 'var(--green)'
-    : 'rgba(238,242,255,0.25)'
+    : isActive ? 'var(--live)'
+    : 'rgba(255,255,255,0.2)'
 
   const statusLabel = ws.state === 'error' || audio.state === 'error' ? 'Error'
     : ws.state === 'reconnecting' ? 'Reconnecting…'
     : ws.state === 'connecting' ? 'Connecting…'
     : audio.state === 'requesting' ? 'Requesting permission…'
-    : isActive ? `Listening  ·  → ${targetLangLabel?.flag ?? ''} ${targetLangLabel?.label ?? targetLang}`
+    : isActive ? `Live · ${targetLangLabel?.flag ?? ''} ${targetLangLabel?.label ?? targetLang}`
     : 'Ready'
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
       {/* Header */}
-      <header className="header-glass" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 28px', position: 'sticky', top: 0, zIndex: 100 }}>
+      <header className="header-glass" style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '12px 24px', flexShrink: 0,
+      }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div className="logo-mark" style={{ width: 30, height: 30 }}>
-            <span style={{ color: '#fff', fontWeight: 900, fontSize: 15 }}>i</span>
+          <div className="logo-mark" style={{ width: 28, height: 28 }}>
+            <span style={{ color: '#fff', fontWeight: 800, fontSize: 14 }}>i</span>
           </div>
           <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.06em' }}>ISOL</span>
-          <span style={{ fontSize: 13, color: 'var(--text-dim)', marginLeft: 2 }}>/ {workspaceSlug}</span>
+          <span style={{ fontSize: 13, color: 'var(--text-dim)' }}>/ {workspaceSlug}</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div className="status-pill">
-            <span style={{ width: 7, height: 7, borderRadius: '50%', background: statusColor, boxShadow: isActive ? `0 0 8px ${statusColor}` : 'none', flexShrink: 0, transition: 'all 0.3s' }} />
+            <span style={{
+              width: 6, height: 6, borderRadius: '50%',
+              background: statusColor,
+              transition: 'all 0.3s',
+              flexShrink: 0,
+            }} />
             <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>{statusLabel}</span>
           </div>
-          <span style={{ fontSize: 13, color: 'var(--text-dim)', marginLeft: 4 }}>{session.email}</span>
-          <button onClick={handleLogout} className="btn-icon" style={{ fontSize: 12, padding: '7px 14px' }}>Sign out</button>
+          <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>{session.email}</span>
+          <button onClick={handleLogout} className="btn-icon" style={{ fontSize: 12, padding: '6px 12px' }}>Sign out</button>
         </div>
       </header>
 
-      {/* Onboarding */}
+      {/* Onboarding banner */}
       {showOnboarding && (
-        <div className="onboarding-banner" style={{ padding: '12px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 28, flexWrap: 'wrap' }}>
+        <div className="onboarding-banner" style={{ padding: '10px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
             {[
               { n: '1', text: 'Choose audio source' },
               { n: '2', text: 'Pick target language' },
               { n: '3', text: 'Start — share audio when prompted' },
             ].map(({ n, text }) => (
               <div key={n} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ width: 20, height: 20, borderRadius: '50%', background: 'linear-gradient(135deg,#7c3aed,#0ea5e9)', color: '#fff', fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{n}</span>
-                <span style={{ fontSize: 13, color: 'rgba(238,242,255,0.75)' }}>{text}</span>
+                <span style={{
+                  width: 18, height: 18, borderRadius: '50%',
+                  background: 'var(--accent)',
+                  color: '#fff', fontSize: 10, fontWeight: 700,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                }}>{n}</span>
+                <span style={{ fontSize: 13, color: 'var(--text-dim)' }}>{text}</span>
               </div>
             ))}
           </div>
-          <button onClick={dismissOnboarding} style={{ background: 'rgba(255,255,255,0.06)', color: 'var(--text-dim)', fontSize: 12, padding: '5px 12px', borderRadius: 8, border: '1px solid var(--border)' }}>Got it</button>
+          <button onClick={dismissOnboarding} style={{
+            background: 'rgba(255,255,255,0.05)',
+            color: 'var(--text-dim)', fontSize: 12,
+            padding: '4px 12px', borderRadius: 'var(--radius)',
+            border: '1px solid var(--border)',
+          }}>Got it</button>
         </div>
       )}
 
-      {/* Main */}
-      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', maxWidth: 880, margin: '0 auto', width: '100%', padding: '28px 28px', gap: 20 }}>
+      {/* Two-zone layout */}
+      <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
 
-        {error && <ErrorBanner message={error} onDismiss={() => setError('')} />}
+        {/* Left sidebar */}
+        <aside style={{
+          width: 256,
+          flexShrink: 0,
+          borderRight: '1px solid var(--border)',
+          padding: '24px 20px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 20,
+          overflowY: 'auto',
+        }}>
+          {!sessionActive ? (
+            <>
+              {/* Audio source */}
+              <div>
+                <p style={{ fontSize: 11, color: 'var(--text-dim)', marginBottom: 10, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase' }}>
+                  Audio source
+                </p>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    className={`source-btn${audioSource === 'display' ? ' active' : ''}`}
+                    onClick={() => setAudioSource('display')}
+                  >
+                    <span style={{ fontSize: 20 }}>🖥</span>
+                    <span style={{ fontWeight: 600 }}>Screen</span>
+                  </button>
+                  <button
+                    className={`source-btn${audioSource === 'microphone' ? ' active' : ''}`}
+                    onClick={() => setAudioSource('microphone')}
+                  >
+                    <span style={{ fontSize: 20 }}>🎤</span>
+                    <span style={{ fontWeight: 600 }}>Mic</span>
+                  </button>
+                </div>
+                {isUnsupported && (
+                  <p style={{ fontSize: 12, color: 'var(--orange)', marginTop: 10, lineHeight: 1.5 }}>
+                    Screen audio not supported. Use Mic or Chrome/Edge.
+                  </p>
+                )}
+              </div>
 
-        {/* Controls */}
-        {!sessionActive ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-            <div>
-              <p style={{ fontSize: 11, color: 'var(--text-dim)', marginBottom: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Audio source</p>
-              <div style={{ display: 'flex', gap: 12 }}>
-                <button className={`source-btn${audioSource === 'display' ? ' active' : ''}`} onClick={() => setAudioSource('display')}>
-                  <span style={{ fontSize: 26 }}>🖥</span>
-                  <span style={{ fontWeight: 600 }}>Screen / Tab</span>
-                  <span style={{ fontSize: 11, opacity: 0.6 }}>Chrome · Edge</span>
-                </button>
-                <button className={`source-btn${audioSource === 'microphone' ? ' active' : ''}`} onClick={() => setAudioSource('microphone')}>
-                  <span style={{ fontSize: 26 }}>🎤</span>
-                  <span style={{ fontWeight: 600 }}>Microphone</span>
-                  <span style={{ fontSize: 11, opacity: 0.6 }}>All browsers</span>
-                </button>
-              </div>
-            </div>
-            <div style={{ display: 'flex', gap: 14, alignItems: 'flex-end', flexWrap: 'wrap' }}>
-              <div style={{ flex: '0 0 220px' }}>
-                <LanguageSelector value={targetLang} onChange={setTargetLang} disabled={false} />
-              </div>
+              {/* Language */}
+              <LanguageSelector value={targetLang} onChange={setTargetLang} disabled={false} />
+
+              {/* Start */}
               <button
                 onClick={handleStart}
                 disabled={isUnsupported}
-                style={{
-                  background: 'linear-gradient(135deg, #7c3aed 0%, #0ea5e9 100%)',
-                  color: '#fff', fontWeight: 700, fontSize: 15,
-                  padding: '12px 36px', borderRadius: 13, border: 'none',
-                  cursor: isUnsupported ? 'not-allowed' : 'pointer',
-                  opacity: isUnsupported ? 0.4 : 1,
-                  boxShadow: '0 0 28px rgba(124,58,237,0.35), 0 4px 12px rgba(0,0,0,0.25)',
-                  whiteSpace: 'nowrap',
-                }}
+                className="btn-primary"
+                style={{ width: '100%', justifyContent: 'center' }}
               >
                 Start session →
               </button>
-              <button onClick={() => setCompact(c => !c)} className="btn-icon" title="Compact panel" style={{ fontSize: 18 }}>⊟</button>
-            </div>
-            {isUnsupported && (
-              <p style={{ fontSize: 13, color: 'var(--orange)', background: 'rgba(251,191,36,0.07)', border: '1px solid rgba(251,191,36,0.20)', borderRadius: 10, padding: '10px 14px' }}>
-                Screen audio not supported. Switch to Microphone or use Chrome/Edge.
+            </>
+          ) : (
+            <>
+              {/* Language (disabled while active) */}
+              <LanguageSelector value={targetLang} onChange={setTargetLang} disabled={true} />
+
+              {/* Stop */}
+              <button
+                onClick={handleStop}
+                style={{
+                  background: 'rgba(239,68,68,0.08)',
+                  border: '1px solid rgba(239,68,68,0.20)',
+                  color: 'var(--red)',
+                  fontWeight: 600, fontSize: 13,
+                  padding: '10px 18px', borderRadius: 'var(--radius)', cursor: 'pointer',
+                  width: '100%',
+                }}
+              >
+                Stop session
+              </button>
+            </>
+          )}
+
+          {/* Compact view toggle */}
+          <button onClick={() => setCompact(c => !c)} className="btn-icon" style={{ width: '100%', textAlign: 'center' }}>
+            {compact ? 'Show document' : '⊟ Compact view'}
+          </button>
+
+          {/* Export (post-session) */}
+          {!sessionActive && transcript.length > 0 && (
+            <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
+              <p style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 10 }}>
+                {transcript.length} lines captured
               </p>
-            )}
-          </div>
-        ) : (
-          <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap' }}>
-            <LanguageSelector value={targetLang} onChange={setTargetLang} disabled={true} />
-            <div style={{ marginLeft: 'auto', display: 'flex', gap: 10, alignItems: 'center' }}>
-              <button onClick={handleStop} style={{
-                background: 'rgba(248,113,113,0.10)', border: '1px solid rgba(248,113,113,0.22)',
-                color: 'var(--red)', fontWeight: 600, fontSize: 14,
-                padding: '10px 24px', borderRadius: 12, cursor: 'pointer',
-              }}>Stop</button>
-              <button onClick={() => setCompact(c => !c)} className="btn-icon" style={{ fontSize: 18 }}>⊟</button>
+              <button onClick={() => setShowModal(true)} className="btn-primary" style={{ width: '100%' }}>
+                Edit & Export →
+              </button>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Live document view */}
-        {!compact && (
-          <DocumentView
-            transcript={transcript}
-            currentLine={currentLine}
-            isActive={isActive}
-            targetLang={targetLangLabel ? `${targetLangLabel.flag} ${targetLangLabel.label}` : targetLang}
-            aiFormatted={aiFormatted}
-            aiFormattedAt={aiFormattedAt}
-            aiLoading={aiLoading}
-            onWordClick={handleWordClick}
-          />
-        )}
-
-        {/* Room panel — shown when session active and we have session_id */}
-        {sessionActive && ws.sessionId && workspaceSlug && (
-          <RoomPanel sessionId={ws.sessionId} workspaceSlug={workspaceSlug} />
-        )}
-
-        {/* Post-session: edit & export */}
-        {!sessionActive && transcript.length > 0 && (
-          <div style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(167,139,250,0.18)',
-            borderRadius: 14, padding: '16px 22px', gap: 16,
-            backdropFilter: 'blur(16px)',
-          }}>
-            <div>
-              <p style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>Session complete</p>
-              <p style={{ fontSize: 13, color: 'var(--text-dim)' }}>{transcript.length} lines captured</p>
+          {/* Room panel (when session active) */}
+          {sessionActive && ws.sessionId && workspaceSlug && (
+            <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
+              <RoomPanel sessionId={ws.sessionId} workspaceSlug={workspaceSlug} />
             </div>
-            <button onClick={() => setShowModal(true)} style={{
-              background: 'linear-gradient(135deg,#7c3aed,#0ea5e9)',
-              color: '#fff', fontWeight: 700, fontSize: 13,
-              padding: '10px 24px', borderRadius: 11, border: 'none',
-              cursor: 'pointer', boxShadow: '0 0 20px rgba(124,58,237,0.30)',
-            }}>
-              Edit & Export →
-            </button>
-          </div>
-        )}
-      </main>
+          )}
+        </aside>
+
+        {/* Right: document area */}
+        <main style={{
+          flex: 1,
+          padding: '24px 32px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 16,
+          overflowY: 'auto',
+          minWidth: 0,
+        }}>
+          {error && <ErrorBanner message={error} onDismiss={() => setError('')} />}
+
+          {!compact && (
+            <DocumentView
+              transcript={transcript}
+              currentLine={currentLine}
+              isActive={isActive}
+              targetLang={targetLangLabel ? `${targetLangLabel.flag} ${targetLangLabel.label}` : targetLang}
+              aiFormatted={aiFormatted}
+              aiFormattedAt={aiFormattedAt}
+              aiLoading={aiLoading}
+              onWordClick={handleWordClick}
+            />
+          )}
+        </main>
+      </div>
 
       {/* Compact floating panel */}
       {compact && (
@@ -304,7 +338,6 @@ export default function WorkspacePage() {
         />
       )}
 
-      {/* Transcript modal */}
       {showModal && (
         <TranscriptModal
           transcript={transcript}
@@ -314,7 +347,6 @@ export default function WorkspacePage() {
         />
       )}
 
-      {/* Glossary panel */}
       {glossaryWord && (
         <GlossaryPanel
           word={glossaryWord.word}

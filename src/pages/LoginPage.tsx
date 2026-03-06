@@ -56,55 +56,56 @@ export default function LoginPage() {
 
       {/* ── Left: hero ──────────────────────────────────────────────────── */}
       <div className="login-hero">
-        <div style={{ maxWidth: 480 }}>
+        <div style={{ maxWidth: 460 }}>
 
           {/* Logo */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 56 }}>
-            <div className="logo-mark" style={{ width: 40, height: 40 }}>
-              <span style={{ color: '#fff', fontWeight: 900, fontSize: 20 }}>i</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 52 }}>
+            <div className="logo-mark" style={{ width: 36, height: 36 }}>
+              <span style={{ color: '#fff', fontWeight: 800, fontSize: 18 }}>i</span>
             </div>
-            <span style={{ fontSize: 16, fontWeight: 800, letterSpacing: '0.08em', color: 'var(--text)' }}>ISOL</span>
+            <span style={{ fontSize: 15, fontWeight: 700, letterSpacing: '0.08em', color: 'var(--text)' }}>ISOL</span>
           </div>
 
           {/* Headline */}
           <h1 style={{
-            fontSize: 'clamp(32px, 3.5vw, 52px)',
-            fontWeight: 800,
-            lineHeight: 1.1,
+            fontSize: 'clamp(28px, 3vw, 48px)',
+            fontWeight: 700,
+            lineHeight: 1.15,
             letterSpacing: '-0.03em',
-            marginBottom: 20,
+            marginBottom: 16,
+            fontFamily: 'var(--font-ui)',
           }}>
             Every meeting,<br />
             <span className="gradient-text">in every language.</span>
           </h1>
 
           <p style={{
-            fontSize: 18,
-            color: 'rgba(238,242,255,0.55)',
+            fontSize: 16,
+            color: 'var(--text-dim)',
             lineHeight: 1.65,
-            marginBottom: 48,
-            maxWidth: 400,
+            marginBottom: 44,
+            maxWidth: 380,
           }}>
             Real-time captions and translation for your team — no app, no delay.
           </p>
 
           {/* Features */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {[
               { icon: '🌐', text: 'Understand every word, even in foreign-language calls' },
               { icon: '⚡', text: 'Under 2 seconds latency, streamed live' },
               { icon: '🎤', text: 'Works with microphone or any browser tab audio' },
             ].map(({ icon, text }) => (
-              <div key={text} style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
+              <div key={text} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <span style={{
-                  fontSize: 22, flexShrink: 0, marginTop: 1,
-                  width: 40, height: 40,
-                  background: 'rgba(255,255,255,0.05)',
-                  border: '1px solid rgba(255,255,255,0.08)',
-                  borderRadius: 10,
+                  fontSize: 18, flexShrink: 0,
+                  width: 36, height: 36,
+                  background: 'var(--surface)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 'var(--radius)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>{icon}</span>
-                <span style={{ fontSize: 15, color: 'rgba(238,242,255,0.70)', lineHeight: 1.55, paddingTop: 10 }}>
+                <span style={{ fontSize: 14, color: 'var(--text-dim)', lineHeight: 1.55 }}>
                   {text}
                 </span>
               </div>
@@ -113,21 +114,24 @@ export default function LoginPage() {
 
           {/* Live preview card */}
           <div style={{
-            marginTop: 52,
-            background: 'rgba(255,255,255,0.04)',
-            border: '1px solid rgba(167,139,250,0.18)',
-            borderRadius: 16,
-            padding: '20px 24px',
-            boxShadow: '0 0 40px rgba(124,58,237,0.10)',
+            marginTop: 44,
+            background: 'var(--surface)',
+            border: '1px solid var(--border)',
+            borderRadius: 'var(--radius-lg)',
+            padding: '18px 22px',
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#4ade80', boxShadow: '0 0 6px #4ade80' }} />
-              <span style={{ fontSize: 11, color: 'rgba(238,242,255,0.40)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Live preview</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 12 }}>
+              <span style={{
+                width: 6, height: 6, borderRadius: '50%',
+                background: 'var(--live)',
+                animation: 'livePulse 2s ease-in-out infinite',
+              }} />
+              <span style={{ fontSize: 11, color: 'var(--text-dim)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Live preview</span>
             </div>
-            <p style={{ fontSize: 17, color: 'rgba(238,242,255,0.30)', lineHeight: 1.5, marginBottom: 8 }}>
+            <p style={{ fontSize: 15, color: 'var(--text-muted)', lineHeight: 1.5, marginBottom: 6, fontFamily: 'var(--font-doc)' }}>
               …il bilancio del Q4 è stato migliore del previsto
             </p>
-            <p style={{ fontSize: 22, fontWeight: 600, color: 'var(--text)', lineHeight: 1.45 }}>
+            <p style={{ fontSize: 19, fontWeight: 400, color: 'var(--text)', lineHeight: 1.5, fontFamily: 'var(--font-doc)' }}>
               Q4 results exceeded expectations.
             </p>
           </div>
@@ -141,7 +145,7 @@ export default function LoginPage() {
       <div style={{
         flex: '0 0 auto',
         width: '100%',
-        maxWidth: 440,
+        maxWidth: 420,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -151,27 +155,27 @@ export default function LoginPage() {
 
           {/* Mobile logo */}
           <div className="login-mobile-logo" style={{ marginBottom: 32 }}>
-            <div className="logo-mark" style={{ width: 48, height: 48, marginBottom: 14 }}>
-              <span style={{ color: '#fff', fontWeight: 900, fontSize: 22 }}>i</span>
+            <div className="logo-mark" style={{ width: 44, height: 44, marginBottom: 12 }}>
+              <span style={{ color: '#fff', fontWeight: 800, fontSize: 20 }}>i</span>
             </div>
-            <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>ISOL Meeting Captions</h1>
-            <p style={{ fontSize: 14, color: 'var(--text-dim)' }}>Live translation for your team</p>
+            <h1 style={{ fontSize: 18, fontWeight: 700, marginBottom: 4 }}>ISOL Meeting Captions</h1>
+            <p style={{ fontSize: 13, color: 'var(--text-dim)' }}>Live translation for your team</p>
           </div>
 
-          <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 6, letterSpacing: '-0.02em' }}>
+          <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 6, letterSpacing: '-0.02em' }}>
             {step === 'email' ? 'Sign in to your workspace' : 'Check your inbox'}
           </h2>
-          <p style={{ fontSize: 14, color: 'var(--text-dim)', marginBottom: 28, lineHeight: 1.6 }}>
+          <p style={{ fontSize: 13, color: 'var(--text-dim)', marginBottom: 24, lineHeight: 1.6 }}>
             {step === 'email'
-              ? 'Enter your work email — we\'ll send a one-time code.'
+              ? "Enter your work email — we'll send a one-time code."
               : <>Code sent to <strong style={{ color: 'var(--text)' }}>{email}</strong></>}
           </p>
 
           <div className="card">
             {step === 'email' ? (
-              <form onSubmit={requestOtp} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <form onSubmit={requestOtp} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: 12, color: 'var(--text-dim)', marginBottom: 8, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                  <label style={{ display: 'block', fontSize: 11, color: 'var(--text-dim)', marginBottom: 7, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase' }}>
                     Work email
                   </label>
                   <input
@@ -184,12 +188,12 @@ export default function LoginPage() {
                   />
                 </div>
                 {error && <p style={{ color: 'var(--red)', fontSize: 13 }}>{error}</p>}
-                <button className="btn-primary" type="submit" disabled={loading || !email}>
+                <button className="btn-primary" type="submit" disabled={loading || !email} style={{ width: '100%' }}>
                   {loading ? 'Sending…' : 'Continue →'}
                 </button>
               </form>
             ) : (
-              <form onSubmit={verifyOtp} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <form onSubmit={verifyOtp} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 <input
                   className="input-field"
                   type="text"
@@ -199,16 +203,16 @@ export default function LoginPage() {
                   value={otp}
                   onChange={e => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
                   required autoFocus
-                  style={{ textAlign: 'center', fontSize: 32, letterSpacing: '0.3em', fontWeight: 700, padding: '16px' }}
+                  style={{ textAlign: 'center', fontSize: 28, letterSpacing: '0.3em', fontWeight: 700, padding: '14px' }}
                 />
                 {error && <p style={{ color: 'var(--red)', fontSize: 13 }}>{error}</p>}
-                <button className="btn-primary" type="submit" disabled={loading || otp.length !== 6}>
+                <button className="btn-primary" type="submit" disabled={loading || otp.length !== 6} style={{ width: '100%' }}>
                   {loading ? 'Verifying…' : 'Sign in →'}
                 </button>
                 <button
                   type="button"
                   onClick={() => { setStep('email'); setOtp(''); setError('') }}
-                  style={{ background: 'none', color: 'var(--text-dim)', fontSize: 13, textDecoration: 'underline' }}
+                  style={{ background: 'none', color: 'var(--text-dim)', fontSize: 13 }}
                 >
                   ← Use a different email
                 </button>
@@ -216,7 +220,7 @@ export default function LoginPage() {
             )}
           </div>
 
-          <p style={{ textAlign: 'center', fontSize: 12, color: 'rgba(238,242,255,0.30)', marginTop: 24, lineHeight: 1.6 }}>
+          <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--text-muted)', marginTop: 20, lineHeight: 1.6 }}>
             Audio is streamed for live captioning and never stored.
           </p>
         </div>

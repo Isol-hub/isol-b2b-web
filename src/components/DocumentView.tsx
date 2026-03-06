@@ -34,13 +34,13 @@ function AiMarkdown({ text }: { text: string }) {
     const line = lines[i]
     if (line.startsWith('## ')) {
       elements.push(
-        <h2 key={i} style={{ fontSize: 20, fontWeight: 700, color: 'rgba(238,242,255,0.95)', margin: '18px 0 8px', letterSpacing: '-0.01em' }}>
+        <h2 key={i} style={{ fontSize: 18, fontWeight: 600, color: 'var(--text)', margin: '20px 0 8px', fontFamily: 'var(--font-doc)', letterSpacing: '-0.01em' }}>
           {line.slice(3)}
         </h2>
       )
     } else if (line.startsWith('### ')) {
       elements.push(
-        <h3 key={i} style={{ fontSize: 12, fontWeight: 700, color: '#c4b5fd', margin: '14px 0 6px', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+        <h3 key={i} style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-dim)', margin: '16px 0 6px', fontFamily: 'var(--font-ui)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
           {line.slice(4)}
         </h3>
       )
@@ -48,13 +48,34 @@ function AiMarkdown({ text }: { text: string }) {
       elements.push(<br key={i} />)
     } else {
       elements.push(
-        <span key={i} style={{ display: 'block', marginBottom: 4, color: 'rgba(238,242,255,0.82)', fontSize: 17, lineHeight: 1.85 }}>
+        <span key={i} style={{ display: 'block', marginBottom: 2, color: 'var(--text)', fontSize: 20, lineHeight: 1.65 }}>
           {line}
         </span>
       )
     }
   }
   return <>{elements}</>
+}
+
+function WordSpan({ word, sentence, onWordClick }: { word: string; sentence: string; onWordClick: (w: string, s: string) => void }) {
+  return (
+    <span
+      onClick={() => onWordClick(word.replace(/[^\w]/g, ''), sentence)}
+      style={{ cursor: 'pointer', borderRadius: 3, transition: 'background 0.15s', padding: '0 1px' }}
+      onMouseEnter={e => (e.target as HTMLElement).style.background = 'rgba(124,58,237,0.15)'}
+      onMouseLeave={e => (e.target as HTMLElement).style.background = 'transparent'}
+    >{word}</span>
+  )
+}
+
+function renderWords(text: string, sentence: string, onWordClick?: (w: string, s: string) => void): React.ReactNode {
+  if (!onWordClick) return text
+  return text.split(' ').map((word, j) => (
+    <span key={j}>
+      {j > 0 && ' '}
+      <WordSpan word={word} sentence={sentence} onWordClick={onWordClick} />
+    </span>
+  ))
 }
 
 export default function DocumentView({ transcript, currentLine, isActive, targetLang, aiFormatted, aiFormattedAt, aiLoading, onWordClick }: Props) {
@@ -69,7 +90,6 @@ export default function DocumentView({ transcript, currentLine, isActive, target
     return () => clearInterval(t)
   }, [isActive])
 
-  // Autoscroll on new content
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
   }, [transcript.length, currentLine, aiMode, aiFormatted])
@@ -84,40 +104,51 @@ export default function DocumentView({ transcript, currentLine, isActive, target
 
   return (
     <div style={{
-      background: 'rgba(255,255,255,0.025)',
-      border: '1px solid rgba(255,255,255,0.07)',
-      borderRadius: 20,
+      background: 'var(--surface)',
+      border: '1px solid var(--border)',
+      borderRadius: 'var(--radius-lg)',
       overflow: 'hidden',
       display: 'flex',
       flexDirection: 'column',
-      minHeight: 280,
-      maxHeight: 'calc(100vh - 280px)',
-      backdropFilter: 'blur(20px)',
-      transition: 'border-color 0.4s, box-shadow 0.4s',
-      ...(isActive ? {
-        borderColor: 'rgba(167,139,250,0.18)',
-        boxShadow: '0 0 48px rgba(124,58,237,0.08)',
-      } : {}),
+      minHeight: 300,
+      maxHeight: 'calc(100vh - 240px)',
+      flex: 1,
     }}>
-      {/* Doc header */}
+      {/* Status bar */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '12px 20px',
-        borderBottom: '1px solid rgba(255,255,255,0.06)',
-        background: 'rgba(255,255,255,0.025)',
+        padding: '10px 20px',
+        borderBottom: '1px solid var(--border)',
+        background: 'var(--surface-2)',
         flexShrink: 0,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{
-            width: 8, height: 8, borderRadius: '50%',
-            background: isActive ? '#4ade80' : 'rgba(238,242,255,0.2)',
-            boxShadow: isActive ? '0 0 8px #4ade80' : 'none',
-            transition: 'all 0.3s',
-            flexShrink: 0,
-          }} />
-          <span style={{ fontSize: 12, color: 'rgba(238,242,255,0.40)', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-            {isActive ? 'Live · ' + targetLang.toUpperCase() : 'Transcript · ' + targetLang.toUpperCase()}
-          </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {isActive ? (
+            <>
+              <span style={{
+                width: 7, height: 7, borderRadius: '50%',
+                background: 'var(--live)',
+                animation: 'livePulse 2s ease-in-out infinite',
+                flexShrink: 0,
+              }} />
+              <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--live)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Live</span>
+              <span style={{ fontSize: 11, color: 'var(--border)', margin: '0 2px' }}>·</span>
+              <span style={{ fontSize: 11, color: 'var(--text-dim)', letterSpacing: '0.04em' }}>{targetLang}</span>
+            </>
+          ) : (
+            <>
+              <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--border)', flexShrink: 0 }} />
+              <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-dim)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                {transcript.length > 0 ? 'Transcript' : 'Waiting'}
+              </span>
+              {transcript.length > 0 && (
+                <>
+                  <span style={{ fontSize: 11, color: 'var(--border)', margin: '0 2px' }}>·</span>
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{targetLang}</span>
+                </>
+              )}
+            </>
+          )}
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -127,12 +158,12 @@ export default function DocumentView({ transcript, currentLine, isActive, target
               onClick={() => setAiMode(m => !m)}
               disabled={!canAi}
               style={{
-                display: 'flex', alignItems: 'center', gap: 6,
-                fontSize: 11, fontWeight: 700, letterSpacing: '0.06em',
-                padding: '4px 10px', borderRadius: 8,
-                border: `1px solid ${aiMode ? 'rgba(167,139,250,0.5)' : 'rgba(255,255,255,0.10)'}`,
-                background: aiMode ? 'rgba(124,58,237,0.18)' : 'rgba(255,255,255,0.04)',
-                color: aiMode ? '#c4b5fd' : 'rgba(238,242,255,0.40)',
+                display: 'flex', alignItems: 'center', gap: 5,
+                fontSize: 11, fontWeight: 600,
+                padding: '3px 9px', borderRadius: 6,
+                border: `1px solid ${aiMode ? 'rgba(124,58,237,0.45)' : 'var(--border)'}`,
+                background: aiMode ? 'rgba(124,58,237,0.12)' : 'transparent',
+                color: aiMode ? '#a78bfa' : 'var(--text-dim)',
                 cursor: canAi ? 'pointer' : 'default',
                 transition: 'all 0.2s',
               }}
@@ -140,19 +171,19 @@ export default function DocumentView({ transcript, currentLine, isActive, target
               {aiLoading && !canAi ? (
                 <>
                   <span style={{
-                    width: 10, height: 10, border: '1.5px solid rgba(167,139,250,0.3)',
+                    width: 9, height: 9, border: '1.5px solid rgba(167,139,250,0.3)',
                     borderTopColor: '#a78bfa', borderRadius: '50%',
                     animation: 'spin 0.8s linear infinite', display: 'inline-block',
                   }} />
                   AI…
                 </>
               ) : (
-                <>✦ {aiMode ? 'AI Enhanced' : 'AI Enhanced'}</>
+                <>✦ AI</>
               )}
             </button>
           )}
 
-          <span style={{ fontSize: 12, color: 'rgba(238,242,255,0.28)', fontFamily: 'monospace' }}>
+          <span style={{ fontSize: 11, color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>
             {isActive ? elapsed(sessionStart, now) : transcript.length > 0 ? `${transcript.length} lines` : ''}
           </span>
         </div>
@@ -162,89 +193,61 @@ export default function DocumentView({ transcript, currentLine, isActive, target
       <div style={{
         flex: 1,
         overflowY: 'auto',
-        padding: '28px 32px',
-        fontFamily: "'Georgia', 'Times New Roman', serif",
-        lineHeight: 1.85,
-        letterSpacing: '0.005em',
+        padding: '32px 40px',
+        fontFamily: 'var(--font-doc)',
+        lineHeight: 1.65,
       }}>
         {isEmpty ? (
           <div style={{
-            height: 200, display: 'flex', flexDirection: 'column',
-            alignItems: 'center', justifyContent: 'center', gap: 12,
-            color: 'rgba(238,242,255,0.20)',
+            height: 220, display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center', gap: 10,
+            color: 'var(--text-muted)', fontFamily: 'var(--font-ui)',
           }}>
-            <span style={{ fontSize: 32 }}>✦</span>
-            <span style={{ fontSize: 14 }}>The session will appear here…</span>
+            <span style={{ fontSize: 24, opacity: 0.4 }}>✦</span>
+            <span style={{ fontSize: 13 }}>The session will appear here…</span>
           </div>
         ) : aiMode && aiFormatted ? (
           /* AI Enhanced view */
-          <div style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}>
+          <div>
             <AiMarkdown text={aiFormatted} />
 
             {/* Lines that arrived after the last AI formatting run */}
             {(aiFormattedAt !== undefined ? transcript.slice(aiFormattedAt) : []).map((line, i) => (
-              <span key={i} style={{ display: 'block', marginTop: 6, fontSize: 17, color: 'rgba(238,242,255,0.82)', lineHeight: 1.85 }}>
-                {onWordClick
-                  ? line.text.split(' ').map((word, j) => (
-                      <span
-                        key={j}
-                        onClick={() => onWordClick(word.replace(/[^\w]/g, ''), line.text)}
-                        style={{ cursor: 'pointer', borderRadius: 3, transition: 'background 0.15s' }}
-                        onMouseEnter={e => (e.target as HTMLElement).style.background = 'rgba(167,139,250,0.15)'}
-                        onMouseLeave={e => (e.target as HTMLElement).style.background = 'transparent'}
-                      >{word}</span>
-                    )).reduce((acc: React.ReactNode[], el, j) => j === 0 ? [el] : [...acc, ' ', el], [])
-                  : line.text}
+              <span key={i} className="transcript-line" style={{ display: 'block', marginTop: 4, fontSize: 20, color: 'var(--text)', lineHeight: 1.65 }}>
+                {renderWords(line.text, line.text, onWordClick)}
               </span>
             ))}
 
-            {/* Live partial line */}
+            {/* Live partial (draft) */}
             {currentLine && (
-              <span style={{ display: 'block', marginTop: 6 }}>
-                <MatrixText text={currentLine} color="rgba(167,139,250,0.9)" />
-                <span className="doc-cursor">█</span>
+              <span style={{ display: 'block', marginTop: 4, color: 'var(--text-dim)', fontSize: 20 }}>
+                <MatrixText text={currentLine} color="var(--text-dim)" />
+                <span className="doc-cursor">|</span>
               </span>
             )}
-            {isActive && !currentLine && <span className="doc-cursor">█</span>}
+            {isActive && !currentLine && <span className="doc-cursor">|</span>}
           </div>
         ) : (
           /* Raw word-by-word view */
-          <p style={{ margin: 0, fontSize: 19, color: 'rgba(238,242,255,0.85)' }}>
+          <p style={{ margin: 0, fontSize: 20, color: 'var(--text)', lineHeight: 1.65 }}>
             {transcript.map((line, i) => (
-              <span key={i}>
-                {onWordClick
-                  ? line.text.split(' ').map((word, j) => (
-                      <span
-                        key={j}
-                        onClick={() => onWordClick(word.replace(/[^\w]/g, ''), line.text)}
-                        style={{
-                          cursor: 'pointer',
-                          borderRadius: 3,
-                          transition: 'background 0.15s',
-                        }}
-                        onMouseEnter={e => (e.target as HTMLElement).style.background = 'rgba(167,139,250,0.15)'}
-                        onMouseLeave={e => (e.target as HTMLElement).style.background = 'transparent'}
-                      >
-                        {word}
-                      </span>
-                    )).reduce((acc: React.ReactNode[], el, j) => j === 0 ? [el] : [...acc, ' ', el], [])
-                  : line.text
-                }
+              <span key={i} className="transcript-line" style={{ display: 'inline' }}>
+                {renderWords(line.text, line.text, onWordClick)}
                 {' '}
               </span>
             ))}
 
-            {/* Live current line */}
+            {/* Live current line (draft color) */}
             {currentLine && (
-              <span style={{ display: 'inline' }}>
-                <MatrixText text={currentLine} color="rgba(167,139,250,0.9)" />
-                <span className="doc-cursor">█</span>
+              <span style={{ color: 'var(--text-dim)' }}>
+                <MatrixText text={currentLine} color="var(--text-dim)" />
+                <span className="doc-cursor">|</span>
               </span>
             )}
 
-            {/* Blinking cursor when active but no current line */}
+            {/* Cursor when active but no current line */}
             {isActive && !currentLine && (
-              <span className="doc-cursor">█</span>
+              <span className="doc-cursor">|</span>
             )}
           </p>
         )}
