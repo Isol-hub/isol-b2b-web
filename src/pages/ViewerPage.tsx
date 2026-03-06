@@ -1,6 +1,5 @@
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { useState, useCallback, useRef, useEffect } from 'react'
-import { getSession } from '../lib/auth'
 import { useWebSocket } from '../hooks/useWebSocket'
 import type { SubtitleMessage } from '../hooks/useWebSocket'
 import DocumentView from '../components/DocumentView'
@@ -12,8 +11,6 @@ interface TranscriptLine { text: string; time: Date }
 
 export default function ViewerPage() {
   const { workspaceSlug, sessionId } = useParams<{ workspaceSlug: string; sessionId: string }>()
-  const navigate = useNavigate()
-  const session = getSession()
 
   const [targetLang, setTargetLang] = useState('en')
   const [currentLine, setCurrentLine] = useState('')
@@ -101,11 +98,6 @@ export default function ViewerPage() {
     onMessage: handleMessage,
     viewerSessionId: sessionId,
   })
-
-  if (!session) {
-    navigate(`/login?next=/join/${workspaceSlug}/${sessionId}`, { replace: true })
-    return null
-  }
 
   const handleJoin = () => { ws.open(); setJoined(true) }
 

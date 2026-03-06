@@ -48,12 +48,13 @@ export default function WorkspacePage() {
   const sessionStartRef = useRef<number>(0)
 
   // Session history
-  interface SessionMeta { id: number; started_at: number; target_lang: string; line_count: number; title?: string }
+  interface SessionMeta { id: number; started_at: number; target_lang: string; line_count: number; title?: string; share_token?: string }
   interface SessionDetail { session: Record<string, unknown>; lines: Array<{ line_index: number; text: string }> }
   const [sessions, setSessions] = useState<SessionMeta[]>([])
   const [viewingSession, setViewingSession] = useState<SessionDetail | null>(null)
   const [sessionDetailLoading, setSessionDetailLoading] = useState(false)
   const [editingTitle, setEditingTitle] = useState('')
+  const [shareCopied, setShareCopied] = useState(false)
 
   // Sync title input when session detail opens
   useEffect(() => {
@@ -213,6 +214,25 @@ export default function WorkspacePage() {
       setTitleSaved(true)
       setTimeout(() => setTitleSaved(false), 1800)
     } catch { /* silent */ }
+  }, [])
+
+  const generateShareLink = useCallback(async (sessionId: number) => {
+    const token = getToken()
+    if (!token) return
+    const res = await fetch('/api/share', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ session_id: sessionId }),
+    })
+    if (!res.ok) return
+    const data = await res.json() as { token: string }
+    setViewingSession(prev => prev ? { ...prev, session: { ...prev.session, share_token: data.token } } : prev)
+    setSessions(prev => prev.map(s => s.id === sessionId ? { ...s, share_token: data.token } : s))
+  }, [])
+
+  const handleCopyShareUrl = useCallback((token: string) => {
+    navigator.clipboard.writeText(`${window.location.origin}/share/${token}`)
+      .then(() => { setShareCopied(true); setTimeout(() => setShareCopied(false), 2400) })
   }, [])
 
   const saveSession = useCallback(async (
@@ -598,8 +618,13 @@ export default function WorkspacePage() {
                         onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,0.03)'}
                         onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
                       >
-                        <div style={{ fontSize: 11, color: 'var(--text-dim)', fontWeight: 600, marginBottom: 2 }}>
-                          {s.title ?? `${date.toLocaleDateString()} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
+                        <div style={{ fontSize: 11, color: 'var(--text-dim)', fontWeight: 600, marginBottom: 2, display: 'flex', alignItems: 'center' }}>
+                          <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {s.title ?? `${date.toLocaleDateString()} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
+                          </span>
+                          {s.share_token && (
+                            <span style={{ fontSize: 10, color: 'var(--accent)', marginLeft: 4, flexShrink: 0 }}>🔗</span>
+                          )}
                         </div>
                         <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
                           {lang ? `${lang.flag} ${lang.label}` : s.target_lang} · {s.line_count} lines
@@ -861,6 +886,49 @@ export default function WorkspacePage() {
                 </>
               ) : null}
             </div>
+
+            {/* Share footer */}
+            {viewingSession && (
+              <div style={{
+                borderTop: '1px solid var(--divider)',
+                padding: '14px 24px',
+                flexShrink: 0,
+              }}>
+                <p style={{
+                  fontSize: 10, fontWeight: 700, letterSpacing: '0.09em',
+                  textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 10,
+                }}>Share</p>
+                {viewingSession.session.share_token ? (
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <input
+                      className="input-field"
+                      readOnly
+                      value={`${window.location.origin}/share/${viewingSession.session.share_token as string}`}
+                      onFocus={e => e.target.select()}
+                      style={{ fontSize: 12, flex: 1 }}
+                    />
+                    <button
+                      onClick={() => handleCopyShareUrl(viewingSession.session.share_token as string)}
+                      className="btn-icon"
+                      style={{
+                        fontSize: 12, flexShrink: 0,
+                        color: shareCopied ? 'var(--live)' : undefined,
+                      }}
+                    >
+                      {shareCopied ? '✓ Copied' : 'Copy'}
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => generateShareLink(viewingSession.session.id as number)}
+                    className="btn-icon"
+                    style={{ fontSize: 12 }}
+                  >
+                    ↗ Create share link
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}

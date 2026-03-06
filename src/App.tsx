@@ -3,6 +3,7 @@ import LoginPage from './pages/LoginPage'
 import LandingPage from './pages/LandingPage'
 import WorkspacePage from './pages/WorkspacePage'
 import ViewerPage from './pages/ViewerPage'
+import SharedSessionPage from './pages/SharedSessionPage'
 import { getSession } from './lib/auth'
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
@@ -16,11 +17,8 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
-        <Route path="/join/:workspaceSlug/:sessionId" element={
-          <RequireAuth>
-            <ViewerPage />
-          </RequireAuth>
-        } />
+        <Route path="/share/:token" element={<SharedSessionPage />} />
+        <Route path="/join/:workspaceSlug/:sessionId" element={<ViewerPage />} />
         <Route path="/:workspaceSlug" element={
           <RequireAuth>
             <WorkspacePage />
