@@ -8,6 +8,8 @@ interface Props {
   onClose: () => void
   isSaved?: boolean
   onSave?: (word: string) => void
+  savedCount?: number
+  onShowAll?: () => void
 }
 
 interface AiDef {
@@ -23,7 +25,7 @@ const REGISTER_COLOR: Record<string, string> = {
   neutral: 'var(--text-muted)',
 }
 
-export default function GlossaryPanel({ word, sentences, currentSentence, targetLang = 'en', onClose, isSaved, onSave }: Props) {
+export default function GlossaryPanel({ word, sentences, currentSentence, targetLang = 'en', onClose, isSaved, onSave, savedCount, onShowAll }: Props) {
   const [aiDef, setAiDef] = useState<AiDef | null>(null)
   const [aiLoading, setAiLoading] = useState(true)
 
@@ -228,6 +230,25 @@ export default function GlossaryPanel({ word, sentences, currentSentence, target
           <p style={{ fontSize: 12, color: 'var(--text-muted)', fontStyle: 'italic' }}>
             First occurrence in this session.
           </p>
+        )}
+
+        {/* Link to full workspace glossary */}
+        {onShowAll && savedCount !== undefined && savedCount > 0 && (
+          <button
+            onClick={onShowAll}
+            style={{
+              background: 'none', border: 'none',
+              fontSize: 12, color: 'var(--accent)',
+              padding: 0, cursor: 'pointer',
+              textAlign: 'left',
+              transition: 'opacity 0.15s',
+              marginTop: 4,
+            }}
+            onMouseEnter={e => (e.target as HTMLElement).style.opacity = '0.7'}
+            onMouseLeave={e => (e.target as HTMLElement).style.opacity = '1'}
+          >
+            ← See all {savedCount} saved terms
+          </button>
         )}
       </div>
     </div>

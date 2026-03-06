@@ -8,6 +8,7 @@ import DocumentView from '../components/DocumentView'
 import CompactPanel from '../components/CompactPanel'
 import TranscriptModal from '../components/TranscriptModal'
 import GlossaryPanel from '../components/GlossaryPanel'
+import GlossaryListPanel from '../components/GlossaryListPanel'
 import LanguageSelector from '../components/LanguageSelector'
 import ErrorBanner from '../components/ErrorBanner'
 import StickyNote from '../components/StickyNote'
@@ -34,6 +35,8 @@ export default function WorkspacePage() {
   const [aiMode, setAiMode] = useState(false)
 
   const [glossaryWord, setGlossaryWord] = useState<{ word: string; sentence: string } | null>(null)
+  const [showGlossaryList, setShowGlossaryList] = useState(false)
+  const [titleSaved, setTitleSaved] = useState(false)
 
   const [aiFormatted, setAiFormatted] = useState<string | undefined>()
   const [aiFormattedAt, setAiFormattedAt] = useState<number | undefined>()
@@ -168,6 +171,18 @@ export default function WorkspacePage() {
     } catch { /* silent */ }
   }, [workspaceSlug])
 
+  const handleDeleteGlossaryTerm = useCallback(async (term: string) => {
+    const token = getToken()
+    if (!token || !workspaceSlug) return
+    try {
+      await fetch(`/api/glossary/${encodeURIComponent(term)}?workspace_slug=${workspaceSlug}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      setGlossaryTerms(prev => { const next = new Set(prev); next.delete(term); return next })
+    } catch { /* silent */ }
+  }, [workspaceSlug])
+
   const openSession = useCallback(async (id: number) => {
     const token = getToken()
     if (!token) return
@@ -186,14 +201,17 @@ export default function WorkspacePage() {
   const patchSessionTitle = useCallback(async (id: number, title: string) => {
     const token = getToken()
     if (!token) return
+    const trimmed = title.trim()
     try {
       await fetch(`/api/sessions/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ title: title.trim() || null }),
+        body: JSON.stringify({ title: trimmed || null }),
       })
-      setSessions(prev => prev.map(s => s.id === id ? { ...s, title: title.trim() || undefined } : s))
-      setViewingSession(prev => prev ? { ...prev, session: { ...prev.session, title: title.trim() || null } } : prev)
+      setSessions(prev => prev.map(s => s.id === id ? { ...s, title: trimmed || undefined } : s))
+      setViewingSession(prev => prev ? { ...prev, session: { ...prev.session, title: trimmed || null } } : prev)
+      setTitleSaved(true)
+      setTimeout(() => setTitleSaved(false), 1800)
     } catch { /* silent */ }
   }, [])
 
@@ -252,6 +270,7 @@ export default function WorkspacePage() {
 
   const handleWordClick = useCallback((word: string, sentence: string) => {
     setGlossaryWord({ word: word.toLowerCase(), sentence })
+    setShowGlossaryList(false)
   }, [])
 
   // Keyboard shortcuts
@@ -641,13 +660,16 @@ export default function WorkspacePage() {
 
             {/* Glossary */}
             <button
-              onClick={() => glossaryWord && setGlossaryWord(null)}
-              className={`toolbar-btn${glossaryWord ? ' active' : ''}`}
-              disabled={!glossaryWord}
-              title={glossaryWord ? undefined : 'Click any word in the document to look it up'}
+              onClick={() => {
+                if (glossaryWord) { setGlossaryWord(null); setShowGlossaryList(false) }
+                else if (showGlossaryList) { setShowGlossaryList(false) }
+                else { setShowGlossaryList(true) }
+              }}
+              className={`toolbar-btn${(glossaryWord || showGlossaryList) ? ' active' : ''}`}
+              title={glossaryWord ? undefined : 'Open workspace glossary'}
             >
               <span style={{ fontSize: 11 }}>◉</span>
-              Glossary
+              Glossary{glossaryTerms.size > 0 && ` (${glossaryTerms.size})`}
             </button>
 
             <div className="toolbar-sep" />
@@ -767,29 +789,32 @@ export default function WorkspacePage() {
             }}>
               <div style={{ flex: 1, minWidth: 0 }}>
                 {/* Editable session title */}
-                <input
-                  value={editingTitle}
-                  onChange={e => setEditingTitle(e.target.value)}
-                  onFocus={e => (e.target.style.borderBottomColor = 'var(--border-accent)')}
-                  onBlur={e => {
-                    e.target.style.borderBottomColor = 'transparent'
-                    if (viewingSession) patchSessionTitle(viewingSession.session.id as number, editingTitle)
-                  }}
-                  onKeyDown={e => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
-                  placeholder={viewingSession
-                    ? `Session ${new Date(viewingSession.session.started_at as number).toLocaleDateString()}`
-                    : 'Session title'}
-                  style={{
-                    fontSize: 15, fontWeight: 700,
-                    background: 'none', border: 'none',
-                    borderBottom: '1px solid transparent',
-                    padding: '1px 0', marginBottom: 2,
-                    color: 'var(--text)', fontFamily: 'inherit',
-                    width: '100%', cursor: 'text',
-                    transition: 'border-color 0.15s',
-                    outline: 'none',
-                  }}
-                />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+                  <input
+                    value={editingTitle}
+                    onChange={e => setEditingTitle(e.target.value)}
+                    onFocus={e => (e.target.style.borderBottomColor = 'var(--border-accent)')}
+                    onBlur={e => {
+                      e.target.style.borderBottomColor = 'transparent'
+                      if (viewingSession) patchSessionTitle(viewingSession.session.id as number, editingTitle)
+                    }}
+                    onKeyDown={e => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+                    placeholder="Add a title…"
+                    style={{
+                      fontSize: 15, fontWeight: 700,
+                      background: 'none', border: 'none',
+                      borderBottom: '1px solid transparent',
+                      padding: '1px 0',
+                      color: 'var(--text)', fontFamily: 'inherit',
+                      flex: 1, cursor: 'text',
+                      transition: 'border-color 0.15s',
+                      outline: 'none',
+                    }}
+                  />
+                  {titleSaved && (
+                    <span style={{ fontSize: 11, color: 'var(--live)', fontWeight: 600, flexShrink: 0 }}>✓ Saved</span>
+                  )}
+                </div>
                 {viewingSession && (
                   <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>
                     {new Date(viewingSession.session.started_at as number).toLocaleString()} ·{' '}
@@ -840,7 +865,7 @@ export default function WorkspacePage() {
         </div>
       )}
 
-      {/* Glossary drawer */}
+      {/* Glossary drawer — word lookup */}
       {glossaryWord && (
         <>
           <div className="glossary-backdrop" onClick={() => setGlossaryWord(null)} />
@@ -853,6 +878,23 @@ export default function WorkspacePage() {
               onClose={() => setGlossaryWord(null)}
               isSaved={glossaryTerms.has(glossaryWord.word)}
               onSave={handleSaveGlossaryWord}
+              savedCount={glossaryTerms.size}
+              onShowAll={() => { setGlossaryWord(null); setShowGlossaryList(true) }}
+            />
+          </div>
+        </>
+      )}
+
+      {/* Glossary drawer — workspace list */}
+      {showGlossaryList && !glossaryWord && (
+        <>
+          <div className="glossary-backdrop" onClick={() => setShowGlossaryList(false)} />
+          <div className="glossary-drawer">
+            <GlossaryListPanel
+              terms={Array.from(glossaryTerms).sort()}
+              onDelete={handleDeleteGlossaryTerm}
+              onClose={() => setShowGlossaryList(false)}
+              onWordClick={undefined}
             />
           </div>
         </>
