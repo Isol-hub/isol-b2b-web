@@ -24,7 +24,7 @@ function elapsed(start: Date, now: Date): string {
   return `${String(m).padStart(2, '0')}:${String(ss).padStart(2, '0')}`
 }
 
-function AiMarkdown({ text }: { text: string }) {
+function AiMarkdown({ text, onWordClick }: { text: string; onWordClick?: (w: string, s: string) => void }) {
   const lines = text.split('\n')
   const elements: React.ReactNode[] = []
 
@@ -61,7 +61,7 @@ function AiMarkdown({ text }: { text: string }) {
         <p key={i} style={{
           margin: '0 0 16px', fontSize: 18,
           color: 'var(--text)', lineHeight: 1.75, fontWeight: 400,
-        }}>{line}</p>
+        }}>{renderWords(line, line, onWordClick)}</p>
       )
     }
   }
@@ -296,7 +296,7 @@ export default function DocumentView({
               </div>
             ) : aiMode && aiFormatted ? (
               <div className="doc-ai-update">
-                <AiMarkdown text={aiFormatted} />
+                <AiMarkdown text={aiFormatted} onWordClick={onWordClick} />
                 {(aiFormattedAt !== undefined ? transcript.slice(aiFormattedAt) : []).map((line, i) => (
                   <p key={i} className="transcript-line" style={{
                     margin: '0 0 16px', fontSize: 18,
