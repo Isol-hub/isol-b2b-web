@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import LoginPage from './pages/LoginPage'
+import LandingPage from './pages/LandingPage'
 import WorkspacePage from './pages/WorkspacePage'
 import ViewerPage from './pages/ViewerPage'
 import { getSession } from './lib/auth'
@@ -25,7 +26,7 @@ export default function App() {
             <WorkspacePage />
           </RequireAuth>
         } />
-        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="/" element={<LandingPage />} />
       </Routes>
     </BrowserRouter>
   )

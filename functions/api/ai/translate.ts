@@ -16,14 +16,35 @@ const LANG_NAMES: Record<string, string> = {
   ro: 'Romanian', hu: 'Hungarian', uk: 'Ukrainian', he: 'Hebrew', id: 'Indonesian',
 }
 
+interface TranslateBody {
+  // New shape (with context window)
+  current?: string
+  context?: string[]
+  // Legacy shape (backward compat)
+  text?: string
+  // Shared
+  targetLang: string
+}
+
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   try {
-    const { text, targetLang } = await request.json<{ text: string; targetLang: string }>()
-    if (!text?.trim() || !targetLang) {
-      return Response.json({ translated: text }, { status: 200, headers: CORS })
+    const body = await request.json<TranslateBody>()
+    const { text, current, context = [], targetLang } = body
+
+    // Support both legacy { text } and new { current, context }
+    const lineToTranslate = current ?? text ?? ''
+
+    if (!lineToTranslate.trim() || !targetLang) {
+      return Response.json({ translated: lineToTranslate }, { status: 200, headers: CORS })
     }
 
     const langName = LANG_NAMES[targetLang] ?? targetLang
+
+    const contextSection = context.length > 0
+      ? `Previous lines for context only — do not translate these:\n${context.map(l => `- ${l}`).join('\n')}\n\n`
+      : ''
+
+    const prompt = `${contextSection}Translate the following line to ${langName}. If it is already in ${langName}, return it unchanged. Use the previous lines only to disambiguate meaning. Return ONLY the translation — no quotes, no explanation.\n\nLine to translate: ${lineToTranslate}`
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -35,21 +56,16 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
         max_tokens: 512,
-        messages: [
-          {
-            role: 'user',
-            content: `Translate the following text to ${langName}. If it is already in ${langName}, return it unchanged. Return ONLY the translation — no quotes, no explanation.\n\n${text}`,
-          },
-        ],
+        messages: [{ role: 'user', content: prompt }],
       }),
     })
 
     if (!response.ok) {
-      return Response.json({ translated: text }, { status: 200, headers: CORS })
+      return Response.json({ translated: lineToTranslate }, { status: 200, headers: CORS })
     }
 
     const data = await response.json<{ content: { type: string; text: string }[] }>()
-    const translated = data.content.find(c => c.type === 'text')?.text?.trim() ?? text
+    const translated = data.content.find(c => c.type === 'text')?.text?.trim() ?? lineToTranslate
 
     return Response.json({ translated }, { status: 200, headers: CORS })
   } catch (err) {

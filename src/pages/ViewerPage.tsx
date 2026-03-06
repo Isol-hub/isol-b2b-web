@@ -22,6 +22,8 @@ export default function ViewerPage() {
   const [showModal, setShowModal] = useState(false)
   const [glossaryWord, setGlossaryWord] = useState<{ word: string; sentence: string } | null>(null)
   const wordIndex = useRef<Map<string, string[]>>(new Map())
+  const transcriptRef = useRef<TranscriptLine[]>([])
+  useEffect(() => { transcriptRef.current = transcript }, [transcript])
   const [aiFormatted, setAiFormatted] = useState<string | undefined>()
   const [aiFormattedAt, setAiFormattedAt] = useState<number | undefined>()
   const [aiLoading, setAiLoading] = useState(false)
@@ -69,10 +71,11 @@ export default function ViewerPage() {
       const time = new Date()
       const lang = targetLangRef.current
       const textToTranslate = msg.original_text || msg.line_final
+      const context = transcriptRef.current.slice(-3).map(l => l.text)
       fetch('/api/ai/translate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: textToTranslate, targetLang: lang }),
+        body: JSON.stringify({ current: textToTranslate, context, targetLang: lang }),
       })
         .then(r => r.ok ? r.json() : null)
         .then((data: { translated?: string } | null) => {

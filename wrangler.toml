@@ -9,3 +9,8 @@ VITE_WSS_URL = "wss://api.isol.live/audio"
 binding = "CF_KV_OTP"
 id = "74d6c66c1ef344fdb062c23728927f6a"
 preview_id = "74d6c66c1ef344fdb062c23728927f6a"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "isol-studio"
+database_id = "PLACEHOLDER_TO_FILL"

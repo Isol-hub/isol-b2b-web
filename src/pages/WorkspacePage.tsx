@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { useState, useCallback, useRef, useEffect } from 'react'
-import { getSession, clearSession } from '../lib/auth'
+import { getSession, clearSession, getToken } from '../lib/auth'
 import { useAudioCapture, type AudioSource } from '../hooks/useAudioCapture'
 import { useWebSocket } from '../hooks/useWebSocket'
 import type { SubtitleMessage } from '../hooks/useWebSocket'
@@ -39,6 +39,14 @@ export default function WorkspacePage() {
   const aiDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const wordIndex = useRef<Map<string, string[]>>(new Map())
+  const sessionStartRef = useRef<number>(0)
+
+  // Session history
+  interface SessionMeta { id: number; started_at: number; target_lang: string; line_count: number }
+  interface SessionDetail { session: Record<string, unknown>; lines: Array<{ line_index: number; text: string }> }
+  const [sessions, setSessions] = useState<SessionMeta[]>([])
+  const [viewingSession, setViewingSession] = useState<SessionDetail | null>(null)
+  const [sessionDetailLoading, setSessionDetailLoading] = useState(false)
 
   // Auto-enable AI mode when formatting arrives
   useEffect(() => {
@@ -90,10 +98,67 @@ export default function WorkspacePage() {
   const ws = useWebSocket({ url: wssUrl, targetLang, onMessage: handleMessage })
   const audio = useAudioCapture({ chunkMs: 200, onChunk: ws.sendChunk, onError: setError })
 
+  const fetchSessions = useCallback(async () => {
+    if (!workspaceSlug) return
+    const token = getToken()
+    if (!token) return
+    try {
+      const res = await fetch(`/api/sessions?workspace_slug=${workspaceSlug}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) return
+      const data = await res.json() as { sessions: Array<{ id: number; started_at: number; target_lang: string; line_count: number }> }
+      setSessions(data.sessions ?? [])
+    } catch { /* silent */ }
+  }, [workspaceSlug])
+
+  useEffect(() => { fetchSessions() }, [fetchSessions])
+
+  const openSession = useCallback(async (id: number) => {
+    const token = getToken()
+    if (!token) return
+    setSessionDetailLoading(true)
+    try {
+      const res = await fetch(`/api/sessions/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) return
+      const data = await res.json() as { session: Record<string, unknown>; lines: Array<{ line_index: number; text: string }> }
+      setViewingSession(data)
+    } catch { /* silent */ }
+    finally { setSessionDetailLoading(false) }
+  }, [])
+
+  const saveSession = useCallback(async (
+    lines: { text: string; time: Date }[],
+    formatted: string | undefined,
+    startedAt: number
+  ) => {
+    if (!workspaceSlug || lines.length === 0) return
+    const token = getToken()
+    if (!token) return
+    try {
+      await fetch('/api/sessions/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          workspace_slug: workspaceSlug,
+          target_lang: targetLang,
+          started_at: startedAt,
+          ended_at: Date.now(),
+          transcript_lines: lines.map((l, i) => ({ index: i, text: l.text })),
+          ai_formatted_text: formatted ?? null,
+        }),
+      })
+      fetchSessions()
+    } catch { /* silent */ }
+  }, [workspaceSlug, targetLang, fetchSessions])
+
   const handleStart = useCallback(async () => {
     setError(''); setCurrentLine(''); setTranscript([])
     setAiFormatted(undefined); setAiFormattedAt(undefined); setAiLoading(false); setAiMode(false)
     wordIndex.current.clear()
+    sessionStartRef.current = Date.now()
     ws.open()
     await audio.start(audioSource)
     setSessionActive(true)
@@ -102,7 +167,12 @@ export default function WorkspacePage() {
   const handleStop = useCallback(() => {
     audio.stop(); ws.close()
     setSessionActive(false); setCurrentLine('')
-  }, [audio, ws])
+    // Fire-and-forget session save
+    setTranscript(prev => {
+      saveSession(prev, aiFormatted, sessionStartRef.current)
+      return prev
+    })
+  }, [audio, ws, saveSession, aiFormatted])
 
   const handleLogout = useCallback(() => {
     handleStop(); clearSession()
@@ -112,6 +182,35 @@ export default function WorkspacePage() {
   const handleWordClick = useCallback((word: string, sentence: string) => {
     setGlossaryWord({ word: word.toLowerCase(), sentence })
   }, [])
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement).tagName
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(tag)) return
+      if ((e.target as HTMLElement).isContentEditable) return
+
+      if (e.code === 'Space' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        e.preventDefault()
+        if (sessionActive) {
+          handleStop()
+        } else {
+          handleStart()
+        }
+        return
+      }
+      if (e.code === 'Escape') {
+        if (compact) setCompact(false)
+        return
+      }
+      if ((e.metaKey || e.ctrlKey) && e.code === 'KeyE') {
+        e.preventDefault()
+        if (transcript.length > 0) setShowModal(true)
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [sessionActive, compact, transcript.length, handleStop, handleStart])
 
   if (!session) { navigate('/login', { replace: true }); return null }
 
@@ -371,6 +470,47 @@ export default function WorkspacePage() {
             </button>
           )}
 
+          {/* Recent sessions — shown when not in session */}
+          {!sessionActive && sessions.length > 0 && (
+            <>
+              <div className="rail-divider" />
+              <div>
+                <p className="rail-label">Recent sessions</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  {sessions.slice(0, 5).map(s => {
+                    const date = new Date(s.started_at)
+                    const lang = LANGUAGES.find(l => l.code === s.target_lang)
+                    return (
+                      <button
+                        key={s.id}
+                        onClick={() => openSession(s.id)}
+                        style={{
+                          background: 'transparent',
+                          border: '1px solid var(--border)',
+                          borderRadius: 'var(--radius)',
+                          padding: '7px 10px',
+                          textAlign: 'left',
+                          cursor: 'pointer',
+                          transition: 'background 0.15s',
+                          width: '100%',
+                        }}
+                        onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,0.03)'}
+                        onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
+                      >
+                        <div style={{ fontSize: 11, color: 'var(--text-dim)', fontWeight: 600, marginBottom: 2 }}>
+                          {date.toLocaleDateString()} {date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                          {lang ? `${lang.flag} ${lang.label}` : s.target_lang} · {s.line_count} lines
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            </>
+          )}
+
         </aside>
 
         {/* ── MAIN CANVAS ────────────────────────────────────── */}
@@ -477,6 +617,86 @@ export default function WorkspacePage() {
           aiFormatted={aiFormatted}
           onClose={() => setShowModal(false)}
         />
+      )}
+
+      {/* Session detail modal */}
+      {(viewingSession || sessionDetailLoading) && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, zIndex: 10000,
+            background: 'rgba(0,0,0,0.40)',
+            backdropFilter: 'blur(20px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: 24,
+          }}
+          onClick={e => { if (e.target === e.currentTarget) setViewingSession(null) }}
+        >
+          <div style={{
+            width: '100%', maxWidth: 700,
+            background: 'var(--canvas)',
+            border: '1px solid var(--border)',
+            borderRadius: 'var(--radius-xl)',
+            boxShadow: 'var(--shadow-lg)',
+            display: 'flex', flexDirection: 'column',
+            maxHeight: '85vh', overflow: 'hidden',
+          }}>
+            {/* Modal header */}
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '18px 24px',
+              borderBottom: '1px solid var(--divider)',
+              flexShrink: 0,
+            }}>
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 2 }}>Session transcript</h3>
+                {viewingSession && (
+                  <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                    {new Date(viewingSession.session.started_at as number).toLocaleString()} ·{' '}
+                    {viewingSession.lines.length} lines
+                  </p>
+                )}
+              </div>
+              <button
+                onClick={() => setViewingSession(null)}
+                style={{ background: 'none', color: 'var(--text-muted)', fontSize: 20, padding: '2px 8px', borderRadius: 4 }}
+              >×</button>
+            </div>
+            {/* Content */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
+              {sessionDetailLoading ? (
+                <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)', fontSize: 14 }}>
+                  Loading…
+                </div>
+              ) : viewingSession ? (
+                <>
+                  {viewingSession.session.ai_formatted_text ? (
+                    <div>
+                      <p style={{
+                        fontSize: 10, fontWeight: 700, letterSpacing: '0.09em',
+                        textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 14,
+                      }}>AI structured</p>
+                      <div style={{ fontSize: 15, color: 'var(--text)', lineHeight: 1.75, whiteSpace: 'pre-wrap' }}>
+                        {viewingSession.session.ai_formatted_text as string}
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <p style={{
+                        fontSize: 10, fontWeight: 700, letterSpacing: '0.09em',
+                        textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 14,
+                      }}>Transcript</p>
+                      {viewingSession.lines.map(l => (
+                        <p key={l.line_index} style={{
+                          fontSize: 15, color: 'var(--text)', lineHeight: 1.75, marginBottom: 12,
+                        }}>{l.text}</p>
+                      ))}
+                    </div>
+                  )}
+                </>
+              ) : null}
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Glossary drawer */}
