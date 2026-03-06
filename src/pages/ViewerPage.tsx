@@ -204,6 +204,7 @@ export default function ViewerPage() {
         <TranscriptModal
           transcript={transcript}
           targetLang={targetLang}
+          aiFormatted={aiFormatted}
           onClose={() => setShowModal(false)}
         />
       )}

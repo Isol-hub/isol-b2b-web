@@ -309,6 +309,7 @@ export default function WorkspacePage() {
         <TranscriptModal
           transcript={transcript}
           targetLang={targetLang}
+          aiFormatted={aiFormatted}
           onClose={() => setShowModal(false)}
         />
       )}

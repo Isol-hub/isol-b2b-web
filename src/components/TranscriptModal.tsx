@@ -7,12 +7,13 @@ interface TranscriptLine {
   time: Date
 }
 
-type ViewMode = 'raw' | 'dialogue' | 'notes'
+type ViewMode = 'ai' | 'raw' | 'dialogue' | 'notes'
 type FileFormat = 'txt' | 'md' | 'json' | 'pdf' | 'docx' | 'ics'
 
 interface Props {
   transcript: TranscriptLine[]
   targetLang: string
+  aiFormatted?: string
   onClose: () => void
 }
 
@@ -184,16 +185,17 @@ function serialize(content: string, lines: TranscriptLine[], format: FileFormat,
   return content
 }
 
-export default function TranscriptModal({ transcript, targetLang, onClose }: Props) {
-  const [mode, setMode] = useState<ViewMode>('dialogue')
+export default function TranscriptModal({ transcript, targetLang, aiFormatted, onClose }: Props) {
+  const [mode, setMode] = useState<ViewMode>(aiFormatted ? 'ai' : 'dialogue')
   const [format, setFormat] = useState<FileFormat>('md')
   const [downloading, setDownloading] = useState(false)
 
   const generated = useMemo(() => {
+    if (mode === 'ai') return aiFormatted ?? toNotes(transcript)
     if (mode === 'raw') return toRaw(transcript)
     if (mode === 'dialogue') return toDialogue(transcript)
     return toNotes(transcript)
-  }, [mode, transcript])
+  }, [mode, transcript, aiFormatted])
 
   const [edited, setEdited] = useState<string | null>(null)
   const content = edited ?? generated
@@ -287,6 +289,15 @@ export default function TranscriptModal({ transcript, targetLang, onClose }: Pro
 
         {/* Mode tabs */}
         <div style={{ display: 'flex', gap: 4, padding: '12px 24px 0', borderBottom: '1px solid rgba(255,255,255,0.06)', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+          {aiFormatted && (
+            <button style={{
+              ...TAB_STYLE(mode === 'ai'),
+              background: mode === 'ai' ? 'rgba(124,58,237,0.30)' : 'transparent',
+              borderBottom: mode === 'ai' ? '2px solid #a78bfa' : '2px solid transparent',
+            }} onClick={() => switchMode('ai')}>
+              ✦ AI Enhanced
+            </button>
+          )}
           {(['raw', 'dialogue', 'notes'] as ViewMode[]).map(m => (
             <button key={m} style={TAB_STYLE(mode === m)} onClick={() => switchMode(m)}>
               {m === 'raw' ? '📄 Raw' : m === 'dialogue' ? '💬 Dialogue' : '📝 Notes'}
@@ -304,6 +315,7 @@ export default function TranscriptModal({ transcript, targetLang, onClose }: Pro
         {/* Mode description */}
         <div style={{ padding: '10px 24px', borderBottom: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)' }}>
           <p style={{ fontSize: 12, color: 'rgba(238,242,255,0.40)', lineHeight: 1.5 }}>
+            {mode === 'ai' && 'AI-formatted text with punctuation, titles and paragraph structure. Edit before exporting.'}
             {mode === 'raw' && 'Timestamped lines exactly as captured. Edit freely before downloading.'}
             {mode === 'dialogue' && 'Speakers detected automatically from pauses (A, B, C…). Edit names before exporting.'}
             {mode === 'notes' && 'Content reorganized into sections by topic pauses. Add titles, highlights, action items.'}
