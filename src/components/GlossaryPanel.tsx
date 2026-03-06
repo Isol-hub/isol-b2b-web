@@ -51,7 +51,7 @@ export default function GlossaryPanel({ word, sentences, currentSentence, target
     return parts.map((p, i) =>
       re.test(p)
         ? <mark key={i} style={{
-            background: 'rgba(214,178,94,0.18)',
+            background: 'rgba(99,102,241,0.10)',
             color: 'var(--accent)',
             borderRadius: 3,
             padding: '0 2px',
@@ -88,7 +88,7 @@ export default function GlossaryPanel({ word, sentences, currentSentence, target
               fontSize: 10, fontWeight: 700, letterSpacing: '0.05em',
               textTransform: 'uppercase',
               color: REGISTER_COLOR[aiDef.register] ?? REGISTER_COLOR.neutral,
-              background: 'rgba(255,255,255,0.05)',
+              background: 'rgba(0,0,0,0.04)',
               borderRadius: 5, padding: '2px 6px',
             }}>{aiDef.register}</span>
           )}
@@ -117,8 +117,8 @@ export default function GlossaryPanel({ word, sentences, currentSentence, target
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 0' }}>
             <span style={{
               width: 14, height: 14,
-              border: '1.5px solid rgba(88,213,201,0.2)',
-              borderTopColor: 'var(--teal)',
+              border: '1.5px solid rgba(99,102,241,0.15)',
+              borderTopColor: 'var(--accent)',
               borderRadius: '50%',
               animation: 'spin 0.8s linear infinite',
               display: 'inline-block', flexShrink: 0,
@@ -145,10 +145,10 @@ export default function GlossaryPanel({ word, sentences, currentSentence, target
 
             {aiDef.context && (
               <div style={{
-                background: 'rgba(88,213,201,0.05)',
+                background: 'rgba(6,182,212,0.05)',
                 borderRadius: 10,
                 padding: '14px 16px',
-                border: '1px solid rgba(88,213,201,0.12)',
+                border: '1px solid rgba(6,182,212,0.12)',
               }}>
                 <p style={{
                   fontSize: 10, fontWeight: 700, letterSpacing: '0.09em',

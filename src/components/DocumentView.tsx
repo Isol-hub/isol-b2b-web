@@ -79,7 +79,7 @@ function WordSpan({ word, sentence, onWordClick }: {
     <span
       onClick={() => onWordClick(word.replace(/[^\w]/g, ''), sentence)}
       style={{ cursor: 'pointer', borderRadius: 3, transition: 'background 0.12s', padding: '0 1px' }}
-      onMouseEnter={e => (e.target as HTMLElement).style.background = 'rgba(217,164,65,0.15)'}
+      onMouseEnter={e => (e.target as HTMLElement).style.background = 'rgba(99,102,241,0.10)'}
       onMouseLeave={e => (e.target as HTMLElement).style.background = 'transparent'}
     >{word}</span>
   )
@@ -213,8 +213,8 @@ export default function DocumentView({
           {aiLoading && (
             <span style={{
               width: 9, height: 9,
-              border: '1.5px solid rgba(88,213,201,0.18)',
-              borderTopColor: 'var(--teal)',
+              border: '1.5px solid rgba(99,102,241,0.15)',
+              borderTopColor: 'var(--accent)',
               borderRadius: '50%',
               animation: 'spin 0.9s linear infinite',
               display: 'inline-block', flexShrink: 0,
@@ -230,8 +230,8 @@ export default function DocumentView({
                 display: 'flex', alignItems: 'center', gap: 4,
                 fontSize: 11, fontWeight: 600,
                 padding: '3px 10px', borderRadius: 20,
-                border: `1px solid ${aiMode ? 'rgba(217,164,65,0.40)' : 'var(--border)'}`,
-                background: aiMode ? 'rgba(217,164,65,0.10)' : 'transparent',
+                border: `1px solid ${aiMode ? 'rgba(99,102,241,0.35)' : 'var(--border)'}`,
+                background: aiMode ? 'rgba(99,102,241,0.08)' : 'transparent',
                 color: aiMode ? 'var(--accent)' : 'var(--text-muted)',
                 cursor: 'pointer',
                 transition: 'all 0.18s',

@@ -1,40 +1,40 @@
-/* ISOL Studio — Design System 4.0 */
+/* ISOL Studio — Design System 5.0 — Pearl + Iris */
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
   /* ── Backgrounds ─────────────────────────────── */
-  --bg:         #111315;
-  --rail:       #171A1D;
-  --canvas:     #1B1F24;
-  --surface-1:  #20252B;
-  --surface-2:  #252C34;
-  --surface-3:  #2A3240;
+  --bg:         #FAFAF8;
+  --rail:       #F2F0EB;
+  --canvas:     #FFFFFF;
+  --surface-1:  #F4F3F0;
+  --surface-2:  #ECEAE4;
+  --surface-3:  #E5E2DA;
 
   /* ── Text ────────────────────────────────────── */
-  --text:       #F3F1EA;
-  --text-dim:   #A5A19A;
-  --text-muted: #77736D;
+  --text:       #1C1917;
+  --text-dim:   #78716C;
+  --text-muted: #A8A29E;
 
   /* ── Accents ─────────────────────────────────── */
-  --accent:       #D9A441;
-  --accent-soft:  #E8C67A;
-  --accent-hover: #CC9938;
-  --teal:         #58D5C9;
-  --live:         #5FCF8B;
-  --warning:      #F0D78A;
-  --red:          #E56A6A;
+  --accent:       #6366F1;
+  --accent-soft:  #818CF8;
+  --accent-hover: #4F46E5;
+  --teal:         #06B6D4;
+  --live:         #22C55E;
+  --warning:      #F59E0B;
+  --red:          #EF4444;
   --orange:       #F97316;
 
   /* ── Borders ─────────────────────────────────── */
-  --border:        rgba(255,255,255,0.07);
-  --divider:       rgba(255,255,255,0.05);
-  --border-accent: rgba(217,164,65,0.22);
+  --border:        rgba(0,0,0,0.07);
+  --divider:       rgba(0,0,0,0.05);
+  --border-accent: rgba(99,102,241,0.22);
 
   /* ── Shadows ─────────────────────────────────── */
-  --shadow:    0 8px 32px rgba(0,0,0,0.30);
-  --shadow-sm: 0 2px 12px rgba(0,0,0,0.18);
-  --shadow-lg: 0 20px 60px rgba(0,0,0,0.45);
+  --shadow:    0 8px 32px rgba(0,0,0,0.10);
+  --shadow-sm: 0 2px 12px rgba(0,0,0,0.06);
+  --shadow-lg: 0 20px 60px rgba(0,0,0,0.16);
 
   /* ── Radius ──────────────────────────────────── */
   --radius:    8px;
@@ -67,12 +67,12 @@ input, select { font-family: inherit; outline: none; }
 /* ─── Scrollbar ──────────────────────────────────── */
 ::-webkit-scrollbar { width: 3px; height: 3px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.07); border-radius: 2px; }
+::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.10); border-radius: 2px; }
 
 /* ─── Primary button ─────────────────────────────── */
 .btn-primary {
   background: var(--accent);
-  color: #111;
+  color: #fff;
   font-weight: 700;
   font-size: 13px;
   padding: 0 18px;
@@ -93,8 +93,8 @@ input, select { font-family: inherit; outline: none; }
 
 /* ─── Stop button ────────────────────────────────── */
 .btn-stop {
-  background: rgba(229,106,106,0.07);
-  border: 1px solid rgba(229,106,106,0.18);
+  background: rgba(239,68,68,0.06);
+  border: 1px solid rgba(239,68,68,0.18);
   color: var(--red);
   font-weight: 600;
   font-size: 13px;
@@ -108,7 +108,7 @@ input, select { font-family: inherit; outline: none; }
   align-items: center;
   justify-content: center;
 }
-.btn-stop:hover { background: rgba(229,106,106,0.13); }
+.btn-stop:hover { background: rgba(239,68,68,0.12); }
 
 /* ─── Icon / secondary button ────────────────────── */
 .btn-icon {
@@ -125,14 +125,14 @@ input, select { font-family: inherit; outline: none; }
   gap: 5px;
 }
 .btn-icon:hover {
-  background: rgba(255,255,255,0.04);
+  background: rgba(0,0,0,0.04);
   color: var(--text);
-  border-color: rgba(255,255,255,0.10);
+  border-color: rgba(0,0,0,0.12);
 }
 
 /* ─── Input ──────────────────────────────────────── */
 .input-field {
-  background: var(--surface-1);
+  background: var(--canvas);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 10px 13px;
@@ -142,14 +142,14 @@ input, select { font-family: inherit; outline: none; }
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 .input-field:focus {
-  border-color: rgba(217,164,65,0.40);
-  box-shadow: 0 0 0 3px rgba(217,164,65,0.09);
+  border-color: rgba(99,102,241,0.40);
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.09);
 }
 .input-field::placeholder { color: var(--text-muted); }
 
 /* ─── Card ───────────────────────────────────────── */
 .card {
-  background: var(--surface-1);
+  background: var(--canvas);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: 20px;
@@ -157,7 +157,7 @@ input, select { font-family: inherit; outline: none; }
 
 /* ─── Top system bar ─────────────────────────────── */
 .header-glass {
-  background: rgba(17,19,21,0.98);
+  background: rgba(250,250,248,0.96);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border-bottom: 1px solid var(--divider);
@@ -170,7 +170,7 @@ input, select { font-family: inherit; outline: none; }
   align-items: center;
   gap: 6px;
   padding: 3px 10px;
-  background: rgba(255,255,255,0.03);
+  background: rgba(0,0,0,0.03);
   border: 1px solid var(--border);
   border-radius: 20px;
 }
@@ -232,16 +232,16 @@ input, select { font-family: inherit; outline: none; }
   left: 50%;
   transform: translateX(-50%);
   z-index: 10;
-  background: rgba(21,25,30,0.95);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255,255,255,0.09);
+  background: rgba(255,255,255,0.88);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(0,0,0,0.07);
   border-radius: 999px;
   padding: 5px 6px;
   display: flex;
   align-items: center;
   gap: 2px;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.40), 0 1px 0 rgba(255,255,255,0.04) inset;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.10), 0 1px 0 rgba(255,255,255,0.9) inset;
   white-space: nowrap;
 }
 
@@ -250,28 +250,29 @@ input, select { font-family: inherit; outline: none; }
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 7px 15px;
+  padding: 7px 16px;
   border-radius: 999px;
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+  transition: background 0.15s, color 0.15s, box-shadow 0.15s;
   border: none;
   background: transparent;
   color: var(--text-dim);
   letter-spacing: 0.01em;
 }
 .toolbar-btn:hover:not(:disabled) {
-  background: rgba(255,255,255,0.07);
-  color: var(--text);
-}
-.toolbar-btn.active {
-  background: rgba(217,164,65,0.14);
+  background: rgba(99,102,241,0.08);
   color: var(--accent);
 }
+.toolbar-btn.active {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 2px 10px rgba(99,102,241,0.30);
+}
 .toolbar-btn.live-active {
-  background: rgba(95,207,139,0.10);
-  color: var(--live);
+  background: rgba(34,197,94,0.12);
+  color: #16A34A;
 }
 .toolbar-btn:disabled {
   opacity: 0.30;
@@ -280,8 +281,8 @@ input, select { font-family: inherit; outline: none; }
 .toolbar-sep {
   width: 1px;
   height: 18px;
-  background: rgba(255,255,255,0.07);
-  margin: 0 4px;
+  background: rgba(0,0,0,0.07);
+  margin: 0 3px;
   flex-shrink: 0;
 }
 
@@ -303,13 +304,13 @@ input, select { font-family: inherit; outline: none; }
   transition: all 0.18s;
 }
 .source-btn:hover {
-  border-color: rgba(217,164,65,0.28);
+  border-color: rgba(99,102,241,0.28);
   color: var(--text-dim);
 }
 .source-btn.active {
-  border-color: rgba(217,164,65,0.45);
-  background: rgba(217,164,65,0.08);
-  color: var(--text);
+  border-color: rgba(99,102,241,0.45);
+  background: rgba(99,102,241,0.08);
+  color: var(--accent);
 }
 
 /* ─── Section label (legacy compat) ─────────────── */
@@ -329,9 +330,9 @@ input, select { font-family: inherit; outline: none; }
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.05em;
-  color: var(--teal);
-  background: rgba(88,213,201,0.08);
-  border: 1px solid rgba(88,213,201,0.15);
+  color: var(--accent);
+  background: rgba(99,102,241,0.08);
+  border: 1px solid rgba(99,102,241,0.15);
   border-radius: 5px;
   padding: 2px 7px;
 }
@@ -363,7 +364,7 @@ input, select { font-family: inherit; outline: none; }
 
 /* ─── Gradient text ──────────────────────────────── */
 .gradient-text {
-  background: linear-gradient(135deg, #D9A441 0%, #58D5C9 100%);
+  background: linear-gradient(135deg, #6366F1 0%, #06B6D4 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -376,18 +377,18 @@ input, select { font-family: inherit; outline: none; }
   border-radius: var(--radius-lg);
   transition: border-color 0.3s;
 }
-.subtitle-card.active { border-color: rgba(95,207,139,0.22); }
+.subtitle-card.active { border-color: rgba(34,197,94,0.30); }
 
 /* ─── Sticky note / insight card ────────────────── */
 .sticky-note {
-  background: #F0D78A;
-  color: #1c1608;
+  background: #FEF3C7;
+  color: #78350F;
   border-radius: 10px;
   padding: 14px 18px;
   font-size: 13px;
   line-height: 1.55;
   font-weight: 500;
-  box-shadow: 0 4px 20px rgba(240,215,138,0.10), 0 1px 4px rgba(0,0,0,0.30);
+  box-shadow: 0 4px 20px rgba(245,158,11,0.08), 0 1px 4px rgba(0,0,0,0.06);
 }
 
 /* ─── Glossary drawer (overlay) ──────────────────── */
@@ -398,9 +399,9 @@ input, select { font-family: inherit; outline: none; }
   bottom: 0;
   width: 360px;
   z-index: 50;
-  background: var(--surface-1);
+  background: var(--canvas);
   border-left: 1px solid var(--divider);
-  box-shadow: -20px 0 56px rgba(0,0,0,0.35);
+  box-shadow: -12px 0 40px rgba(0,0,0,0.08);
   animation: drawerSlideIn 0.2s ease-out;
   overflow: hidden;
   display: flex;
@@ -458,7 +459,7 @@ input, select { font-family: inherit; outline: none; }
   display: inline-block;
   width: 2px;
   height: 1.05em;
-  background: var(--teal);
+  background: var(--accent);
   animation: cursorBlink 1s ease-in-out infinite;
   vertical-align: text-bottom;
   border-radius: 1px;
@@ -494,7 +495,7 @@ input, select { font-family: inherit; outline: none; }
     border-left: none;
     border-top: 1px solid var(--divider);
     border-radius: 14px 14px 0 0;
-    box-shadow: 0 -20px 56px rgba(0,0,0,0.40);
+    box-shadow: 0 -12px 40px rgba(0,0,0,0.12);
     animation: sheetSlideUp 0.22s ease-out;
   }
   .glossary-backdrop {
@@ -502,7 +503,7 @@ input, select { font-family: inherit; outline: none; }
     position: fixed;
     inset: 0;
     z-index: 49;
-    background: rgba(0,0,0,0.55);
+    background: rgba(0,0,0,0.35);
   }
   .workspace-toolbar {
     left: 50%;

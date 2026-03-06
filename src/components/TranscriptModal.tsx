@@ -235,9 +235,9 @@ export default function TranscriptModal({ transcript, targetLang, aiFormatted, o
     border: 'none',
     cursor: 'pointer',
     transition: 'all 0.15s',
-    background: active ? 'rgba(214,178,94,0.12)' : 'transparent',
+    background: active ? 'rgba(99,102,241,0.10)' : 'transparent',
     color: active ? 'var(--accent)' : 'var(--text-muted)',
-    borderBottom: active ? '2px solid rgba(214,178,94,0.60)' : '2px solid transparent',
+    borderBottom: active ? '2px solid rgba(99,102,241,0.55)' : '2px solid transparent',
   })
 
   const FORMAT_STYLE = (active: boolean): React.CSSProperties => ({
@@ -245,10 +245,10 @@ export default function TranscriptModal({ transcript, targetLang, aiFormatted, o
     borderRadius: 7,
     fontSize: 12,
     fontWeight: 600,
-    border: `1px solid ${active ? 'rgba(214,178,94,0.45)' : 'var(--border)'}`,
+    border: `1px solid ${active ? 'rgba(99,102,241,0.35)' : 'var(--border)'}`,
     cursor: 'pointer',
     transition: 'all 0.15s',
-    background: active ? 'rgba(214,178,94,0.10)' : 'rgba(255,255,255,0.03)',
+    background: active ? 'rgba(99,102,241,0.08)' : 'rgba(0,0,0,0.03)',
     color: active ? 'var(--accent)' : 'var(--text-muted)',
   })
 
@@ -267,7 +267,7 @@ export default function TranscriptModal({ transcript, targetLang, aiFormatted, o
     <div
       style={{
         position: 'fixed', inset: 0, zIndex: 10000,
-        background: 'rgba(7,10,18,0.88)',
+        background: 'rgba(0,0,0,0.40)',
         backdropFilter: 'blur(20px)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         padding: 24,
@@ -342,7 +342,7 @@ export default function TranscriptModal({ transcript, targetLang, aiFormatted, o
         {/* Mode description */}
         <div style={{
           padding: '10px 28px',
-          background: 'rgba(255,255,255,0.02)',
+          background: 'rgba(0,0,0,0.02)',
           borderBottom: '1px solid var(--divider)',
         }}>
           <p style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5 }}>

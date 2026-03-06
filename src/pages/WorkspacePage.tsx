@@ -123,7 +123,7 @@ export default function WorkspacePage() {
   const statusColor = ws.state === 'error' || audio.state === 'error' ? 'var(--red)'
     : ws.state === 'reconnecting' ? 'var(--orange)'
     : isActive ? 'var(--live)'
-    : 'rgba(255,255,255,0.18)'
+    : 'rgba(0,0,0,0.12)'
 
   const statusLabel = ws.state === 'error' || audio.state === 'error' ? 'Error'
     : ws.state === 'reconnecting' ? 'Reconnecting…'
@@ -172,7 +172,7 @@ export default function WorkspacePage() {
         {/* Brand */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <div className="logo-mark" style={{ width: 24, height: 24 }}>
-            <span style={{ color: '#111', fontWeight: 800, fontSize: 12 }}>i</span>
+            <span style={{ color: '#fff', fontWeight: 800, fontSize: 12 }}>i</span>
           </div>
           <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: '-0.01em' }}>ISOL Studio</span>
         </div>
@@ -340,9 +340,9 @@ export default function WorkspacePage() {
                   style={{
                     width: '100%',
                     background: roomCopied
-                      ? 'rgba(95,207,139,0.10)'
-                      : 'rgba(255,255,255,0.04)',
-                    border: `1px solid ${roomCopied ? 'rgba(95,207,139,0.22)' : 'var(--border)'}`,
+                      ? 'rgba(34,197,94,0.08)'
+                      : 'rgba(0,0,0,0.03)',
+                    border: `1px solid ${roomCopied ? 'rgba(34,197,94,0.22)' : 'var(--border)'}`,
                     color: roomCopied ? 'var(--live)' : 'var(--text-dim)',
                     fontWeight: 600, fontSize: 12,
                     padding: '7px 12px',

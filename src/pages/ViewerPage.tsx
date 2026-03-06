@@ -110,7 +110,7 @@ export default function ViewerPage() {
   const statusColor = ws.state === 'error' ? 'var(--red)'
     : ws.state === 'reconnecting' ? 'var(--orange)'
     : isActive ? 'var(--live)'
-    : 'rgba(255,255,255,0.2)'
+    : 'rgba(0,0,0,0.12)'
 
   const handleWordClick = useCallback((word: string, sentence: string) => {
     setGlossaryWord({ word: word.toLowerCase(), sentence })
@@ -141,7 +141,7 @@ export default function ViewerPage() {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
           <div className="logo-mark" style={{ width: 26, height: 26 }}>
-            <span style={{ color: '#111', fontWeight: 800, fontSize: 13 }}>i</span>
+            <span style={{ color: '#fff', fontWeight: 800, fontSize: 13 }}>i</span>
           </div>
           <span style={{ fontSize: 14, fontWeight: 700, letterSpacing: '-0.01em' }}>ISOL Studio</span>
           {workspaceSlug && (
@@ -152,9 +152,9 @@ export default function ViewerPage() {
         <span style={{
           fontSize: 11, fontWeight: 700, letterSpacing: '0.08em',
           textTransform: 'uppercase',
-          background: 'rgba(88,213,201,0.08)',
-          border: '1px solid rgba(88,213,201,0.18)',
-          color: 'var(--teal)',
+          background: 'rgba(99,102,241,0.08)',
+          border: '1px solid rgba(99,102,241,0.18)',
+          color: 'var(--accent)',
           borderRadius: 6, padding: '3px 9px',
         }}>Viewer</span>
 
@@ -203,8 +203,8 @@ export default function ViewerPage() {
                 {/* Live badge */}
                 <div style={{
                   display: 'inline-flex', alignItems: 'center', gap: 8,
-                  background: 'rgba(60,203,127,0.07)',
-                  border: '1px solid rgba(60,203,127,0.18)',
+                  background: 'rgba(34,197,94,0.07)',
+                  border: '1px solid rgba(34,197,94,0.18)',
                   borderRadius: 20, padding: '5px 14px', marginBottom: 28,
                 }}>
                   <span style={{
