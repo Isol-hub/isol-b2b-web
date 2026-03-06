@@ -320,6 +320,7 @@ export default function WorkspacePage() {
           word={glossaryWord.word}
           sentences={wordIndex.current.get(glossaryWord.word) ?? [glossaryWord.sentence]}
           currentSentence={glossaryWord.sentence}
+          targetLang={targetLang}
           onClose={() => setGlossaryWord(null)}
         />
       )}

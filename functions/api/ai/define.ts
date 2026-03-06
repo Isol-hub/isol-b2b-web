@@ -9,10 +9,13 @@ const CORS = {
 
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   try {
-    const { word, sentence } = await request.json<{ word: string; sentence: string }>()
+    const { word, sentence, targetLang } = await request.json<{ word: string; sentence: string; targetLang?: string }>()
     if (!word || !sentence) {
       return Response.json({ error: 'word and sentence required' }, { status: 400, headers: CORS })
     }
+    const langInstruction = targetLang && targetLang !== 'en'
+      ? `Write the definition and context in ${targetLang} language.`
+      : ''
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -29,6 +32,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
             role: 'user',
             content: `The word "${word}" appeared in this spoken context: "${sentence}"
 
+${langInstruction}
 Respond ONLY with a valid JSON object (no markdown, no code blocks) with these exact fields:
 {
   "definition": "brief dictionary definition, 1-2 sentences",

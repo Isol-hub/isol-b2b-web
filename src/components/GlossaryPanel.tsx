@@ -4,6 +4,7 @@ interface Props {
   word: string
   sentences: string[]   // all sentences from transcript containing this word
   currentSentence: string
+  targetLang?: string
   onClose: () => void
 }
 
@@ -13,7 +14,7 @@ interface AiDef {
   register: string
 }
 
-export default function GlossaryPanel({ word, sentences, currentSentence, onClose }: Props) {
+export default function GlossaryPanel({ word, sentences, currentSentence, targetLang = 'en', onClose }: Props) {
   const [aiDef, setAiDef] = useState<AiDef | null>(null)
   const [aiLoading, setAiLoading] = useState(true)
 
@@ -25,7 +26,7 @@ export default function GlossaryPanel({ word, sentences, currentSentence, onClos
     fetch('/api/ai/define', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ word, sentence: currentSentence }),
+      body: JSON.stringify({ word, sentence: currentSentence, targetLang }),
     })
       .then(r => r.ok ? r.json() : null)
       .then((data: AiDef | null) => {
