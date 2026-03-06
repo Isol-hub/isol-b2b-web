@@ -12,6 +12,7 @@ interface Props {
   isActive: boolean
   targetLang: string
   aiFormatted?: string
+  aiFormattedAt?: number   // transcript.length at the moment AI ran
   aiLoading?: boolean
   /** Called when user clicks a word — for glossary */
   onWordClick?: (word: string, sentence: string) => void
@@ -56,7 +57,7 @@ function AiMarkdown({ text }: { text: string }) {
   return <>{elements}</>
 }
 
-export default function DocumentView({ transcript, currentLine, isActive, targetLang, aiFormatted, aiLoading, onWordClick }: Props) {
+export default function DocumentView({ transcript, currentLine, isActive, targetLang, aiFormatted, aiFormattedAt, aiLoading, onWordClick }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null)
   const [sessionStart] = useState(() => new Date())
   const [now, setNow] = useState(new Date())
@@ -179,9 +180,27 @@ export default function DocumentView({ transcript, currentLine, isActive, target
           /* AI Enhanced view */
           <div style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}>
             <AiMarkdown text={aiFormatted} />
-            {/* Live current line appended */}
+
+            {/* Lines that arrived after the last AI formatting run */}
+            {(aiFormattedAt !== undefined ? transcript.slice(aiFormattedAt) : []).map((line, i) => (
+              <span key={i} style={{ display: 'block', marginTop: 6, fontSize: 17, color: 'rgba(238,242,255,0.82)', lineHeight: 1.85 }}>
+                {onWordClick
+                  ? line.text.split(' ').map((word, j) => (
+                      <span
+                        key={j}
+                        onClick={() => onWordClick(word.replace(/[^\w]/g, ''), line.text)}
+                        style={{ cursor: 'pointer', borderRadius: 3, transition: 'background 0.15s' }}
+                        onMouseEnter={e => (e.target as HTMLElement).style.background = 'rgba(167,139,250,0.15)'}
+                        onMouseLeave={e => (e.target as HTMLElement).style.background = 'transparent'}
+                      >{word}</span>
+                    )).reduce((acc: React.ReactNode[], el, j) => j === 0 ? [el] : [...acc, ' ', el], [])
+                  : line.text}
+              </span>
+            ))}
+
+            {/* Live partial line */}
             {currentLine && (
-              <span style={{ display: 'block', marginTop: 8 }}>
+              <span style={{ display: 'block', marginTop: 6 }}>
                 <MatrixText text={currentLine} color="rgba(167,139,250,0.9)" />
                 <span className="doc-cursor">█</span>
               </span>

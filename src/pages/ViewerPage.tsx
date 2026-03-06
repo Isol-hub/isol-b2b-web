@@ -23,28 +23,35 @@ export default function ViewerPage() {
   const [glossaryWord, setGlossaryWord] = useState<{ word: string; sentence: string } | null>(null)
   const wordIndex = useRef<Map<string, string[]>>(new Map())
   const [aiFormatted, setAiFormatted] = useState<string | undefined>()
+  const [aiFormattedAt, setAiFormattedAt] = useState<number | undefined>()
   const [aiLoading, setAiLoading] = useState(false)
   const aiRunningRef = useRef(false)
+  const aiDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
-    if (transcript.length === 0 || transcript.length % 20 !== 0) return
-    if (aiRunningRef.current) return
-    aiRunningRef.current = true
-    setAiLoading(true)
-    fetch('/api/ai/format', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ lines: transcript.map(l => l.text) }),
-    })
-      .then(r => {
-        if (!r.ok) { r.text().then(t => console.error(`AI format error ${r.status}: ${t}`)); return null }
-        return r.json()
+    if (transcript.length < 5) return
+    if (aiDebounceRef.current) clearTimeout(aiDebounceRef.current)
+    aiDebounceRef.current = setTimeout(() => {
+      if (aiRunningRef.current) return
+      if (aiFormattedAt !== undefined && transcript.length <= aiFormattedAt) return
+      aiRunningRef.current = true
+      setAiLoading(true)
+      const snapLength = transcript.length
+      fetch('/api/ai/format', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lines: transcript.map(l => l.text) }),
       })
-      .then((data: { formatted?: string } | null) => {
-        if (data?.formatted) setAiFormatted(data.formatted)
-      })
-      .catch(e => console.error(`AI format failed: ${e.message}`))
-      .finally(() => { setAiLoading(false); aiRunningRef.current = false })
+        .then(r => {
+          if (!r.ok) { r.text().then(t => console.error(`AI format error ${r.status}: ${t}`)); return null }
+          return r.json()
+        })
+        .then((data: { formatted?: string } | null) => {
+          if (data?.formatted) { setAiFormatted(data.formatted); setAiFormattedAt(snapLength) }
+        })
+        .catch(e => console.error(`AI format failed: ${e.message}`))
+        .finally(() => { setAiLoading(false); aiRunningRef.current = false })
+    }, 2000)
   }, [transcript.length])
 
   const wssUrl = import.meta.env.VITE_WSS_URL ?? 'wss://api.isol.live/audio'
@@ -172,6 +179,7 @@ export default function ViewerPage() {
               isActive={isActive}
               targetLang={targetLang}
               aiFormatted={aiFormatted}
+              aiFormattedAt={aiFormattedAt}
               aiLoading={aiLoading}
               onWordClick={handleWordClick}
             />

@@ -37,32 +37,40 @@ export default function WorkspacePage() {
 
   // AI formatting state
   const [aiFormatted, setAiFormatted] = useState<string | undefined>()
+  const [aiFormattedAt, setAiFormattedAt] = useState<number | undefined>()
   const [aiLoading, setAiLoading] = useState(false)
   const aiRunningRef = useRef(false)
+  const aiDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Build word→sentences index from transcript
   const wordIndex = useRef<Map<string, string[]>>(new Map())
 
-  // Trigger AI formatting every 20 finalized lines
+  // Trigger AI formatting with debounce — every 5+ new lines, wait 2s of silence
   useEffect(() => {
-    if (transcript.length === 0 || transcript.length % 20 !== 0) return
-    if (aiRunningRef.current) return
-    aiRunningRef.current = true
-    setAiLoading(true)
-    fetch('/api/ai/format', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ lines: transcript.map(l => l.text) }),
-    })
-      .then(r => {
-        if (!r.ok) { r.text().then(t => setError(`AI format error ${r.status}: ${t}`)); return null }
-        return r.json()
+    if (transcript.length < 5) return
+    if (aiDebounceRef.current) clearTimeout(aiDebounceRef.current)
+    aiDebounceRef.current = setTimeout(() => {
+      if (aiRunningRef.current) return
+      // Only re-run if there are new lines since last format
+      if (aiFormattedAt !== undefined && transcript.length <= aiFormattedAt) return
+      aiRunningRef.current = true
+      setAiLoading(true)
+      const snapLength = transcript.length
+      fetch('/api/ai/format', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lines: transcript.map(l => l.text) }),
       })
-      .then((data: { formatted?: string } | null) => {
-        if (data?.formatted) setAiFormatted(data.formatted)
-      })
-      .catch(e => setError(`AI format failed: ${e.message}`))
-      .finally(() => { setAiLoading(false); aiRunningRef.current = false })
+        .then(r => {
+          if (!r.ok) { r.text().then(t => setError(`AI format error ${r.status}: ${t}`)); return null }
+          return r.json()
+        })
+        .then((data: { formatted?: string } | null) => {
+          if (data?.formatted) { setAiFormatted(data.formatted); setAiFormattedAt(snapLength) }
+        })
+        .catch(e => setError(`AI format failed: ${e.message}`))
+        .finally(() => { setAiLoading(false); aiRunningRef.current = false })
+    }, 2000)
   }, [transcript.length])
 
   useEffect(() => {
@@ -97,7 +105,7 @@ export default function WorkspacePage() {
 
   const handleStart = useCallback(async () => {
     setError(''); setCurrentLine(''); setTranscript([])
-    setAiFormatted(undefined); setAiLoading(false)
+    setAiFormatted(undefined); setAiFormattedAt(undefined); setAiLoading(false)
     wordIndex.current.clear()
     dismissOnboarding()
     ws.open()
@@ -251,6 +259,7 @@ export default function WorkspacePage() {
             isActive={isActive}
             targetLang={targetLangLabel ? `${targetLangLabel.flag} ${targetLangLabel.label}` : targetLang}
             aiFormatted={aiFormatted}
+            aiFormattedAt={aiFormattedAt}
             aiLoading={aiLoading}
             onWordClick={handleWordClick}
           />
