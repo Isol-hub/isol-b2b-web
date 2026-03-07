@@ -36,7 +36,10 @@ export default function WorkspacePage() {
   const [error, setError] = useState('')
   const [compact, setCompact] = useState(false)
   const [sessionActive, setSessionActive] = useState(false)
-  const [audioSource, setAudioSource] = useState<AudioSource>('display')
+  // Default to microphone on mobile (screen capture not available)
+  const [audioSource, setAudioSource] = useState<AudioSource>(
+    () => 'getDisplayMedia' in navigator.mediaDevices ? 'display' : 'microphone'
+  )
   const [transcript, setTranscript] = useState<TranscriptLine[]>([])
   const [showModal, setShowModal] = useState(false)
   const [roomCopied, setRoomCopied] = useState(false)
@@ -891,39 +894,61 @@ export default function WorkspacePage() {
       </div>
 
       {/* ━━ MOBILE BOTTOM BAR ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-      <div className="mobile-bottom-bar">
-        {!sessionActive ? (
-          <button
-            onClick={handleStart}
-            disabled={isUnsupported}
-            className="btn-primary"
-            style={{ flex: 1 }}
-          >
-            Start session →
-          </button>
-        ) : (
-          <button onClick={handleStop} className="btn-stop" style={{ flex: 1 }}>
-            <span style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--red)', flexShrink: 0, marginRight: 4 }} />
-            Stop
-          </button>
+      <div className="mobile-bottom-bar" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
+        {/* Top row: language + source (only when not in session) */}
+        {!sessionActive && (
+          <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+            <select
+              value={targetLang}
+              onChange={e => setTargetLang(e.target.value)}
+              style={{
+                flex: 1, background: 'var(--surface-1)', border: '1px solid var(--border)',
+                borderRadius: 'var(--radius)', color: 'var(--text)', fontSize: 14,
+                padding: '8px 12px', fontFamily: 'inherit', cursor: 'pointer',
+              }}
+            >
+              {LANGUAGES.map(l => (
+                <option key={l.code} value={l.code}>{l.flag} {l.label}</option>
+              ))}
+            </select>
+            {'getDisplayMedia' in navigator.mediaDevices && (
+              <button
+                onClick={() => setAudioSource(s => s === 'display' ? 'microphone' : 'display')}
+                className="btn-icon"
+                style={{ flexShrink: 0, fontSize: 13 }}
+              >
+                {audioSource === 'display' ? '🖥' : '🎙'}
+              </button>
+            )}
+          </div>
         )}
-        <button
-          onClick={() => transcript.length > 0 && setShowModal(true)}
-          className="btn-icon"
-          disabled={transcript.length === 0}
-          style={{ flexShrink: 0 }}
-        >
-          ↑ Export
-        </button>
-        {ws.sessionId && (
-          <button
-            onClick={handleCopyRoom}
-            className="btn-icon"
-            style={{ flexShrink: 0, color: roomCopied ? 'var(--live)' : undefined }}
-          >
-            {roomCopied ? '✓' : '↗ Share'}
-          </button>
-        )}
+        {/* Bottom row: main action + secondary actions */}
+        <div style={{ display: 'flex', gap: 8 }}>
+          {!sessionActive ? (
+            <button onClick={handleStart} disabled={isUnsupported} className="btn-primary" style={{ flex: 1 }}>
+              Start session →
+            </button>
+          ) : (
+            <button onClick={handleStop} className="btn-stop" style={{ flex: 1 }}>
+              <span style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--red)', flexShrink: 0, marginRight: 4 }} />
+              Stop
+            </button>
+          )}
+          {!sessionActive && transcript.length > 0 && (
+            <button onClick={() => setShowModal(true)} className="btn-icon" style={{ flexShrink: 0 }}>
+              Export
+            </button>
+          )}
+          {sessionActive && ws.sessionId && (
+            <button
+              onClick={handleCopyRoom}
+              className="btn-icon"
+              style={{ flexShrink: 0, color: roomCopied ? 'var(--live)' : undefined }}
+            >
+              {roomCopied ? '✓' : '↗ Share'}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* ━━ OVERLAYS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
