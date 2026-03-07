@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { getSession, clearSession, getToken } from '../lib/auth'
 import { useAudioCapture, type AudioSource } from '../hooks/useAudioCapture'
@@ -740,7 +740,7 @@ export default function WorkspacePage() {
               <div>
                 <p className="rail-label">Recent sessions</p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  {sessions.slice(0, 5).map(s => {
+                  {sessions.slice(0, 4).map(s => {
                     const date = new Date(s.started_at)
                     const lang = LANGUAGES.find(l => l.code === s.target_lang)
                     return (
@@ -775,6 +775,16 @@ export default function WorkspacePage() {
                     )
                   })}
                 </div>
+                <Link
+                  to={`/${workspaceSlug}/sessions`}
+                  style={{
+                    display: 'block', marginTop: 8,
+                    fontSize: 11, color: 'var(--accent)', textDecoration: 'none',
+                    textAlign: 'right', letterSpacing: '0.01em',
+                  }}
+                >
+                  All sessions →
+                </Link>
               </div>
             </>
           )}

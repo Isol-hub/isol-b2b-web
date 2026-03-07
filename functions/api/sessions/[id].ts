@@ -82,12 +82,49 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params 
   }
 }
 
+export const onRequestDelete: PagesFunction<Env> = async ({ request, env, params }) => {
+  const auth = decodeJwt(request)
+  if (!auth) {
+    return Response.json({ error: 'Unauthorized' }, { status: 401, headers: CORS })
+  }
+
+  const sessionId = Number(params.id)
+  if (!sessionId || isNaN(sessionId)) {
+    return Response.json({ error: 'Invalid session id' }, { status: 400, headers: CORS })
+  }
+
+  try {
+    const session = await env.DB.prepare(
+      'SELECT workspace_slug FROM sessions WHERE id = ?'
+    ).bind(sessionId).first()
+
+    if (!session) {
+      return Response.json({ error: 'Not found' }, { status: 404, headers: CORS })
+    }
+
+    if (session.workspace_slug !== auth.workspaceSlug) {
+      return Response.json({ error: 'Forbidden' }, { status: 403, headers: CORS })
+    }
+
+    await env.DB.batch([
+      env.DB.prepare('DELETE FROM transcript_lines WHERE session_id = ?').bind(sessionId),
+      env.DB.prepare('DELETE FROM share_comments WHERE session_id = ?').bind(sessionId),
+      env.DB.prepare('DELETE FROM sessions WHERE id = ?').bind(sessionId),
+    ])
+
+    return Response.json({ ok: true }, { headers: CORS })
+  } catch (err) {
+    console.error('session delete error', err)
+    return Response.json({ error: 'Server error' }, { status: 500, headers: CORS })
+  }
+}
+
 export const onRequestOptions: PagesFunction = async () =>
   new Response(null, {
     status: 204,
     headers: {
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, PATCH, OPTIONS',
+      'Access-Control-Allow-Methods': 'GET, PATCH, DELETE, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     },
   })

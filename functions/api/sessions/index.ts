@@ -28,7 +28,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
        FROM sessions
        WHERE workspace_slug = ?
        ORDER BY started_at DESC
-       LIMIT 20`
+       LIMIT 200`
     ).bind(workspaceSlug).all()
 
     return Response.json({ sessions: result.results }, { status: 200, headers: CORS })

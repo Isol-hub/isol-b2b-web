@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import LoginPage from './pages/LoginPage'
 import LandingPage from './pages/LandingPage'
 import WorkspacePage from './pages/WorkspacePage'
+import SessionsPage from './pages/SessionsPage'
 import ViewerPage from './pages/ViewerPage'
 import SharedSessionPage from './pages/SharedSessionPage'
 import { getSession } from './lib/auth'
@@ -19,6 +20,11 @@ export default function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/share/:token" element={<SharedSessionPage />} />
         <Route path="/join/:workspaceSlug/:sessionId" element={<ViewerPage />} />
+        <Route path="/:workspaceSlug/sessions" element={
+          <RequireAuth>
+            <SessionsPage />
+          </RequireAuth>
+        } />
         <Route path="/:workspaceSlug" element={
           <RequireAuth>
             <WorkspacePage />
