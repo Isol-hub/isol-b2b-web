@@ -5,6 +5,7 @@ import { useAudioCapture, type AudioSource } from '../hooks/useAudioCapture'
 import { useWebSocket } from '../hooks/useWebSocket'
 import type { SubtitleMessage } from '../hooks/useWebSocket'
 import DocumentView from '../components/DocumentView'
+import type { CommentItem } from '../components/CommentThread'
 import CompactPanel from '../components/CompactPanel'
 import TranscriptModal from '../components/TranscriptModal'
 import GlossaryPanel from '../components/GlossaryPanel'
@@ -15,6 +16,15 @@ import StickyNote from '../components/StickyNote'
 import { LANGUAGES } from '../lib/languages'
 
 interface TranscriptLine { text: string; time: Date }
+
+function buildCommentMap(arr: (CommentItem & { line_index: number | null })[]): Map<number, CommentItem[]> {
+  const m = new Map<number, CommentItem[]>()
+  arr.forEach(c => {
+    const idx = c.line_index ?? -1
+    m.set(idx, [...(m.get(idx) ?? []), { id: c.id, author: c.author, body: c.body, created_at: c.created_at }])
+  })
+  return m
+}
 
 export default function WorkspacePage() {
   const { workspaceSlug } = useParams<{ workspaceSlug: string }>()
@@ -61,6 +71,15 @@ export default function WorkspacePage() {
   const [sessionDetailLoading, setSessionDetailLoading] = useState(false)
   const [editingTitle, setEditingTitle] = useState('')
   const [shareCopied, setShareCopied] = useState(false)
+
+  // Inline annotations
+  const [lineComments, setLineComments] = useState<Map<number, CommentItem[]>>(new Map())
+  const [openCommentLine, setOpenCommentLine] = useState<number | null>(null)
+  const [commentAuthor, setCommentAuthor] = useState(
+    () => localStorage.getItem('isol_commenter_name') || ''
+  )
+  const [commentSubmitting, setCommentSubmitting] = useState(false)
+  const commentPollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   // Sync title input when session detail opens
   useEffect(() => {
@@ -191,6 +210,24 @@ export default function WorkspacePage() {
 
   useEffect(() => { fetchGlossary() }, [fetchGlossary])
 
+  // Poll comments so host sees viewer notes
+  useEffect(() => {
+    if (!ws.sessionId) {
+      setLineComments(new Map())
+      return
+    }
+    const fetchComments = () =>
+      fetch(`/api/viewer/${ws.sessionId}/comments`)
+        .then(r => r.ok ? r.json() : null)
+        .then((d: { comments: (CommentItem & { line_index: number | null })[] } | null) => {
+          if (d) setLineComments(buildCommentMap(d.comments))
+        })
+        .catch(() => {})
+    fetchComments()
+    commentPollRef.current = setInterval(fetchComments, 10_000)
+    return () => { if (commentPollRef.current) clearInterval(commentPollRef.current) }
+  }, [ws.sessionId])
+
   const handleSaveGlossaryWord = useCallback(async (word: string) => {
     const token = getToken()
     if (!token || !workspaceSlug) return
@@ -304,6 +341,30 @@ export default function WorkspacePage() {
     }).catch(() => {})
   }, [ws.sessionId])
 
+  const handleAddComment = useCallback(async (lineIndex: number, body: string) => {
+    if (!body.trim() || !ws.sessionId) return
+    setCommentSubmitting(true)
+    const name = commentAuthor.trim() || 'Anonymous'
+    localStorage.setItem('isol_commenter_name', name)
+    setCommentAuthor(name)
+    try {
+      const res = await fetch(`/api/viewer/${ws.sessionId}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ author: name, body: body.trim(), line_index: lineIndex }),
+      })
+      if (res.ok) {
+        const c = await res.json() as { id: number; line_index: number | null; author: string; body: string; created_at: number }
+        setLineComments(prev => {
+          const next = new Map(prev)
+          const idx = c.line_index ?? -1
+          next.set(idx, [...(next.get(idx) ?? []), { id: c.id, author: c.author, body: c.body, created_at: c.created_at }])
+          return next
+        })
+      }
+    } finally { setCommentSubmitting(false) }
+  }, [ws.sessionId, commentAuthor])
+
   const handleStart = useCallback(async () => {
     setError(''); setCurrentLine(''); setTranscript([])
     setAiFormatted(undefined); setAiFormattedAt(undefined); setAiLoading(false)
@@ -322,6 +383,9 @@ export default function WorkspacePage() {
     if (shareHintTimerRef.current) clearTimeout(shareHintTimerRef.current)
     setShowShareHint(false)
     prevSessionIdRef.current = null
+    if (commentPollRef.current) { clearInterval(commentPollRef.current); commentPollRef.current = null }
+    setLineComments(new Map())
+    setOpenCommentLine(null)
     // Fire-and-forget session save
     setTranscript(prev => {
       saveSession(prev, aiFormatted, sessionStartRef.current)
@@ -713,6 +777,13 @@ export default function WorkspacePage() {
                 onWordClick={handleWordClick}
                 isEditable={sessionActive}
                 onLineEdit={handleLineEdit}
+                lineComments={lineComments}
+                openCommentLine={openCommentLine}
+                onOpenCommentLine={setOpenCommentLine}
+                commentAuthor={commentAuthor}
+                onCommentAuthorChange={(n) => { setCommentAuthor(n); localStorage.setItem('isol_commenter_name', n) }}
+                onAddComment={handleAddComment}
+                commentSubmitting={commentSubmitting}
               />
             </div>
           )}

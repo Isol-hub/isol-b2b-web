@@ -70,6 +70,45 @@ function renderInline(
   })
 }
 
+function timeAgoDoc(ts: number): string {
+  const diff = Date.now() - ts
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return 'just now'
+  if (mins < 60) return `${mins}m ago`
+  const hours = Math.floor(mins / 60)
+  if (hours < 24) return `${hours}h ago`
+  return new Date(ts).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })
+}
+
+function AnnotationsPanel({ items }: { items: Array<{ lineText: string; comment: CommentItem }> }) {
+  return (
+    <div style={{ marginTop: 40, paddingTop: 24, borderTop: '1px solid var(--divider)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+        <div style={{ flex: 1, height: 1, background: 'var(--divider)' }} />
+        <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+          Annotations ({items.length})
+        </span>
+        <div style={{ flex: 1, height: 1, background: 'var(--divider)' }} />
+      </div>
+      {items.map(({ lineText, comment }) => (
+        <div key={comment.id} style={{ marginBottom: 16 }}>
+          {lineText && (
+            <p style={{ fontSize: 13, color: 'var(--text-muted)', fontStyle: 'italic', marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {lineText.length > 80 ? lineText.slice(0, 80) + '…' : lineText}
+            </p>
+          )}
+          <div style={{ fontFamily: 'var(--font-note)', fontSize: 14, color: 'var(--text-dim)', lineHeight: 1.45 }}>
+            {comment.body}
+          </div>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+            {comment.author} · {timeAgoDoc(comment.created_at)}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 function AiContent({ text, onWordClick }: { text: string; onWordClick?: (w: string, s: string) => void }) {
   const lines = text.split('\n')
   const elements: React.ReactNode[] = []
@@ -144,6 +183,15 @@ export default function DocumentView({
   const hasAi = !!aiFormatted
   const hasNotes = !!aiNotes
   const showModeBar = hasAi || hasNotes || !!aiLoading || !!aiNotesLoading
+
+  // Flat list of annotations for read-only panel in AI/Notes views
+  const annotationsForPanel: Array<{ lineText: string; comment: CommentItem }> = []
+  if (lineComments) {
+    lineComments.forEach((comments, lineIndex) => {
+      const lineText = lineIndex >= 0 && lineIndex < transcript.length ? transcript[lineIndex].text : ''
+      comments.forEach(c => annotationsForPanel.push({ lineText, comment: c }))
+    })
+  }
 
   const commitEdit = () => {
     if (editingIndex === null) return
@@ -245,12 +293,14 @@ export default function DocumentView({
                 </p>
               ))}
               {isActive && !currentLine && <span className="doc-cursor" />}
+              {annotationsForPanel.length > 0 && <AnnotationsPanel items={annotationsForPanel} />}
             </div>
 
           ) : viewMode === 'notes' && aiNotes ? (
             <div className="doc-ai-update">
               <AiContent text={aiNotes} onWordClick={onWordClick} />
               {isActive && <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 16, fontStyle: 'italic' }}>Notes update as session progresses…</p>}
+              {annotationsForPanel.length > 0 && <AnnotationsPanel items={annotationsForPanel} />}
             </div>
 
           ) : (
@@ -296,23 +346,26 @@ export default function DocumentView({
                       >
                         {renderInline(line.text, line.text, onWordClick)}
                       </p>
-                      {/* 💬 button — always visible (at low opacity if no comments), never hidden */}
+                      {/* ✎ annotation trigger — hidden until hover; amber dot when notes exist */}
                       {onAddComment && (
                         <button
                           onClick={() => onOpenCommentLine?.(isOpenC ? null : i)}
-                          title="Comment on this line"
+                          title="Aggiungi nota"
                           style={{
                             background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0,
                             padding: '6px 4px', marginTop: 2,
-                            color: hasComments ? 'var(--accent)' : 'var(--text-muted)',
-                            fontSize: 11, display: 'flex', alignItems: 'center', gap: 3,
-                            opacity: isOpenC || hasComments ? 1 : 0.3,
+                            color: 'var(--text-muted)',
+                            fontSize: 14, display: 'flex', alignItems: 'center', gap: 2,
+                            opacity: isOpenC || hasComments ? 1 : 0,
                             transition: 'opacity 0.15s',
                           }}
                           onMouseEnter={e => (e.currentTarget as HTMLElement).style.opacity = '1'}
-                          onMouseLeave={e => (e.currentTarget as HTMLElement).style.opacity = isOpenC || hasComments ? '1' : '0.3'}
+                          onMouseLeave={e => (e.currentTarget as HTMLElement).style.opacity = isOpenC || hasComments ? '1' : '0'}
                         >
-                          💬{hasComments && <span style={{ fontWeight: 600 }}>{lineC.length}</span>}
+                          {hasComments && (
+                            <span style={{ color: '#D97706', fontSize: 11, fontWeight: 600 }}>●{lineC.length}</span>
+                          )}
+                          <span>✎</span>
                         </button>
                       )}
                     </div>
