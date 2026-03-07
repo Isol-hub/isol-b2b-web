@@ -227,34 +227,57 @@ export default function DocumentView({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
 
-      {/* ━━ LIVE STREAM STRIP ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-      <div style={{ flexShrink: 0, padding: '14px 32px', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid var(--divider)', minHeight: 48 }}>
-        {isActive && <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--live)', animation: 'livePulse 2s ease-in-out infinite', flexShrink: 0 }} />}
-        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.10em', textTransform: 'uppercase', color: isActive ? 'var(--live)' : 'var(--text-muted)', flexShrink: 0 }}>
-          {isActive ? 'Live' : transcript.length > 0 ? 'Capture' : 'Ready'}
-        </span>
-        {(isActive || transcript.length > 0) && <span style={{ width: 1, height: 14, background: 'var(--divider)', flexShrink: 0 }} />}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          {currentLine ? (
-            <span style={{ fontSize: 14, color: 'var(--text-dim)', lineHeight: 1.55 }}>
-              <MatrixText text={currentLine} color="var(--text-dim)" />
-              <span className="doc-cursor" />
-            </span>
-          ) : isActive ? (
-            <span style={{ fontSize: 13, color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center' }}>Listening<span className="doc-cursor" /></span>
-          ) : transcript.length > 0 ? (
-            <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Session ended · {transcript.length} lines captured</span>
-          ) : (
-            <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Start a session to begin capturing</span>
-          )}
-        </div>
-        {isActive && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-            <span style={{ fontSize: 11, color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>{elapsed(sessionStart, now)}</span>
-            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{targetLang}</span>
+      {/* ━━ LIVE CAPTION BANNER ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+      {(() => {
+        const prevText = currentLine
+          ? (transcript[transcript.length - 1]?.text ?? '')
+          : (transcript[transcript.length - 2]?.text ?? '')
+        const currentText = currentLine || (transcript[transcript.length - 1]?.text ?? '')
+
+        return (
+          <div style={{ flexShrink: 0, borderBottom: '1px solid var(--divider)', position: 'relative', background: 'var(--canvas)' }}>
+
+            {/* Status pill — top right */}
+            <div style={{ position: 'absolute', top: 12, right: 20, display: 'flex', alignItems: 'center', gap: 7, zIndex: 1 }}>
+              {isActive && <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--live)', animation: 'livePulse 2s ease-in-out infinite', flexShrink: 0 }} />}
+              <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.10em', textTransform: 'uppercase', color: isActive ? 'var(--live)' : 'var(--text-muted)' }}>
+                {isActive ? 'Live' : transcript.length > 0 ? 'Ended' : 'Ready'}
+              </span>
+              {isActive && <>
+                <span style={{ fontSize: 10, color: 'var(--divider)' }}>·</span>
+                <span style={{ fontSize: 11, color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>{elapsed(sessionStart, now)}</span>
+                <span style={{ fontSize: 10, color: 'var(--divider)' }}>·</span>
+                <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{targetLang}</span>
+              </>}
+            </div>
+
+            {/* Two-line display */}
+            {!currentText && !isActive ? (
+              <div style={{ padding: '28px 32px', display: 'flex', alignItems: 'center', gap: 10, color: 'var(--text-muted)', fontSize: 14, minHeight: 90 }}>
+                <span style={{ fontSize: 24, opacity: 0.2 }}>✦</span>
+                <span>Start a session to begin capturing</span>
+              </div>
+            ) : (
+              <div style={{ padding: '24px 32px 22px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {prevText && (
+                  <p style={{ fontSize: 21, lineHeight: 1.5, color: 'var(--text-muted)', fontWeight: 400, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', transition: 'opacity 0.4s' }}>
+                    {prevText}
+                  </p>
+                )}
+                <p key={transcript.length} style={{ fontSize: 31, lineHeight: 1.45, color: 'var(--text)', fontWeight: 600, margin: 0, letterSpacing: '-0.01em', animation: 'lineReveal 0.25s ease-out' }}>
+                  {currentLine ? (
+                    <><MatrixText text={currentLine} color="var(--text)" /><span className="doc-cursor" /></>
+                  ) : isActive ? (
+                    <span style={{ color: 'var(--text-muted)', fontWeight: 400, fontSize: 22 }}>Listening<span className="doc-cursor" /></span>
+                  ) : (
+                    currentText
+                  )}
+                </p>
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        )
+      })()}
 
       {/* ━━ MODE BAR ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
       <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 10, padding: '9px 32px', borderBottom: '1px solid var(--divider)' }}>
