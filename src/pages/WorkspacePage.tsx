@@ -313,7 +313,7 @@ export default function WorkspacePage() {
     const token = getToken()
     if (!token) return
     try {
-      await fetch('/api/sessions/save', {
+      const res = await fetch('/api/sessions/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
@@ -326,6 +326,28 @@ export default function WorkspacePage() {
         }),
       })
       fetchSessions()
+      if (res.ok) {
+        const { session_id } = await res.json() as { session_id: number }
+        // Generate AI title from first 10 lines, then patch session
+        try {
+          const titleRes = await fetch('/api/ai/title', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ lines: lines.slice(0, 10).map(l => l.text) }),
+          })
+          if (titleRes.ok) {
+            const { title } = await titleRes.json() as { title: string }
+            if (title) {
+              await fetch(`/api/sessions/${session_id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                body: JSON.stringify({ title }),
+              })
+              fetchSessions()
+            }
+          }
+        } catch { /* silent */ }
+      }
     } catch { /* silent */ }
   }, [workspaceSlug, targetLang, fetchSessions])
 
