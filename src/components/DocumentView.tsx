@@ -262,7 +262,7 @@ export default function DocumentView({
             <div style={{ paddingTop: 80, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14, color: 'var(--text-muted)', textAlign: 'center' }}>
               <span style={{ fontSize: 28, opacity: 0.15 }}>✦</span>
               <span style={{ fontSize: 15, fontWeight: 500 }}>The document will appear here as you speak</span>
-              <span style={{ fontSize: 13, opacity: 0.60 }}>Start a session from the left rail to begin</span>
+              <span style={{ fontSize: 13, opacity: 0.60 }}>Start a session to begin</span>
             </div>
 
           ) : viewMode === 'ai' && aiFormatted ? (

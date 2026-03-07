@@ -894,61 +894,23 @@ export default function WorkspacePage() {
       </div>
 
       {/* ━━ MOBILE BOTTOM BAR ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-      <div className="mobile-bottom-bar" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
-        {/* Top row: language + source (only when not in session) */}
-        {!sessionActive && (
-          <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-            <select
-              value={targetLang}
-              onChange={e => setTargetLang(e.target.value)}
-              style={{
-                flex: 1, background: 'var(--surface-1)', border: '1px solid var(--border)',
-                borderRadius: 'var(--radius)', color: 'var(--text)', fontSize: 14,
-                padding: '8px 12px', fontFamily: 'inherit', cursor: 'pointer',
-              }}
-            >
-              {LANGUAGES.map(l => (
-                <option key={l.code} value={l.code}>{l.flag} {l.label}</option>
-              ))}
-            </select>
-            {'getDisplayMedia' in navigator.mediaDevices && (
-              <button
-                onClick={() => setAudioSource(s => s === 'display' ? 'microphone' : 'display')}
-                className="btn-icon"
-                style={{ flexShrink: 0, fontSize: 13 }}
-              >
-                {audioSource === 'display' ? '🖥' : '🎙'}
-              </button>
-            )}
-          </div>
-        )}
-        {/* Bottom row: main action + secondary actions */}
-        <div style={{ display: 'flex', gap: 8 }}>
-          {!sessionActive ? (
-            <button onClick={handleStart} disabled={isUnsupported} className="btn-primary" style={{ flex: 1 }}>
-              Start session →
-            </button>
-          ) : (
-            <button onClick={handleStop} className="btn-stop" style={{ flex: 1 }}>
-              <span style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--red)', flexShrink: 0, marginRight: 4 }} />
-              Stop
-            </button>
-          )}
-          {!sessionActive && transcript.length > 0 && (
-            <button onClick={() => setShowModal(true)} className="btn-icon" style={{ flexShrink: 0 }}>
-              Export
-            </button>
-          )}
-          {sessionActive && ws.sessionId && (
-            <button
-              onClick={handleCopyRoom}
-              className="btn-icon"
-              style={{ flexShrink: 0, color: roomCopied ? 'var(--live)' : undefined }}
-            >
-              {roomCopied ? '✓' : '↗ Share'}
-            </button>
-          )}
-        </div>
+      {/* Mobile = read-only: audio capture stops in background tabs.
+          Sessions and glossary are accessible; hosting is desktop-only. */}
+      <div className="mobile-bottom-bar" style={{ gap: 10 }}>
+        <button
+          onClick={() => setShowGlossaryList(true)}
+          className="btn-icon"
+          style={{ flex: 1, justifyContent: 'center', fontSize: 13 }}
+        >
+          ◉ Glossary{glossaryTerms.size > 0 && ` (${glossaryTerms.size})`}
+        </button>
+        <button
+          onClick={() => navigate(`/${workspaceSlug}/sessions`)}
+          className="btn-primary"
+          style={{ flex: 1, fontSize: 13 }}
+        >
+          Sessions →
+        </button>
       </div>
 
       {/* ━━ OVERLAYS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
