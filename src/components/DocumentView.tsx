@@ -356,11 +356,11 @@ export default function DocumentView({
                             padding: '6px 4px', marginTop: 2,
                             color: 'var(--text-muted)',
                             fontSize: 14, display: 'flex', alignItems: 'center', gap: 2,
-                            opacity: isOpenC || hasComments ? 1 : 0,
+                            opacity: isOpenC || hasComments ? 1 : 0.2,
                             transition: 'opacity 0.15s',
                           }}
                           onMouseEnter={e => (e.currentTarget as HTMLElement).style.opacity = '1'}
-                          onMouseLeave={e => (e.currentTarget as HTMLElement).style.opacity = isOpenC || hasComments ? '1' : '0'}
+                          onMouseLeave={e => (e.currentTarget as HTMLElement).style.opacity = isOpenC || hasComments ? '1' : '0.2'}
                         >
                           {hasComments && (
                             <span style={{ color: '#D97706', fontSize: 11, fontWeight: 600 }}>●{lineC.length}</span>
