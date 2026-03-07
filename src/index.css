@@ -446,6 +446,11 @@ input, select { font-family: inherit; outline: none; }
   50%       { opacity: 0.35; }
 }
 
+@keyframes isolPulse {
+  0%, 100% { opacity: 0.08; }
+  50%       { opacity: 1; }
+}
+
 @keyframes drawerSlideIn {
   from { transform: translateX(28px); opacity: 0; }
   to   { transform: translateX(0); opacity: 1; }
