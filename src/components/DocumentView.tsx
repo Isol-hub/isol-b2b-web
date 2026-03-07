@@ -256,7 +256,7 @@ export default function DocumentView({
 
       {/* ━━ DOCUMENT SURFACE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
       <div ref={scrollContainerRef} style={{ flex: 1, overflowY: 'auto', background: 'var(--surface-1)' }}>
-        <div style={{ maxWidth: 860, margin: '0 auto', padding: '48px 64px calc(48px + 80px)' }}>
+        <div className="doc-surface" style={{ maxWidth: 860, margin: '0 auto', padding: '48px 64px calc(48px + 80px)' }}>
 
           {isEmpty ? (
             <div style={{ paddingTop: 80, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14, color: 'var(--text-muted)', textAlign: 'center' }}>

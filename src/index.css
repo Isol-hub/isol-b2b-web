@@ -549,4 +549,9 @@ input, select { font-family: inherit; outline: none; }
     z-index: 49;
     background: rgba(0,0,0,0.35);
   }
+
+  /* Document surface — compact padding on small screens */
+  .doc-surface {
+    padding: 24px 20px 80px !important;
+  }
 }
