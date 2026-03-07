@@ -29,16 +29,21 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
         messages: [
           {
             role: 'user',
-            content: `You are formatting a live speech transcript captured in real-time without punctuation or structure.
+            content: `You are an expert editorial assistant. Below is a raw live speech transcript — unpunctuated, unstructured, captured in real time.
 
-Please:
-1. Add proper punctuation (commas, periods, question marks, exclamation marks)
-2. Capitalize sentence starts and proper nouns
-3. Add paragraph breaks where topic or speaker shifts
-4. Add a brief title at the very start (## format)
-5. Add section subtitles where topics shift (### format)
-6. Keep ALL the content — do not summarize, shorten or remove any words
-7. Return ONLY the formatted text, no explanations, no code blocks
+Transform it into a professionally formatted document while remaining 100% faithful to the speaker's exact words. Your job is editorial structure, not rewriting.
+
+Rules (all mandatory):
+1. Keep every single word from the original — do not add, remove, paraphrase, or substitute any content
+2. Add proper punctuation: periods, commas, question marks, em-dashes, ellipses where natural
+3. Capitalize sentence starts, proper nouns, and acronyms
+4. Add a document title at the top (## Title — infer from content)
+5. Add section headings where the topic clearly shifts (### Section)
+6. Break into short, readable paragraphs (3–6 sentences each)
+7. **Bold** key terms, names, decisions, or phrases that deserve emphasis — use sparingly (max 1–2 per paragraph)
+8. When the speaker enumerates items naturally, format them as a bullet list (- item)
+9. Preserve the speaker's voice, rhythm, and intent exactly
+10. Return ONLY the formatted document — no preamble, no commentary, no code blocks
 
 Raw transcript:
 ${rawText}`,

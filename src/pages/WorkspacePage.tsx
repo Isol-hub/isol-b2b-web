@@ -32,7 +32,7 @@ export default function WorkspacePage() {
   const [roomCopied, setRoomCopied] = useState(false)
   const [showShareHint, setShowShareHint] = useState(false)
   const shareHintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const [aiMode, setAiMode] = useState(false)
+  const [viewMode, setViewMode] = useState<'raw' | 'ai' | 'notes'>('raw')
 
   const [glossaryWord, setGlossaryWord] = useState<{ word: string; sentence: string } | null>(null)
   const [showGlossaryList, setShowGlossaryList] = useState(false)
@@ -41,8 +41,12 @@ export default function WorkspacePage() {
   const [aiFormatted, setAiFormatted] = useState<string | undefined>()
   const [aiFormattedAt, setAiFormattedAt] = useState<number | undefined>()
   const [aiLoading, setAiLoading] = useState(false)
+  const [aiNotes, setAiNotes] = useState<string | undefined>()
+  const [aiNotesLoading, setAiNotesLoading] = useState(false)
   const aiRunningRef = useRef(false)
+  const notesRunningRef = useRef(false)
   const aiDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const notesDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const wordIndex = useRef<Map<string, string[]>>(new Map())
   const sessionStartRef = useRef<number>(0)
@@ -66,9 +70,9 @@ export default function WorkspacePage() {
   // Workspace glossary
   const [glossaryTerms, setGlossaryTerms] = useState<Set<string>>(new Set())
 
-  // Auto-enable AI mode when formatting arrives
+  // Auto-switch to AI mode when formatting arrives
   useEffect(() => {
-    if (aiFormatted && !aiMode) setAiMode(true)
+    if (aiFormatted) setViewMode('ai')
   }, [aiFormatted])
 
   useEffect(() => {
@@ -95,6 +99,28 @@ export default function WorkspacePage() {
         .catch(e => setError(`AI format failed: ${e.message}`))
         .finally(() => { setAiLoading(false); aiRunningRef.current = false })
     }, 2000)
+  }, [transcript.length])
+
+  // AI notes — runs in parallel, slightly delayed
+  useEffect(() => {
+    if (transcript.length < 5) return
+    if (notesDebounceRef.current) clearTimeout(notesDebounceRef.current)
+    notesDebounceRef.current = setTimeout(() => {
+      if (notesRunningRef.current) return
+      notesRunningRef.current = true
+      setAiNotesLoading(true)
+      fetch('/api/ai/notes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lines: transcript.map(l => l.text) }),
+      })
+        .then(r => r.ok ? r.json() : null)
+        .then((data: { notes?: string } | null) => {
+          if (data?.notes) setAiNotes(data.notes)
+        })
+        .catch(e => setError(`AI notes failed: ${e.message}`))
+        .finally(() => { setAiNotesLoading(false); notesRunningRef.current = false })
+    }, 3000)
   }, [transcript.length])
 
   const wssUrl = import.meta.env.VITE_WSS_URL ?? 'wss://api.isol.live/audio'
@@ -260,9 +286,22 @@ export default function WorkspacePage() {
     } catch { /* silent */ }
   }, [workspaceSlug, targetLang, fetchSessions])
 
+  const handleLineEdit = useCallback((index: number, text: string) => {
+    setTranscript(prev => prev.map((l, i) => i === index ? { ...l, text } : l))
+    if (!ws.sessionId) return
+    const token = getToken()
+    if (!token) return
+    fetch(`/api/viewer/${ws.sessionId}/edits`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ line_index: index, text }),
+    }).catch(() => {})
+  }, [ws.sessionId])
+
   const handleStart = useCallback(async () => {
     setError(''); setCurrentLine(''); setTranscript([])
-    setAiFormatted(undefined); setAiFormattedAt(undefined); setAiLoading(false); setAiMode(false)
+    setAiFormatted(undefined); setAiFormattedAt(undefined); setAiLoading(false)
+    setAiNotes(undefined); setAiNotesLoading(false); setViewMode('raw')
     wordIndex.current.clear()
     sessionStartRef.current = Date.now()
     ws.open()
@@ -660,9 +699,13 @@ export default function WorkspacePage() {
                 aiFormatted={aiFormatted}
                 aiFormattedAt={aiFormattedAt}
                 aiLoading={aiLoading}
-                aiMode={aiMode}
-                onAiModeChange={setAiMode}
+                aiNotes={aiNotes}
+                aiNotesLoading={aiNotesLoading}
+                viewMode={viewMode}
+                onViewModeChange={setViewMode}
                 onWordClick={handleWordClick}
+                isEditable={sessionActive}
+                onLineEdit={handleLineEdit}
               />
             </div>
           )}
@@ -672,8 +715,8 @@ export default function WorkspacePage() {
 
             {/* AI Enhanced */}
             <button
-              onClick={() => canAi && setAiMode(m => !m)}
-              className={`toolbar-btn${aiMode && canAi ? ' active' : ''}`}
+              onClick={() => canAi && setViewMode(m => m === 'ai' ? 'raw' : 'ai')}
+              className={`toolbar-btn${viewMode === 'ai' && canAi ? ' active' : ''}`}
               disabled={!canAi}
               title={canAi ? undefined : 'Available after 5+ lines are captured'}
             >
