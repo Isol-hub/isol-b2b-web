@@ -292,6 +292,14 @@ export default function DocumentView({
                 const isOpenC = openCommentLine === i
                 const hasComments = lineC.length > 0
 
+                // Progressive fade — distance from the most recent finalized line
+                const dist = (transcript.length - 1) - i
+                const lineOpacity = dist === 0 ? 1
+                  : dist === 1 ? 0.68
+                  : dist === 2 ? 0.50
+                  : Math.max(0.30, 0.50 - (dist - 2) * 0.04)
+                const lineWeight: number = dist === 0 ? 500 : 400
+
                 if (isEditable && editingIndex === i) {
                   return (
                     <textarea key={i} value={editingText} autoFocus
@@ -301,7 +309,7 @@ export default function DocumentView({
                         if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); commitEdit() }
                         if (e.key === 'Escape') setEditingIndex(null)
                       }}
-                      style={{ width: '100%', resize: 'none', background: 'rgba(99,102,241,0.05)', border: '1px solid rgba(99,102,241,0.3)', borderRadius: 6, padding: '6px 10px', fontSize: 17, color: 'var(--text)', lineHeight: 1.78, fontFamily: 'inherit', marginBottom: 10, outline: 'none' }}
+                      style={{ width: '100%', resize: 'none', background: 'rgba(99,102,241,0.05)', border: '1px solid rgba(99,102,241,0.3)', borderRadius: 6, padding: '8px 12px', fontSize: 18, color: 'var(--text)', lineHeight: 1.85, fontFamily: 'inherit', marginBottom: 22, outline: 'none' }}
                       rows={Math.max(1, Math.ceil(editingText.length / 80))}
                     />
                   )
@@ -309,16 +317,17 @@ export default function DocumentView({
 
                 return (
                   <div key={i} style={{
-                    marginBottom: isOpenC ? 16 : 4,
+                    marginBottom: isOpenC ? 28 : 20,
                     borderLeft: `2px solid ${isOpenC ? 'var(--accent)' : hasComments ? 'rgba(99,102,241,0.25)' : 'transparent'}`,
-                    paddingLeft: isOpenC || hasComments ? 12 : 0,
+                    paddingLeft: isOpenC || hasComments ? 14 : 2,
                     borderRadius: 6,
                     background: isOpenC ? 'rgba(99,102,241,0.03)' : 'transparent',
-                    transition: 'all 0.15s',
+                    opacity: lineOpacity,
+                    transition: 'opacity 0.5s ease, background 0.15s',
                   }}>
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
                       <p
-                        style={{ flex: 1, margin: '0 0 0', fontSize: 17, color: 'var(--text)', lineHeight: 1.78, cursor: isEditable ? 'text' : undefined, padding: '4px 0' }}
+                        style={{ flex: 1, margin: 0, fontSize: 18, color: 'var(--text)', lineHeight: 1.85, fontWeight: lineWeight, cursor: isEditable ? 'text' : undefined, padding: '2px 0' }}
                         onClick={() => {
                           if (isEditable) { setEditingIndex(i); setEditingText(line.text) }
                         }}
@@ -327,7 +336,7 @@ export default function DocumentView({
                       >
                         {renderInline(line.text, line.text, onWordClick)}
                       </p>
-                      {/* ✎ annotation trigger — hidden until hover; amber dot when notes exist */}
+                      {/* ✎ annotation trigger */}
                       {onAddComment && (
                         <button
                           onClick={() => onOpenCommentLine?.(isOpenC ? null : i)}
@@ -366,6 +375,23 @@ export default function DocumentView({
                   </div>
                 )
               })}
+
+              {/* Live current line — inline highlight while session is active */}
+              {isActive && currentLine && (
+                <div style={{
+                  marginBottom: 20,
+                  paddingLeft: 14,
+                  paddingTop: 10,
+                  paddingBottom: 10,
+                  borderLeft: '3px solid var(--accent)',
+                  borderRadius: 6,
+                  background: 'rgba(99,102,241,0.04)',
+                }}>
+                  <p style={{ margin: 0, fontSize: 18, lineHeight: 1.85, color: 'var(--text)', fontWeight: 500 }}>
+                    {currentLine}<span className="doc-cursor" style={{ display: 'inline-block', marginLeft: 2 }} />
+                  </p>
+                </div>
+              )}
               {isActive && !currentLine && <span className="doc-cursor" />}
             </div>
           )}
