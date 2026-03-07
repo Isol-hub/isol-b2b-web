@@ -7,7 +7,7 @@ interface Props {
   targetLang?: string
   onClose: () => void
   isSaved?: boolean
-  onSave?: (word: string) => void
+  onSave?: (word: string, note?: string) => void
   savedCount?: number
   onShowAll?: () => void
 }
@@ -26,6 +26,7 @@ const REGISTER_COLOR: Record<string, string> = {
 }
 
 export default function GlossaryPanel({ word, sentences, currentSentence, targetLang = 'en', onClose, isSaved, onSave, savedCount, onShowAll }: Props) {
+  // pass AI definition as note when saving so the list can show it without re-fetching
   const [aiDef, setAiDef] = useState<AiDef | null>(null)
   const [aiLoading, setAiLoading] = useState(true)
 
@@ -99,7 +100,7 @@ export default function GlossaryPanel({ word, sentences, currentSentence, target
           {/* Save to workspace glossary — only shown after AI definition loads */}
           {onSave && !aiLoading && (
             <button
-              onClick={() => !isSaved && onSave(word)}
+              onClick={() => !isSaved && onSave(word, aiDef?.definition ?? undefined)}
               disabled={isSaved}
               style={{
                 background: isSaved ? 'rgba(34,197,94,0.08)' : 'rgba(99,102,241,0.08)',
@@ -186,23 +187,25 @@ export default function GlossaryPanel({ word, sentences, currentSentence, target
         ) : null}
 
         {/* Sentence context */}
-        <div>
-          <p style={{
-            fontSize: 10, fontWeight: 700, letterSpacing: '0.09em',
-            textTransform: 'uppercase', color: 'var(--text-muted)',
-            marginBottom: 10,
-          }}>Sentence</p>
-          <p style={{
-            fontSize: 13, color: 'var(--text-dim)',
-            lineHeight: 1.65,
-            padding: '12px 14px',
-            background: 'var(--surface)',
-            borderRadius: 8,
-            border: '1px solid var(--divider)',
-          }}>
-            "{highlight(currentSentence, word)}"
-          </p>
-        </div>
+        {currentSentence && (
+          <div>
+            <p style={{
+              fontSize: 10, fontWeight: 700, letterSpacing: '0.09em',
+              textTransform: 'uppercase', color: 'var(--text-muted)',
+              marginBottom: 10,
+            }}>Sentence</p>
+            <p style={{
+              fontSize: 13, color: 'var(--text-dim)',
+              lineHeight: 1.65,
+              padding: '12px 14px',
+              background: 'var(--surface)',
+              borderRadius: 8,
+              border: '1px solid var(--divider)',
+            }}>
+              "{highlight(currentSentence, word)}"
+            </p>
+          </div>
+        )}
 
         {/* Other occurrences */}
         {otherSentences.length > 0 && (

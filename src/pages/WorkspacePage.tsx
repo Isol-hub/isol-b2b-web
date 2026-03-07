@@ -1,5 +1,5 @@
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { useState, useCallback, useRef, useEffect } from 'react'
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { getSession, clearSession, getToken } from '../lib/auth'
 import { useAudioCapture, type AudioSource } from '../hooks/useAudioCapture'
 import { useWebSocket } from '../hooks/useWebSocket'
@@ -9,7 +9,7 @@ import type { CommentItem } from '../components/CommentThread'
 import CompactPanel from '../components/CompactPanel'
 import TranscriptModal from '../components/TranscriptModal'
 import GlossaryPanel from '../components/GlossaryPanel'
-import GlossaryListPanel from '../components/GlossaryListPanel'
+import GlossaryListPanel, { type GlossaryItem } from '../components/GlossaryListPanel'
 import LanguageSelector from '../components/LanguageSelector'
 import ErrorBanner from '../components/ErrorBanner'
 import StickyNote from '../components/StickyNote'
@@ -92,7 +92,8 @@ export default function WorkspacePage() {
   }, [viewingSession])
 
   // Workspace glossary
-  const [glossaryTerms, setGlossaryTerms] = useState<Set<string>>(new Set())
+  const [glossaryItems, setGlossaryItems] = useState<GlossaryItem[]>([])
+  const glossaryTermsSet = useMemo(() => new Set(glossaryItems.map(i => i.term)), [glossaryItems])
 
   // Auto-switch to AI only the first time format arrives — never override user's choice after that
   const hasAutoSwitchedRef = useRef(false)
@@ -206,8 +207,8 @@ export default function WorkspacePage() {
         headers: { Authorization: `Bearer ${token}` },
       })
       if (!res.ok) return
-      const data = await res.json() as { terms: Array<{ term: string }> }
-      setGlossaryTerms(new Set(data.terms.map(t => t.term)))
+      const data = await res.json() as { terms: GlossaryItem[] }
+      setGlossaryItems(data.terms)
     } catch { /* silent */ }
   }, [workspaceSlug])
 
@@ -231,18 +232,31 @@ export default function WorkspacePage() {
     return () => { if (commentPollRef.current) clearInterval(commentPollRef.current) }
   }, [ws.sessionId])
 
-  const handleSaveGlossaryWord = useCallback(async (word: string) => {
+  const handleSaveGlossaryWord = useCallback(async (word: string, note?: string) => {
     const token = getToken()
     if (!token || !workspaceSlug) return
     try {
       await fetch('/api/glossary', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ workspace_slug: workspaceSlug, term: word }),
+        body: JSON.stringify({ workspace_slug: workspaceSlug, term: word, note: note ?? null }),
       })
-      setGlossaryTerms(prev => new Set([...prev, word]))
+      await fetchGlossary()
     } catch { /* silent */ }
-  }, [workspaceSlug])
+  }, [workspaceSlug, fetchGlossary])
+
+  const handleAddGlossaryTerm = useCallback(async (term: string) => {
+    const token = getToken()
+    if (!token || !workspaceSlug) return
+    try {
+      await fetch('/api/glossary', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ workspace_slug: workspaceSlug, term, note: null }),
+      })
+      await fetchGlossary()
+    } catch { /* silent */ }
+  }, [workspaceSlug, fetchGlossary])
 
   const handleDeleteGlossaryTerm = useCallback(async (term: string) => {
     const token = getToken()
@@ -252,7 +266,7 @@ export default function WorkspacePage() {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       })
-      setGlossaryTerms(prev => { const next = new Set(prev); next.delete(term); return next })
+      setGlossaryItems(prev => prev.filter(i => i.term !== term))
     } catch { /* silent */ }
   }, [workspaceSlug])
 
@@ -860,7 +874,7 @@ export default function WorkspacePage() {
               title={glossaryWord ? undefined : 'Open workspace glossary'}
             >
               <span style={{ fontSize: 11 }}>◉</span>
-              Glossary{glossaryTerms.size > 0 && ` (${glossaryTerms.size})`}
+              Glossary{glossaryItems.length > 0 && ` (${glossaryItems.length})`}
             </button>
 
             <div className="toolbar-sep" />
@@ -902,7 +916,7 @@ export default function WorkspacePage() {
           className="btn-icon"
           style={{ flex: 1, justifyContent: 'center', fontSize: 13 }}
         >
-          ◉ Glossary{glossaryTerms.size > 0 && ` (${glossaryTerms.size})`}
+          ◉ Glossary{glossaryItems.length > 0 && ` (${glossaryItems.length})`}
         </button>
         <button
           onClick={() => navigate(`/${workspaceSlug}/sessions`)}
@@ -1094,9 +1108,9 @@ export default function WorkspacePage() {
               currentSentence={glossaryWord.sentence}
               targetLang={targetLang}
               onClose={() => setGlossaryWord(null)}
-              isSaved={glossaryTerms.has(glossaryWord.word)}
+              isSaved={glossaryTermsSet.has(glossaryWord.word)}
               onSave={handleSaveGlossaryWord}
-              savedCount={glossaryTerms.size}
+              savedCount={glossaryItems.length}
               onShowAll={() => { setGlossaryWord(null); setShowGlossaryList(true) }}
             />
           </div>
@@ -1109,10 +1123,15 @@ export default function WorkspacePage() {
           <div className="glossary-backdrop" onClick={() => setShowGlossaryList(false)} />
           <div className="glossary-drawer">
             <GlossaryListPanel
-              terms={Array.from(glossaryTerms).sort()}
+              items={[...glossaryItems].sort((a, b) => a.term.localeCompare(b.term))}
               onDelete={handleDeleteGlossaryTerm}
               onClose={() => setShowGlossaryList(false)}
-              onWordClick={undefined}
+              onWordClick={(term) => {
+                setShowGlossaryList(false)
+                const sentences = wordIndex.current.get(term) ?? []
+                setGlossaryWord({ word: term, sentence: sentences[sentences.length - 1] ?? '' })
+              }}
+              onAdd={handleAddGlossaryTerm}
             />
           </div>
         </>
