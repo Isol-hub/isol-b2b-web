@@ -62,9 +62,13 @@ export default function ViewerPage() {
     localStorage.setItem('isol_commenter_name', name)
   }
 
-  // Auto-switch to AI when format loads
+  // Auto-switch to AI only the first time format arrives — never override user's choice after that
+  const hasAutoSwitchedRef = useRef(false)
   useEffect(() => {
-    if (aiFormatted) setViewMode('ai')
+    if (aiFormatted && !hasAutoSwitchedRef.current) {
+      hasAutoSwitchedRef.current = true
+      setViewMode('ai')
+    }
   }, [aiFormatted])
 
   // AI format debounce

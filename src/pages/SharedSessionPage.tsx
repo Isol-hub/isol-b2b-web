@@ -3,6 +3,37 @@ import { useParams, Link } from 'react-router-dom'
 import { LANGUAGES } from '../lib/languages'
 import CommentThread, { type CommentItem } from '../components/CommentThread'
 
+// Minimal markdown renderer for AI-formatted text (##, ###, **, >, -)
+function AiMarkdown({ text }: { text: string }) {
+  const lines = text.split('\n')
+  return (
+    <>
+      {lines.map((line, i) => {
+        if (line.startsWith('## ')) return <h2 key={i} style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.01em', color: 'var(--text)', marginTop: 32, marginBottom: 12 }}>{line.slice(3)}</h2>
+        if (line.startsWith('### ')) return <h3 key={i} style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.09em', textTransform: 'uppercase', color: 'var(--text-muted)', marginTop: 22, marginBottom: 8 }}>{line.slice(4)}</h3>
+        if (line.startsWith('# ')) return <h1 key={i} style={{ fontSize: 28, fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--text)', marginBottom: 20 }}>{line.slice(2)}</h1>
+        if (line.startsWith('> ')) return <blockquote key={i} style={{ borderLeft: '3px solid var(--accent)', paddingLeft: 14, margin: '0 0 16px', color: 'var(--text-dim)', fontStyle: 'italic', fontSize: 15 }}>{line.slice(2)}</blockquote>
+        if (line.startsWith('- [ ] ') || line.startsWith('- [x] ')) {
+          const done = line.startsWith('- [x] ')
+          return <li key={i} style={{ fontSize: 15, lineHeight: 1.7, marginBottom: 4, marginLeft: 20, listStyle: 'none', color: done ? 'var(--text-muted)' : 'var(--text)' }}><span style={{ marginRight: 8, opacity: 0.7 }}>{done ? '☑' : '☐'}</span>{renderBold(line.slice(6))}</li>
+        }
+        if (line.startsWith('- ') || line.startsWith('* ')) return <li key={i} style={{ fontSize: 15, lineHeight: 1.7, marginBottom: 4, marginLeft: 20, color: 'var(--text)' }}>{renderBold(line.slice(2))}</li>
+        if (line.trim() === '') return <div key={i} style={{ height: 10 }} />
+        return <p key={i} style={{ fontSize: 15, color: 'var(--text)', lineHeight: 1.78, margin: '0 0 16px' }}>{renderBold(line)}</p>
+      })}
+    </>
+  )
+}
+
+function renderBold(text: string): React.ReactNode {
+  const parts = text.split(/(\*\*[^*]+\*\*)/)
+  return parts.map((p, i) =>
+    p.startsWith('**') && p.endsWith('**')
+      ? <strong key={i}>{p.slice(2, -2)}</strong>
+      : <span key={i}>{p}</span>
+  )
+}
+
 interface SharedSession {
   id: number
   title: string | null
@@ -232,57 +263,19 @@ export default function SharedSessionPage() {
                   {/* AI tab */}
                   {activeTab === 'ai' && (
                     <>
-                      <div style={{ fontSize: 15, color: 'var(--text)', lineHeight: 1.75, whiteSpace: 'pre-wrap', marginBottom: 48 }}>
-                        {session.ai_formatted_text}
-                      </div>
+                      <AiMarkdown text={session.ai_formatted_text} />
 
-                      {/* Comments section */}
-                      <div style={{ borderTop: '1px solid var(--divider)', paddingTop: 28 }}>
+                      {/* Discussion section — form first, then list */}
+                      <div style={{ borderTop: '1px solid var(--divider)', paddingTop: 28, marginTop: 40 }}>
                         <p style={{
                           fontSize: 10, fontWeight: 700, letterSpacing: '0.09em',
                           textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 16,
                         }}>
-                          Comments{comments.length > 0 ? ` (${comments.length})` : ''}
+                          Discussion{comments.length > 0 ? ` · ${comments.length}` : ''}
                         </p>
 
-                        {/* All comments flat list */}
-                        {comments.length > 0 && (
-                          <div style={{ marginBottom: 20 }}>
-                            {comments.map(c => {
-                              const lineText = c.line_index !== null
-                                ? lines.find(l => l.line_index === c.line_index)?.text
-                                : null
-                              return (
-                                <div key={c.id} style={{
-                                  padding: '10px 14px',
-                                  marginBottom: 6,
-                                  background: 'var(--surface-1)',
-                                  borderRadius: 8,
-                                  border: '1px solid var(--border)',
-                                }}>
-                                  {lineText && (
-                                    <p style={{
-                                      fontSize: 12, color: 'var(--text-muted)', fontStyle: 'italic',
-                                      marginBottom: 8, paddingLeft: 10,
-                                      borderLeft: '2px solid var(--border-accent)',
-                                      lineHeight: 1.5,
-                                    }}>
-                                      {lineText.length > 100 ? `${lineText.slice(0, 100)}…` : lineText}
-                                    </p>
-                                  )}
-                                  <div style={{ display: 'flex', gap: 5, marginBottom: 4, alignItems: 'baseline' }}>
-                                    <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-dim)' }}>{c.author}</span>
-                                    <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>· {timeAgo(c.created_at)}</span>
-                                  </div>
-                                  <p style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.5, margin: 0 }}>{c.body}</p>
-                                </div>
-                              )
-                            })}
-                          </div>
-                        )}
-
-                        {/* Add general comment form */}
-                        <form onSubmit={handleAiCommentSubmit}>
+                        {/* Add comment form — shown first for visibility */}
+                        <form onSubmit={handleAiCommentSubmit} style={{ marginBottom: 24 }}>
                           <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
                             <input
                               className="input-field"
@@ -297,7 +290,7 @@ export default function SharedSessionPage() {
                               className="input-field"
                               value={aiDraft}
                               onChange={e => setAiDraft(e.target.value)}
-                              placeholder="Add a comment…"
+                              placeholder="Leave a comment on this document…"
                               rows={2}
                               style={{ fontSize: 13, resize: 'none', flex: 1, lineHeight: 1.45, padding: '8px 10px' }}
                               onKeyDown={e => {
@@ -321,6 +314,34 @@ export default function SharedSessionPage() {
                             >↑</button>
                           </div>
                         </form>
+
+                        {/* Comments list */}
+                        {comments.map(c => {
+                          const lineText = c.line_index !== null
+                            ? lines.find(l => l.line_index === c.line_index)?.text
+                            : null
+                          return (
+                            <div key={c.id} style={{
+                              padding: '10px 14px', marginBottom: 6,
+                              background: 'var(--surface-1)', borderRadius: 8, border: '1px solid var(--border)',
+                            }}>
+                              {lineText && (
+                                <p style={{
+                                  fontSize: 12, color: 'var(--text-muted)', fontStyle: 'italic',
+                                  marginBottom: 8, paddingLeft: 10,
+                                  borderLeft: '2px solid var(--border-accent)', lineHeight: 1.5,
+                                }}>
+                                  {lineText.length > 100 ? `${lineText.slice(0, 100)}…` : lineText}
+                                </p>
+                              )}
+                              <div style={{ display: 'flex', gap: 5, marginBottom: 4, alignItems: 'baseline' }}>
+                                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-dim)' }}>{c.author}</span>
+                                <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>· {timeAgo(c.created_at)}</span>
+                              </div>
+                              <p style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.5, margin: 0 }}>{c.body}</p>
+                            </div>
+                          )
+                        })}
                       </div>
                     </>
                   )}

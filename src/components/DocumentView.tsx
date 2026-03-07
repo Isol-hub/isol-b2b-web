@@ -137,6 +137,7 @@ export default function DocumentView({
   isEditable, onLineEdit,
 }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null)
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
   const [sessionStart] = useState(() => new Date())
   const [now, setNow] = useState(new Date())
   const [editingIndex, setEditingIndex] = useState<number | null>(null)
@@ -148,9 +149,28 @@ export default function DocumentView({
     return () => clearInterval(t)
   }, [isActive])
 
+  // "Stick to bottom" — only auto-scroll when user is already near the bottom.
+  // Never hijack the scroll position when the user has scrolled up to read.
+  const isNearBottom = () => {
+    const el = scrollContainerRef.current
+    if (!el) return true
+    return el.scrollHeight - el.scrollTop - el.clientHeight < 120
+  }
+
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
-  }, [transcript.length, currentLine, viewMode, aiFormatted, aiNotes])
+    if (isNearBottom()) {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
+    }
+  }, [transcript.length, currentLine])
+
+  // When the user explicitly switches view mode, scroll to top of new content.
+  const prevViewMode = useRef(viewMode)
+  useEffect(() => {
+    if (prevViewMode.current !== viewMode) {
+      prevViewMode.current = viewMode
+      scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+  }, [viewMode])
 
   const isEmpty = transcript.length === 0 && !currentLine
   const hasAi = !!aiFormatted
@@ -271,7 +291,7 @@ export default function DocumentView({
       </div>
 
       {/* ━━ DOCUMENT SURFACE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-      <div style={{ flex: 1, overflowY: 'auto', background: 'var(--surface-1)' }}>
+      <div ref={scrollContainerRef} style={{ flex: 1, overflowY: 'auto', background: 'var(--surface-1)' }}>
         <div style={{ maxWidth: 860, margin: '0 auto', padding: '48px 64px calc(48px + 80px)' }}>
 
           {isEmpty ? (

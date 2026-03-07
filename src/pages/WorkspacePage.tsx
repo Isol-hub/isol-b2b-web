@@ -70,9 +70,13 @@ export default function WorkspacePage() {
   // Workspace glossary
   const [glossaryTerms, setGlossaryTerms] = useState<Set<string>>(new Set())
 
-  // Auto-switch to AI mode when formatting arrives
+  // Auto-switch to AI only the first time format arrives — never override user's choice after that
+  const hasAutoSwitchedRef = useRef(false)
   useEffect(() => {
-    if (aiFormatted) setViewMode('ai')
+    if (aiFormatted && !hasAutoSwitchedRef.current) {
+      hasAutoSwitchedRef.current = true
+      setViewMode('ai')
+    }
   }, [aiFormatted])
 
   useEffect(() => {
@@ -302,6 +306,7 @@ export default function WorkspacePage() {
     setError(''); setCurrentLine(''); setTranscript([])
     setAiFormatted(undefined); setAiFormattedAt(undefined); setAiLoading(false)
     setAiNotes(undefined); setAiNotesLoading(false); setViewMode('raw')
+    hasAutoSwitchedRef.current = false
     wordIndex.current.clear()
     sessionStartRef.current = Date.now()
     ws.open()
