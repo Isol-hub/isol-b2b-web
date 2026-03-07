@@ -47,6 +47,8 @@ export default function WorkspacePage() {
   const notesRunningRef = useRef(false)
   const aiDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const notesDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const targetLangRef = useRef(targetLang)
+  useEffect(() => { targetLangRef.current = targetLang }, [targetLang])
 
   const wordIndex = useRef<Map<string, string[]>>(new Map())
   const sessionStartRef = useRef<number>(0)
@@ -91,7 +93,7 @@ export default function WorkspacePage() {
       fetch('/api/ai/format', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lines: transcript.map(l => l.text) }),
+        body: JSON.stringify({ lines: transcript.map(l => l.text), targetLang: targetLangRef.current }),
       })
         .then(r => {
           if (!r.ok) { r.text().then(t => setError(`AI format error ${r.status}: ${t}`)); return null }
@@ -116,7 +118,7 @@ export default function WorkspacePage() {
       fetch('/api/ai/notes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lines: transcript.map(l => l.text) }),
+        body: JSON.stringify({ lines: transcript.map(l => l.text), targetLang: targetLangRef.current }),
       })
         .then(r => r.ok ? r.json() : null)
         .then((data: { notes?: string } | null) => {

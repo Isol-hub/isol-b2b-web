@@ -7,14 +7,26 @@ const CORS = {
   'Access-Control-Allow-Origin': '*',
 }
 
+const LANG_NAMES: Record<string, string> = {
+  en: 'English', it: 'Italian', es: 'Spanish', fr: 'French', de: 'German',
+  pt: 'Portuguese', nl: 'Dutch', pl: 'Polish', ru: 'Russian', zh: 'Chinese',
+  ja: 'Japanese', ko: 'Korean', ar: 'Arabic', hi: 'Hindi', tr: 'Turkish',
+  sv: 'Swedish', da: 'Danish', fi: 'Finnish', no: 'Norwegian', cs: 'Czech',
+  ro: 'Romanian', hu: 'Hungarian', uk: 'Ukrainian', he: 'Hebrew', id: 'Indonesian',
+}
+
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   try {
-    const { lines } = await request.json<{ lines: string[] }>()
+    const { lines, targetLang } = await request.json<{ lines: string[]; targetLang?: string }>()
     if (!lines?.length) {
       return Response.json({ error: 'No lines provided' }, { status: 400, headers: CORS })
     }
 
     const rawText = lines.join(' ')
+    const langName = targetLang ? (LANG_NAMES[targetLang] ?? targetLang) : null
+    const langInstruction = langName && langName !== 'English'
+      ? `\nCRITICAL: The transcript is in ${langName}. Output the entire document in ${langName} — do not translate or switch to any other language.\n`
+      : ''
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -29,8 +41,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
         messages: [
           {
             role: 'user',
-            content: `You are an expert editorial assistant. Below is a raw live speech transcript — unpunctuated, unstructured, captured in real time.
-
+            content: `You are an expert editorial assistant. Below is a raw live speech transcript — unpunctuated, unstructured, captured in real time.${langInstruction}
 Transform it into a professionally formatted document while remaining 100% faithful to the speaker's exact words. Your job is editorial structure, not rewriting.
 
 Rules (all mandatory):

@@ -1,15 +1,27 @@
 interface Env { ANTHROPIC_API_KEY: string }
 
+const LANG_NAMES: Record<string, string> = {
+  en: 'English', it: 'Italian', es: 'Spanish', fr: 'French', de: 'German',
+  pt: 'Portuguese', nl: 'Dutch', pl: 'Polish', ru: 'Russian', zh: 'Chinese',
+  ja: 'Japanese', ko: 'Korean', ar: 'Arabic', hi: 'Hindi', tr: 'Turkish',
+  sv: 'Swedish', da: 'Danish', fi: 'Finnish', no: 'Norwegian', cs: 'Czech',
+  ro: 'Romanian', hu: 'Hungarian', uk: 'Ukrainian', he: 'Hebrew', id: 'Indonesian',
+}
+
 const CORS = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
 
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   try {
-    const { lines } = await request.json<{ lines: string[] }>()
+    const { lines, targetLang } = await request.json<{ lines: string[]; targetLang?: string }>()
     if (!lines?.length) {
       return Response.json({ error: 'No lines provided' }, { status: 400, headers: CORS })
     }
 
     const rawText = lines.join('\n')
+    const langName = targetLang ? (LANG_NAMES[targetLang] ?? targetLang) : null
+    const langInstruction = langName && langName !== 'English'
+      ? `\nCRITICAL: The transcript is in ${langName}. Write all notes, headings, and quotes in ${langName} — do not translate or switch to any other language.\n`
+      : ''
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -24,7 +36,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
         messages: [
           {
             role: 'user',
-            content: `You are an expert note-taker. Below is a live speech transcript (raw, unpunctuated).
+            content: `You are an expert note-taker. Below is a live speech transcript (raw, unpunctuated).${langInstruction}
 
 Produce concise, intelligent structured notes that:
 - Capture every key idea, decision, and point — nothing significant should be missing

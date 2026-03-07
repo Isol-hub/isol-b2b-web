@@ -75,7 +75,7 @@ export default function ViewerPage() {
       fetch('/api/ai/format', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lines: transcript.map(l => l.text) }),
+        body: JSON.stringify({ lines: transcript.map(l => l.text), targetLang: targetLangRef.current }),
       })
         .then(r => r.ok ? r.json() : null)
         .then((data: { formatted?: string } | null) => {
@@ -97,7 +97,7 @@ export default function ViewerPage() {
       fetch('/api/ai/notes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lines: transcript.map(l => l.text) }),
+        body: JSON.stringify({ lines: transcript.map(l => l.text), targetLang: targetLangRef.current }),
       })
         .then(r => r.ok ? r.json() : null)
         .then((data: { notes?: string } | null) => {
