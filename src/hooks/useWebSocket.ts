@@ -29,6 +29,7 @@ const MAX_RECONNECT_DELAY = 30_000
 export function useWebSocket({ url, targetLang, onMessage, onStateChange, viewerSessionId, onSessionEnd }: UseWebSocketOptions) {
   const [state, setState] = useState<WsState>('disconnected')
   const [sessionId, setSessionId] = useState<string>('')
+  const [viewerCount, setViewerCount] = useState<number>(0)
   const wsRef = useRef<WebSocket | null>(null)
   const reconnectDelay = useRef(INITIAL_RECONNECT_DELAY)
   const reconnectTimer = useRef<ReturnType<typeof setTimeout>>()
@@ -49,11 +50,13 @@ export function useWebSocket({ url, targetLang, onMessage, onStateChange, viewer
     if (viewerSessionId) {
       wsUrl += `&session_id=${viewerSessionId}&viewer=1`
     }
+    console.log('[WS] connecting →', wsUrl)
     const ws = new WebSocket(wsUrl)
     ws.binaryType = 'arraybuffer'
     wsRef.current = ws
 
     ws.onopen = () => {
+      console.log('[WS] open')
       setWsState('connected')
       reconnectDelay.current = INITIAL_RECONNECT_DELAY
       pingTimer.current = setInterval(() => {
@@ -67,6 +70,7 @@ export function useWebSocket({ url, targetLang, onMessage, onStateChange, viewer
       try {
         const msg = typeof ev.data === 'string' ? JSON.parse(ev.data) : null
         if (!msg) return
+        if (msg.type !== 'pong') console.log('[WS] msg:', msg)
         if (msg.type === 'pong') return
         // Capture session_id from hello message
         if (msg.type === 'hello' && msg.session_id) {
@@ -79,17 +83,23 @@ export function useWebSocket({ url, targetLang, onMessage, onStateChange, viewer
           onSessionEnd?.()
           return
         }
+        if (msg.type === 'viewer_count') {
+          setViewerCount(msg.count ?? 0)
+          return
+        }
         if (msg.type === 'subtitle' || msg.line_final !== undefined || msg.line_next !== undefined) {
           onMessage(msg as SubtitleMessage)
         }
       } catch { /* ignore malformed */ }
     }
 
-    ws.onerror = () => {
+    ws.onerror = (e) => {
+      console.log('[WS] error', e)
       setWsState('error')
     }
 
-    ws.onclose = () => {
+    ws.onclose = (e) => {
+      console.log('[WS] close — code:', e.code, 'reason:', e.reason, 'wasClean:', e.wasClean, 'shouldReconnect:', shouldReconnect.current)
       clearInterval(pingTimer.current)
       if (shouldReconnect.current) {
         setWsState('reconnecting')
@@ -131,5 +141,5 @@ export function useWebSocket({ url, targetLang, onMessage, onStateChange, viewer
     wsRef.current?.close()
   }, [])
 
-  return { state, sessionId, open, close, sendChunk }
+  return { state, sessionId, viewerCount, open, close, sendChunk }
 }

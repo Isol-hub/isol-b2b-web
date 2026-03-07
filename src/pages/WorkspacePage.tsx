@@ -521,6 +521,16 @@ export default function WorkspacePage() {
                 {statusLabel}
               </span>
             </div>
+            {ws.viewerCount > 0 && (
+              <>
+                <span style={{ color: 'var(--divider)', fontSize: 14 }}>·</span>
+                <span style={{ fontSize: 12, color: 'var(--text-dim)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <span>👁</span>
+                  <span style={{ fontWeight: 600 }}>{ws.viewerCount}</span>
+                  <span style={{ color: 'var(--text-muted)' }}>viewer{ws.viewerCount !== 1 ? 's' : ''}</span>
+                </span>
+              </>
+            )}
             {targetLangLabel && (
               <>
                 <span style={{ color: 'var(--divider)', fontSize: 14 }}>·</span>
