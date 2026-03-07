@@ -18,13 +18,15 @@ interface UseWebSocketOptions {
   onStateChange?: (s: WsState) => void
   /** If set, connects as a viewer (no audio) to the given session */
   viewerSessionId?: string
+  /** Called when the server sends end_of_session (host stopped) */
+  onSessionEnd?: () => void
 }
 
 const PING_INTERVAL = 25_000
 const INITIAL_RECONNECT_DELAY = 1_000
 const MAX_RECONNECT_DELAY = 30_000
 
-export function useWebSocket({ url, targetLang, onMessage, onStateChange, viewerSessionId }: UseWebSocketOptions) {
+export function useWebSocket({ url, targetLang, onMessage, onStateChange, viewerSessionId, onSessionEnd }: UseWebSocketOptions) {
   const [state, setState] = useState<WsState>('disconnected')
   const [sessionId, setSessionId] = useState<string>('')
   const wsRef = useRef<WebSocket | null>(null)
@@ -69,6 +71,12 @@ export function useWebSocket({ url, targetLang, onMessage, onStateChange, viewer
         // Capture session_id from hello message
         if (msg.type === 'hello' && msg.session_id) {
           setSessionId(msg.session_id)
+          return
+        }
+        // Host stopped: prevent reconnect loop, surface to caller
+        if (msg.type === 'end_of_session') {
+          shouldReconnect.current = false
+          onSessionEnd?.()
           return
         }
         if (msg.type === 'subtitle' || msg.line_final !== undefined || msg.line_next !== undefined) {

@@ -17,6 +17,7 @@ export default function ViewerPage() {
   const [currentLine, setCurrentLine] = useState('')
   const [transcript, setTranscript] = useState<TranscriptLine[]>([])
   const [joined, setJoined] = useState(false)
+  const [sessionEnded, setSessionEnded] = useState(false)
   const [showModal, setShowModal] = useState(false)
   const [glossaryWord, setGlossaryWord] = useState<{ word: string; sentence: string } | null>(null)
   const wordIndex = useRef<Map<string, string[]>>(new Map())
@@ -139,7 +140,7 @@ export default function ViewerPage() {
     setCurrentLine(msg.line_next || '')
   }, [])
 
-  const ws = useWebSocket({ url: wssUrl, targetLang, onMessage: handleMessage, viewerSessionId: sessionId })
+  const ws = useWebSocket({ url: wssUrl, targetLang, onMessage: handleMessage, viewerSessionId: sessionId, onSessionEnd: () => setSessionEnded(true) })
 
   // Start polling when joined
   useEffect(() => {
@@ -224,14 +225,16 @@ export default function ViewerPage() {
     : transcript
 
   const isActive = ws.state === 'connected'
-  const statusColor = ws.state === 'error' ? 'var(--red)'
+  const statusColor = sessionEnded ? 'var(--text-muted)'
+    : ws.state === 'error' ? 'var(--red)'
     : ws.state === 'reconnecting' ? 'var(--orange)'
     : isActive ? 'var(--live)'
     : 'rgba(0,0,0,0.12)'
 
-  const statusText = ws.state === 'connected' ? 'Live'
+  const statusText = sessionEnded ? 'Session ended'
+    : ws.state === 'connected' ? 'Live'
     : ws.state === 'connecting' ? 'Connecting…'
-    : ws.state === 'reconnecting' ? 'Waiting for host…'
+    : ws.state === 'reconnecting' ? 'Connecting…'
     : 'Waiting…'
 
   const handleWordClick = useCallback((word: string, sentence: string) => {
