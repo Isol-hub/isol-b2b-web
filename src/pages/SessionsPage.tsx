@@ -33,7 +33,9 @@ function fmtDate(ts: number): string {
 export default function SessionsPage() {
   const { workspaceSlug } = useParams<{ workspaceSlug: string }>()
   const navigate = useNavigate()
-  const auth = getSession()
+  // Stable reference — getSession() returns a new object every call,
+  // so we freeze it at mount to avoid infinite useEffect re-runs.
+  const [auth] = useState(() => getSession())
 
   const [sessions, setSessions] = useState<SessionMeta[]>([])
   const [loading, setLoading] = useState(true)
@@ -54,7 +56,7 @@ export default function SessionsPage() {
   useEffect(() => {
     if (!auth) { navigate('/login', { replace: true }); return }
     const token = getToken()
-    if (!token || !workspaceSlug) return
+    if (!token || !workspaceSlug) { setLoading(false); return }
     setLoading(true)
     fetch(`/api/sessions?workspace_slug=${workspaceSlug}`, {
       headers: { Authorization: `Bearer ${token}` },
