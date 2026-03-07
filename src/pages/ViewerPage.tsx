@@ -35,6 +35,7 @@ export default function ViewerPage() {
   const notesRunningRef = useRef(false)
   const aiDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const notesDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const lineNextDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const hasAutoSwitchedRef = useRef(false)
 
   // Comments (per line)
@@ -137,7 +138,30 @@ export default function ViewerPage() {
           setTranscript(prev => [...prev, { text: msg.line_final, time }])
         })
     }
-    setCurrentLine(msg.line_next || '')
+    // line_next: translate with debounce to avoid excessive API calls
+    const nextText = msg.line_next || ''
+    if (lineNextDebounceRef.current) clearTimeout(lineNextDebounceRef.current)
+    if (!nextText) {
+      setCurrentLine('')
+    } else {
+      lineNextDebounceRef.current = setTimeout(() => {
+        const lang = targetLangRef.current
+        if (lang === 'en') {
+          setCurrentLine(nextText)
+          return
+        }
+        fetch('/api/ai/translate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ current: nextText, context: [], targetLang: lang }),
+        })
+          .then(r => r.ok ? r.json() : null)
+          .then((data: { translated?: string } | null) => {
+            setCurrentLine(data?.translated?.trim() || nextText)
+          })
+          .catch(() => setCurrentLine(nextText))
+      }, 600)
+    }
   }, [])
 
   const ws = useWebSocket({ url: wssUrl, targetLang, onMessage: handleMessage, viewerSessionId: sessionId, onSessionEnd: () => setSessionEnded(true) })
