@@ -6,7 +6,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ env, params }) => {
   const sessionId = params.sessionId as string
   try {
     const result = await env.DB.prepare(
-      'SELECT id, author, body, created_at FROM viewer_comments WHERE session_id = ? ORDER BY created_at ASC'
+      'SELECT id, line_index, author, body, created_at FROM viewer_comments WHERE session_id = ? ORDER BY created_at ASC'
     ).bind(sessionId).all()
     return Response.json({ comments: result.results }, { status: 200, headers: CORS })
   } catch (err) {
@@ -17,20 +17,21 @@ export const onRequestGet: PagesFunction<Env> = async ({ env, params }) => {
 
 export const onRequestPost: PagesFunction<Env> = async ({ request, env, params }) => {
   const sessionId = params.sessionId as string
-  let body: { author?: string; body?: string }
+  let body: { author?: string; body?: string; line_index?: number | null }
   try { body = await request.json() } catch {
     return Response.json({ error: 'Invalid body' }, { status: 400, headers: CORS })
   }
   const commentBody = body.body?.trim()
   if (!commentBody) return Response.json({ error: 'Missing body' }, { status: 400, headers: CORS })
   const author = (body.author?.trim() || 'Anonymous').slice(0, 50)
+  const lineIndex = typeof body.line_index === 'number' ? body.line_index : null
   const createdAt = Date.now()
   try {
     const result = await env.DB.prepare(
-      'INSERT INTO viewer_comments (session_id, author, body, created_at) VALUES (?, ?, ?, ?)'
-    ).bind(sessionId, author, commentBody.slice(0, 1000), createdAt).run()
+      'INSERT INTO viewer_comments (session_id, line_index, author, body, created_at) VALUES (?, ?, ?, ?, ?)'
+    ).bind(sessionId, lineIndex, author, commentBody.slice(0, 1000), createdAt).run()
     return Response.json(
-      { id: result.meta.last_row_id, author, body: commentBody.slice(0, 1000), created_at: createdAt },
+      { id: result.meta.last_row_id, line_index: lineIndex, author, body: commentBody.slice(0, 1000), created_at: createdAt },
       { status: 201, headers: CORS }
     )
   } catch (err) {

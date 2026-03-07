@@ -451,7 +451,7 @@ function TranscriptLines({
                   color: lineComments.length > 0 ? 'var(--accent)' : 'var(--text-muted)',
                   fontSize: 11, cursor: 'pointer',
                   padding: '8px 4px', flexShrink: 0,
-                  opacity: isOpen || lineComments.length > 0 || isHovered ? 1 : 0,
+                  opacity: isOpen || lineComments.length > 0 ? 1 : 0.28,
                   transition: 'opacity 0.15s',
                   display: 'flex', alignItems: 'center', gap: 3,
                 }}
