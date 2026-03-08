@@ -217,7 +217,7 @@ export default function DocumentView({
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
 
       {/* ━━ LIVE BANNER — ocean theme ━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-      <div style={{ flexShrink: 0, padding: '16px 24px', borderBottom: '1px solid var(--divider)', background: 'var(--surface-1)', position: 'sticky', top: 0, zIndex: 10 }}>
+      <div style={{ flexShrink: 0, padding: '16px 24px', borderBottom: '1px solid var(--divider)', background: 'var(--surface-1)' }}>
         <LiveBanner
           currentLine={currentLine}
           previousLine={transcript[transcript.length - 1]?.text ?? ''}

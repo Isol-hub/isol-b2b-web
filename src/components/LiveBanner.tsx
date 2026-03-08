@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import MatrixText from './MatrixText'
 
 interface Props {
@@ -38,10 +38,18 @@ export default function LiveBanner({ currentLine, previousLine, isActive }: Prop
   const phaseRef = useRef(0)
   const lastTimeRef = useRef(0)
 
-  // Canvas ocean animation.
-  // Delayed 200ms on mount so React finishes mounting WorkspacePage before
-  // Chrome allocates the GPU canvas layer — prevents compositor crash on navigation.
+  // Delay canvas DOM mount so Chrome doesn't allocate the GPU backing store
+  // while React is still mounting WorkspacePage (causes compositor crash on navigation).
+  // The CSS gradient background is visible during the 200ms gap.
+  const [canvasReady, setCanvasReady] = useState(false)
   useEffect(() => {
+    const t = setTimeout(() => setCanvasReady(true), 200)
+    return () => clearTimeout(t)
+  }, [])
+
+  // Start animation as soon as the canvas element is in the DOM
+  useEffect(() => {
+    if (!canvasReady) return
     const canvas = canvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')
@@ -74,18 +82,13 @@ export default function LiveBanner({ currentLine, previousLine, isActive }: Prop
       animRef.current = requestAnimationFrame(frame)
     }
 
-    const startTimer = setTimeout(() => {
-      animRef.current = requestAnimationFrame(frame)
-    }, 200)
-
-    return () => {
-      clearTimeout(startTimer)
-      cancelAnimationFrame(animRef.current)
-    }
-  }, [])
+    animRef.current = requestAnimationFrame(frame)
+    return () => cancelAnimationFrame(animRef.current)
+  }, [canvasReady])
 
   // Sync canvas size to display size
   useEffect(() => {
+    if (!canvasReady) return
     const canvas = canvasRef.current
     if (!canvas) return
     const obs = new ResizeObserver(() => {
@@ -96,7 +99,7 @@ export default function LiveBanner({ currentLine, previousLine, isActive }: Prop
     canvas.width = canvas.offsetWidth
     canvas.height = canvas.offsetHeight
     return () => obs.disconnect()
-  }, [])
+  }, [canvasReady])
 
   const isEmpty = !currentLine && !previousLine
 
@@ -104,9 +107,6 @@ export default function LiveBanner({ currentLine, previousLine, isActive }: Prop
     <div style={{
       position: 'relative',
       borderRadius: 32,
-      // No overflow:hidden — that + border-radius forces Chrome to create a GPU
-      // stacking context immediately on mount, causing compositor crash on navigation.
-      // The canvas element clips itself via its own border-radius instead.
       boxShadow: '0 4px 24px rgba(26,210,255,0.18), 0 10px 40px rgba(0,0,0,0.28)',
       minHeight: 80,
       display: 'flex',
@@ -114,11 +114,13 @@ export default function LiveBanner({ currentLine, previousLine, isActive }: Prop
       background: 'linear-gradient(90deg, #05081A 0%, #12263F 55%, #1AD2FF 100%)',
     }}>
 
-      {/* Ocean canvas — border-radius clips drawn content without needing parent overflow:hidden */}
-      <canvas
-        ref={canvasRef}
-        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', display: 'block', borderRadius: 32 }}
-      />
+      {/* Canvas mounts after 200ms to avoid GPU backing store allocation during navigation */}
+      {canvasReady && (
+        <canvas
+          ref={canvasRef}
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', display: 'block', borderRadius: 32 }}
+        />
+      )}
 
       {/* Text content */}
       <div style={{
