@@ -149,6 +149,7 @@ export default function DocumentView({
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const lineRefs = useRef<(HTMLDivElement | null)[]>([])
   const [editingIndex, setEditingIndex] = useState<number | null>(null)
+  const [hoveredLine, setHoveredLine] = useState<number | null>(null)
 
   const [editingText, setEditingText] = useState('')
 
@@ -339,17 +340,25 @@ export default function DocumentView({
                   )
                 }
 
+                const isLineHovered = hoveredLine === i
+
                 return (
-                  <div key={i} ref={el => { lineRefs.current[i] = el }} style={{
-                    marginBottom: isOpenC ? 28 : 20,
-                    borderLeft: `2px solid ${isOpenC ? 'var(--accent)' : hasComments ? 'rgba(99,102,241,0.25)' : 'transparent'}`,
-                    paddingLeft: isOpenC || hasComments ? 14 : 2,
-                    borderRadius: 6,
-                    background: isOpenC ? 'rgba(99,102,241,0.03)' : 'transparent',
-                    opacity: lineOpacity,
-                    transition: 'opacity 0.3s ease',
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
+                  <div
+                    key={i}
+                    ref={el => { lineRefs.current[i] = el }}
+                    onMouseEnter={() => setHoveredLine(i)}
+                    onMouseLeave={() => setHoveredLine(null)}
+                    style={{
+                      marginBottom: isOpenC ? 28 : 20,
+                      borderLeft: `2px solid ${isOpenC ? 'var(--accent)' : hasComments ? 'rgba(99,102,241,0.30)' : 'transparent'}`,
+                      paddingLeft: isOpenC || hasComments ? 14 : 2,
+                      borderRadius: 6,
+                      background: isOpenC ? 'rgba(99,102,241,0.03)' : 'transparent',
+                      opacity: lineOpacity,
+                      transition: 'opacity 0.3s ease',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
                       <p
                         style={{ flex: 1, margin: 0, fontSize: 18, color: 'var(--text)', lineHeight: 1.85, fontWeight: lineWeight, cursor: isEditable ? 'text' : undefined, padding: '2px 0' }}
                         onClick={() => {
@@ -360,26 +369,43 @@ export default function DocumentView({
                       >
                         {renderInline(line.text, line.text, onWordClick)}
                       </p>
-                      {/* ✎ annotation trigger */}
+
+                      {/* Annotation trigger */}
                       {onAddComment && (
                         <button
                           onClick={() => onOpenCommentLine?.(isOpenC ? null : i)}
-                          title="Aggiungi nota"
+                          title="Aggiungi annotazione"
                           style={{
-                            background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0,
-                            padding: '6px 4px', marginTop: 2,
-                            color: 'var(--text-muted)',
-                            fontSize: 14, display: 'flex', alignItems: 'center', gap: 2,
-                            opacity: isOpenC || hasComments ? 1 : 0.2,
-                            transition: 'opacity 0.15s',
+                            flexShrink: 0,
+                            display: 'flex', alignItems: 'center', gap: 4,
+                            marginTop: 4,
+                            padding: '3px 7px',
+                            borderRadius: 6,
+                            border: hasComments
+                              ? '1px solid rgba(217,119,6,0.30)'
+                              : isOpenC
+                              ? '1px solid rgba(99,102,241,0.30)'
+                              : '1px solid transparent',
+                            background: hasComments
+                              ? 'rgba(217,119,6,0.08)'
+                              : isOpenC
+                              ? 'rgba(99,102,241,0.07)'
+                              : isLineHovered
+                              ? 'var(--surface-1)'
+                              : 'transparent',
+                            color: hasComments ? '#D97706' : isOpenC ? 'var(--accent)' : 'var(--text-muted)',
+                            cursor: 'pointer',
+                            opacity: isOpenC || hasComments || isLineHovered ? 1 : 0,
+                            transition: 'opacity 0.15s, background 0.15s, border-color 0.15s',
                           }}
-                          onMouseEnter={e => (e.currentTarget as HTMLElement).style.opacity = '1'}
-                          onMouseLeave={e => (e.currentTarget as HTMLElement).style.opacity = isOpenC || hasComments ? '1' : '0.2'}
                         >
+                          {/* Speech bubble SVG */}
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                          </svg>
                           {hasComments && (
-                            <span style={{ color: '#D97706', fontSize: 11, fontWeight: 600 }}>●{lineC.length}</span>
+                            <span style={{ fontSize: 11, fontWeight: 700, lineHeight: 1 }}>{lineC.length}</span>
                           )}
-                          <span>✎</span>
                         </button>
                       )}
                     </div>
