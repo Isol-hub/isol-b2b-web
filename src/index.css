@@ -133,6 +133,35 @@ input, select { font-family: inherit; outline: none; }
   border-color: rgba(0,0,0,0.12);
 }
 
+/* ─── Back navigation (breadcrumb pages) ─────────── */
+.nav-back {
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 10px 4px 7px;
+  border-radius: var(--radius);
+  border: 1px solid transparent;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.nav-back:hover {
+  background: rgba(99,102,241,0.07);
+  color: var(--accent);
+  border-color: rgba(99,102,241,0.18);
+}
+.nav-back-arrow {
+  font-size: 15px;
+  line-height: 1;
+  transition: transform 0.18s;
+  display: inline-block;
+}
+.nav-back:hover .nav-back-arrow {
+  transform: translateX(-3px);
+}
+
 /* ─── Input ──────────────────────────────────────── */
 .input-field {
   background: var(--canvas);

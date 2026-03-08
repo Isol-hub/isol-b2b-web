@@ -190,10 +190,8 @@ export default function SettingsPage() {
         height: 'var(--header-h)', display: 'flex', alignItems: 'center',
         padding: '0 20px', gap: 10, flexShrink: 0,
       }}>
-        <Link to={`/${workspaceSlug}`} style={{
-          color: 'var(--text-muted)', fontSize: 13, textDecoration: 'none',
-          display: 'flex', alignItems: 'center', gap: 6,
-        }}>
+        <Link to={`/${workspaceSlug}`} className="nav-back">
+          <span className="nav-back-arrow">←</span>
           <div className="logo-mark" style={{ width: 22, height: 22 }}>
             <span style={{ color: '#fff', fontWeight: 800, fontSize: 11 }}>i</span>
           </div>
