@@ -133,6 +133,32 @@ input, select { font-family: inherit; outline: none; }
   border-color: rgba(0,0,0,0.12);
 }
 
+/* ─── Settings icon button ───────────────────────── */
+.settings-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  text-decoration: none;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  flex-shrink: 0;
+}
+.settings-btn:hover {
+  background: rgba(99,102,241,0.08);
+  color: var(--accent);
+  border-color: rgba(99,102,241,0.22);
+}
+.settings-btn svg {
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.settings-btn:hover svg {
+  transform: rotate(45deg);
+}
+
 /* ─── Back navigation (breadcrumb pages) ─────────── */
 .nav-back {
   color: var(--text-muted);
