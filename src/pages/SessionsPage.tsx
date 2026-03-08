@@ -248,7 +248,7 @@ export default function SessionsPage() {
   if (!auth) return null
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column', isolation: 'isolate' }}>
 
       {/* Header */}
       <header className="header-glass" style={{

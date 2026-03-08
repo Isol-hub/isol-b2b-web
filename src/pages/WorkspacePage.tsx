@@ -628,6 +628,7 @@ export default function WorkspacePage() {
       flexDirection: 'column',
       overflow: 'hidden',
       background: 'var(--bg)',
+      isolation: 'isolate',
     }}>
 
       {/* ━━ SYSTEM BAR ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}

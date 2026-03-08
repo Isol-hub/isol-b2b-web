@@ -38,14 +38,10 @@ export default function LiveBanner({ currentLine, previousLine, isActive }: Prop
   const phaseRef = useRef(0)
   const lastTimeRef = useRef(0)
 
-  // Canvas ocean animation — only runs when session is active to avoid GPU pressure on navigation
+  // Canvas ocean animation.
+  // Delayed 200ms on mount so React finishes mounting WorkspacePage before
+  // Chrome allocates the GPU canvas layer — prevents compositor crash on navigation.
   useEffect(() => {
-    if (!isActive) {
-      cancelAnimationFrame(animRef.current)
-      lastTimeRef.current = 0
-      return
-    }
-
     const canvas = canvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')
@@ -61,12 +57,10 @@ export default function LiveBanner({ currentLine, previousLine, isActive }: Prop
       const h = canvas.height
       if (w === 0 || h === 0) { animRef.current = requestAnimationFrame(frame); return }
 
-      // Advance phase
       phaseRef.current = (phaseRef.current + (dt / CYCLE) * Math.PI * 2) % (Math.PI * 2)
       const p1 = phaseRef.current
       const p2 = (phaseRef.current * 1.35) % (Math.PI * 2)
 
-      // Base gradient: deep navy → mid blue → bright cyan
       const grad = ctx.createLinearGradient(0, 0, w, 0)
       grad.addColorStop(0,    '#05081A')
       grad.addColorStop(0.55, '#12263F')
@@ -74,17 +68,21 @@ export default function LiveBanner({ currentLine, previousLine, isActive }: Prop
       ctx.fillStyle = grad
       ctx.fillRect(0, 0, w, h)
 
-      // Wave 1 — cyan (50% opacity)
       drawWave(ctx, w, h, p1, 'rgba(226,254,255,0.50)', 0.55, 0.20)
-      // Wave 2 — blue-violet (50% opacity), counter-phase
       drawWave(ctx, w, h, p2, 'rgba(145,147,255,0.50)', 0.45, 0.14)
 
       animRef.current = requestAnimationFrame(frame)
     }
 
-    animRef.current = requestAnimationFrame(frame)
-    return () => cancelAnimationFrame(animRef.current)
-  }, [isActive])
+    const startTimer = setTimeout(() => {
+      animRef.current = requestAnimationFrame(frame)
+    }, 200)
+
+    return () => {
+      clearTimeout(startTimer)
+      cancelAnimationFrame(animRef.current)
+    }
+  }, [])
 
   // Sync canvas size to display size
   useEffect(() => {
@@ -106,19 +104,20 @@ export default function LiveBanner({ currentLine, previousLine, isActive }: Prop
     <div style={{
       position: 'relative',
       borderRadius: 32,
-      overflow: 'hidden',
+      // No overflow:hidden — that + border-radius forces Chrome to create a GPU
+      // stacking context immediately on mount, causing compositor crash on navigation.
+      // The canvas element clips itself via its own border-radius instead.
       boxShadow: '0 4px 24px rgba(26,210,255,0.18), 0 10px 40px rgba(0,0,0,0.28)',
       minHeight: 80,
       display: 'flex',
       alignItems: 'center',
-      // Static CSS gradient — visible when canvas animation is not running (session inactive)
       background: 'linear-gradient(90deg, #05081A 0%, #12263F 55%, #1AD2FF 100%)',
     }}>
 
-      {/* Ocean canvas background — rendered but only animated when isActive */}
+      {/* Ocean canvas — border-radius clips drawn content without needing parent overflow:hidden */}
       <canvas
         ref={canvasRef}
-        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', display: 'block' }}
+        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', display: 'block', borderRadius: 32 }}
       />
 
       {/* Text content */}
@@ -129,7 +128,6 @@ export default function LiveBanner({ currentLine, previousLine, isActive }: Prop
         display: 'flex', flexDirection: 'column', gap: 6,
       }}>
         {isEmpty ? (
-          /* Waiting / idle state */
           <span style={{
             fontSize: 22,
             fontWeight: 900,
@@ -137,16 +135,13 @@ export default function LiveBanner({ currentLine, previousLine, isActive }: Prop
             color: '#fff',
             textShadow: '0 0 4px rgba(26,210,255,0.5)',
             textAlign: 'center',
-            // Only pulse when active — avoids creating a compositor layer on idle mount
-            opacity: isActive ? undefined : 0.5,
-            animation: isActive ? 'isolPulse 3s ease-in-out infinite' : undefined,
+            animation: 'isolPulse 3s ease-in-out infinite',
             userSelect: 'none',
           }}>
             ISOL
           </span>
         ) : (
           <>
-            {/* Previous line — muted white */}
             {previousLine && (
               <p style={{
                 margin: 0,
@@ -163,7 +158,6 @@ export default function LiveBanner({ currentLine, previousLine, isActive }: Prop
               </p>
             )}
 
-            {/* Current line — full white, bold */}
             <p key={currentLine || 'idle'} style={{
               margin: 0,
               fontSize: 17,
