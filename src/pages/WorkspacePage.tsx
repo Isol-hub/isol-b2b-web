@@ -414,7 +414,11 @@ export default function WorkspacePage() {
           target_lang: targetLang,
           started_at: startedAt,
           ended_at: Date.now(),
-          transcript_lines: lines.map((l, i) => ({ index: i, text: l.text })),
+          transcript_lines: lines.map((l, i) => ({
+          index: i,
+          text: l.text,
+          offset_ms: startedAt > 0 ? l.time.getTime() - startedAt : null,
+        })),
           ai_formatted_text: formatted ?? null,
         }),
       })
@@ -972,6 +976,7 @@ export default function WorkspacePage() {
                 onCommentAuthorChange={(n) => { setCommentAuthor(n); localStorage.setItem('isol_commenter_name', n) }}
                 onAddComment={handleAddComment}
                 commentSubmitting={commentSubmitting}
+                sessionStartMs={sessionStartRef.current > 0 ? sessionStartRef.current : undefined}
               />
             </div>
           )}

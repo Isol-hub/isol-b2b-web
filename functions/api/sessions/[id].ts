@@ -1,4 +1,4 @@
-import { decodeJwt } from '../../lib/jwt'
+import { verifyJwt } from '../../lib/jwt'
 
 interface Env {
   DB: D1Database
@@ -10,7 +10,7 @@ const CORS = {
 }
 
 export const onRequestGet: PagesFunction<Env> = async ({ request, env, params }) => {
-  const auth = decodeJwt(request)
+  const auth = await verifyJwt(request)
   if (!auth) {
     return Response.json({ error: 'Unauthorized' }, { status: 401, headers: CORS })
   }
@@ -34,7 +34,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env, params })
     }
 
     const linesResult = await env.DB.prepare(
-      'SELECT line_index, text FROM transcript_lines WHERE session_id = ? ORDER BY line_index ASC'
+      'SELECT line_index, text, offset_ms FROM transcript_lines WHERE session_id = ? ORDER BY line_index ASC'
     ).bind(sessionId).all()
 
     return Response.json({ session, lines: linesResult.results }, { status: 200, headers: CORS })
@@ -45,7 +45,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env, params })
 }
 
 export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params }) => {
-  const auth = decodeJwt(request)
+  const auth = await verifyJwt(request)
   if (!auth) {
     return Response.json({ error: 'Unauthorized' }, { status: 401, headers: CORS })
   }
@@ -83,7 +83,7 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params 
 }
 
 export const onRequestDelete: PagesFunction<Env> = async ({ request, env, params }) => {
-  const auth = decodeJwt(request)
+  const auth = await verifyJwt(request)
   if (!auth) {
     return Response.json({ error: 'Unauthorized' }, { status: 401, headers: CORS })
   }

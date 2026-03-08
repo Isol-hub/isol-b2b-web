@@ -1,4 +1,4 @@
-import { decodeJwt } from '../../lib/jwt'
+import { verifyJwt } from '../../lib/jwt'
 
 interface Env {
   DB: D1Database
@@ -7,6 +7,7 @@ interface Env {
 interface TranscriptLineInput {
   index: number
   text: string
+  offset_ms?: number | null
 }
 
 interface SavePayload {
@@ -24,7 +25,7 @@ const CORS = {
 }
 
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
-  const auth = decodeJwt(request)
+  const auth = await verifyJwt(request)
   if (!auth) {
     return Response.json({ error: 'Unauthorized' }, { status: 401, headers: CORS })
   }
@@ -66,8 +67,8 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       const now = Date.now()
       const stmts = transcript_lines.map(line =>
         env.DB.prepare(
-          'INSERT INTO transcript_lines (session_id, line_index, text, created_at) VALUES (?, ?, ?, ?)'
-        ).bind(sessionId, line.index, line.text, now)
+          'INSERT INTO transcript_lines (session_id, line_index, text, created_at, offset_ms) VALUES (?, ?, ?, ?, ?)'
+        ).bind(sessionId, line.index, line.text, now, line.offset_ms ?? null)
       )
       await env.DB.batch(stmts)
     }

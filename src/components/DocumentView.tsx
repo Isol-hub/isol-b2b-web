@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import MatrixText from './MatrixText'
 import CommentThread, { type CommentItem } from './CommentThread'
 import LiveBanner from './LiveBanner'
+import SessionTimeline, { type TimelineSegment } from './SessionTimeline'
 
 interface TranscriptLine {
   text: string
@@ -33,6 +34,9 @@ interface Props {
   onCommentAuthorChange?: (name: string) => void
   onAddComment?: (lineIndex: number, body: string) => Promise<void>
   commentSubmitting?: boolean
+  // Timeline
+  sessionStartMs?: number  // unix ms; if provided, timeline is shown
+  sessionEndMs?: number    // unix ms; undefined = live
 }
 
 function renderInline(
@@ -139,9 +143,11 @@ export default function DocumentView({
   isEditable, onLineEdit,
   lineComments, openCommentLine, onOpenCommentLine,
   commentAuthor, onCommentAuthorChange, onAddComment, commentSubmitting,
+  sessionStartMs, sessionEndMs,
 }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const lineRefs = useRef<(HTMLDivElement | null)[]>([])
   const [editingIndex, setEditingIndex] = useState<number | null>(null)
 
   const [editingText, setEditingText] = useState('')
@@ -167,6 +173,24 @@ export default function DocumentView({
       scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
     }
   }, [viewMode])
+
+  const scrollToLine = (index: number) => {
+    const el = lineRefs.current[index]
+    if (!el) return
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
+
+  // Build timeline segments from transcript when sessionStartMs is available
+  const timelineSegments: TimelineSegment[] = sessionStartMs
+    ? transcript
+        .map((l, i) => ({
+          index: i,
+          offsetMs: l.time.getTime() - sessionStartMs,
+          text: l.text,
+          hasComment: (lineComments?.get(i)?.length ?? 0) > 0,
+        }))
+        .filter(s => s.offsetMs >= 0)
+    : []
 
   const isEmpty = transcript.length === 0 && !currentLine
   const hasAi = !!aiFormatted
@@ -217,13 +241,25 @@ export default function DocumentView({
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
 
       {/* ━━ LIVE BANNER — ocean theme ━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-      <div style={{ flexShrink: 0, padding: '16px 24px', borderBottom: '1px solid var(--divider)', background: 'var(--surface-1)' }}>
+      <div style={{ flexShrink: 0, padding: '16px 24px', borderBottom: timelineSegments.length > 0 ? 'none' : '1px solid var(--divider)', background: 'var(--surface-1)' }}>
         <LiveBanner
           currentLine={currentLine}
           previousLine={transcript[transcript.length - 1]?.text ?? ''}
           isActive={isActive}
         />
       </div>
+
+      {/* ━━ TIMELINE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+      {sessionStartMs && timelineSegments.length > 0 && (
+        <div style={{ flexShrink: 0, background: 'var(--surface-1)', borderBottom: '1px solid var(--divider)' }}>
+          <SessionTimeline
+            segments={timelineSegments}
+            sessionStartMs={sessionStartMs}
+            sessionEndMs={sessionEndMs}
+            onJumpTo={scrollToLine}
+          />
+        </div>
+      )}
 
       {/* ━━ MODE BAR ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
       <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 10, padding: '9px 32px', borderBottom: '1px solid var(--divider)' }}>
@@ -304,7 +340,7 @@ export default function DocumentView({
                 }
 
                 return (
-                  <div key={i} style={{
+                  <div key={i} ref={el => { lineRefs.current[i] = el }} style={{
                     marginBottom: isOpenC ? 28 : 20,
                     borderLeft: `2px solid ${isOpenC ? 'var(--accent)' : hasComments ? 'rgba(99,102,241,0.25)' : 'transparent'}`,
                     paddingLeft: isOpenC || hasComments ? 14 : 2,
