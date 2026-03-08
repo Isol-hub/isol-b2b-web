@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { getToken } from '../lib/auth'
 
 interface Props {
   word: string
@@ -37,7 +38,7 @@ export default function GlossaryPanel({ word, sentences, currentSentence, target
 
     fetch('/api/ai/define', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken() ?? ''}` },
       body: JSON.stringify({ word, sentence: currentSentence, targetLang }),
     })
       .then(r => r.ok ? r.json() : null)

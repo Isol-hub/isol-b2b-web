@@ -5,13 +5,17 @@ export interface CommentItem {
   author: string
   body: string
   created_at: number
+  pending?: boolean
+  failed?: boolean
 }
 
 interface Props {
   comments: CommentItem[]
   authorName: string
   onAuthorChange: (n: string) => void
+  authorLocked?: boolean
   onAdd: (body: string) => Promise<void>
+  onRetry?: (id: number) => void
   submitting: boolean
 }
 
@@ -52,7 +56,7 @@ function NoteBody({ body }: { body: string }) {
   )
 }
 
-export default function CommentThread({ comments, authorName, onAuthorChange, onAdd, submitting }: Props) {
+export default function CommentThread({ comments, authorName, onAuthorChange, authorLocked, onAdd, onRetry, submitting }: Props) {
   const [draft, setDraft] = useState('')
   const [formOpen, setFormOpen] = useState(false)
 
@@ -68,9 +72,31 @@ export default function CommentThread({ comments, authorName, onAuthorChange, on
     <div style={{ paddingTop: 8 }}>
       {/* Note list */}
       {comments.map(c => (
-        <div key={c.id} className="note-card">
-          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4, fontFamily: 'var(--font-ui)' }}>
-            {c.author} · {timeAgo(c.created_at)}
+        <div
+          key={c.id}
+          className="note-card"
+          style={{
+            opacity: c.pending ? 0.6 : 1,
+            borderLeft: c.failed ? '3px solid var(--red)' : undefined,
+            transition: 'opacity 0.2s',
+          }}
+        >
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4, fontFamily: 'var(--font-ui)', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span>{c.author} · {c.pending ? 'Sending…' : timeAgo(c.created_at)}</span>
+            {c.failed && (
+              <>
+                <span style={{ color: 'var(--red)', fontWeight: 600 }}>Failed</span>
+                {onRetry && (
+                  <button
+                    onClick={() => onRetry(c.id)}
+                    style={{
+                      background: 'none', border: 'none', cursor: 'pointer',
+                      fontSize: 11, color: 'var(--accent)', padding: 0, fontFamily: 'var(--font-ui)',
+                    }}
+                  >Retry</button>
+                )}
+              </>
+            )}
           </div>
           <NoteBody body={c.body} />
         </div>
@@ -93,9 +119,13 @@ export default function CommentThread({ comments, authorName, onAuthorChange, on
           <input
             className="input-field"
             value={authorName}
-            onChange={e => onAuthorChange(e.target.value)}
+            onChange={authorLocked ? undefined : e => onAuthorChange(e.target.value)}
+            readOnly={authorLocked}
             placeholder="Il tuo nome"
-            style={{ fontSize: 12, padding: '5px 10px', marginBottom: 6, fontFamily: 'var(--font-ui)' }}
+            style={{
+              fontSize: 12, padding: '5px 10px', marginBottom: 6, fontFamily: 'var(--font-ui)',
+              opacity: authorLocked ? 0.7 : 1, cursor: authorLocked ? 'default' : undefined,
+            }}
           />
           <div style={{ display: 'flex', gap: 6 }}>
             <textarea

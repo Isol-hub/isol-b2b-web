@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { LANGUAGES } from '../lib/languages'
+import { getSession, getToken } from '../lib/auth'
 import CommentThread, { type CommentItem } from '../components/CommentThread'
 
 // Minimal markdown renderer for AI-formatted text (##, ###, **, >, -)
@@ -52,7 +53,7 @@ interface Comment extends CommentItem {
   line_index: number | null
 }
 
-type Status = 'loading' | 'loaded' | 'not_found' | 'error'
+type Status = 'loading' | 'loaded' | 'not_found' | 'expired' | 'error'
 
 function timeAgo(ts: number): string {
   const diff = Date.now() - ts
@@ -75,7 +76,11 @@ export default function SharedSessionPage() {
   const [comments, setComments] = useState<Comment[]>([])
   const [openLine, setOpenLine] = useState<number | null>(null)
   const [hoveredLine, setHoveredLine] = useState<number | null>(null)
-  const [authorName, setAuthorName] = useState(() => localStorage.getItem('isol_commenter_name') || '')
+  const [authSession] = useState(() => getSession())
+  const [authorName, setAuthorName] = useState(() =>
+    getSession()?.email ?? localStorage.getItem('isol_commenter_name') ?? ''
+  )
+  const isAuthedCommenter = authSession !== null
   const [submitting, setSubmitting] = useState(false)
   // AI tab general comment form
   const [aiDraft, setAiDraft] = useState('')
@@ -86,6 +91,7 @@ export default function SharedSessionPage() {
     fetch(`/api/share/${token}`)
       .then(res => {
         if (res.status === 404) { setStatus('not_found'); return null }
+        if (res.status === 410) { setStatus('expired'); return null }
         if (!res.ok) { setStatus('error'); return null }
         return res.json()
       })
@@ -115,21 +121,60 @@ export default function SharedSessionPage() {
 
   const handleAddComment = async (lineIndex: number | null, body: string): Promise<void> => {
     if (!body.trim() || !token) return
-    setSubmitting(true)
     const name = authorName.trim() || 'Anonymous'
     saveAuthor(name)
+    const tempId = Date.now()
+    const optimistic: Comment = {
+      id: tempId, author: name, body: body.trim(),
+      created_at: Date.now(), line_index: lineIndex, pending: true,
+    }
+    setComments(prev => [...prev, optimistic])
+    setSubmitting(true)
     try {
+      const jwt = getToken()
       const res = await fetch(`/api/share/${token}/comments`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(jwt ? { Authorization: `Bearer ${jwt}` } : {}),
+        },
         body: JSON.stringify({ line_index: lineIndex, author: name, body: body.trim() }),
       })
       if (res.ok) {
         const c = await res.json() as Comment
-        setComments(prev => [...prev, c])
+        setComments(prev => prev.map(x => x.id === tempId ? c : x))
+      } else {
+        setComments(prev => prev.map(x => x.id === tempId ? { ...x, pending: false, failed: true } : x))
       }
+    } catch {
+      setComments(prev => prev.map(x => x.id === tempId ? { ...x, pending: false, failed: true } : x))
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  const handleRetryComment = async (id: number) => {
+    const c = comments.find(x => x.id === id)
+    if (!c || !token) return
+    setComments(prev => prev.map(x => x.id === id ? { ...x, failed: false, pending: true } : x))
+    try {
+      const jwt = getToken()
+      const res = await fetch(`/api/share/${token}/comments`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(jwt ? { Authorization: `Bearer ${jwt}` } : {}),
+        },
+        body: JSON.stringify({ line_index: c.line_index, author: c.author, body: c.body }),
+      })
+      if (res.ok) {
+        const newC = await res.json() as Comment
+        setComments(prev => prev.map(x => x.id === id ? newC : x))
+      } else {
+        setComments(prev => prev.map(x => x.id === id ? { ...x, pending: false, failed: true } : x))
+      }
+    } catch {
+      setComments(prev => prev.map(x => x.id === id ? { ...x, pending: false, failed: true } : x))
     }
   }
 
@@ -193,6 +238,19 @@ export default function SharedSessionPage() {
           {status === 'loading' && (
             <div style={{ textAlign: 'center', paddingTop: 80, color: 'var(--text-muted)', fontSize: 14 }}>
               Loading…
+            </div>
+          )}
+
+          {status === 'expired' && (
+            <div style={{ textAlign: 'center', paddingTop: 80 }}>
+              <div style={{ fontSize: 40, marginBottom: 16 }}>🔗</div>
+              <p style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)', marginBottom: 10 }}>
+                This link has expired
+              </p>
+              <p style={{ fontSize: 14, color: 'var(--text-muted)', marginBottom: 24 }}>
+                The owner has set an expiry on this shared transcript.
+              </p>
+              <Link to="/" style={{ color: 'var(--accent)', fontSize: 14 }}>← Back to home</Link>
             </div>
           )}
 
@@ -280,9 +338,14 @@ export default function SharedSessionPage() {
                             <input
                               className="input-field"
                               value={authorName}
-                              onChange={e => saveAuthor(e.target.value)}
+                              onChange={isAuthedCommenter ? undefined : e => saveAuthor(e.target.value)}
+                              readOnly={isAuthedCommenter}
                               placeholder="Your name"
-                              style={{ fontSize: 12, padding: '6px 10px', width: 130 }}
+                              style={{
+                                fontSize: 12, padding: '6px 10px', width: 130,
+                                opacity: isAuthedCommenter ? 0.7 : 1,
+                                cursor: isAuthedCommenter ? 'default' : undefined,
+                              }}
                             />
                           </div>
                           <div style={{ display: 'flex', gap: 6 }}>
@@ -357,7 +420,9 @@ export default function SharedSessionPage() {
                       setHoveredLine={setHoveredLine}
                       authorName={authorName}
                       onAuthorChange={saveAuthor}
+                      authorLocked={isAuthedCommenter}
                       onAdd={handleAddComment}
+                      onRetry={handleRetryComment}
                       submitting={submitting}
                     />
                   )}
@@ -374,6 +439,7 @@ export default function SharedSessionPage() {
                   authorName={authorName}
                   onAuthorChange={saveAuthor}
                   onAdd={handleAddComment}
+                  onRetry={handleRetryComment}
                   submitting={submitting}
                 />
               )}
@@ -405,14 +471,16 @@ interface TranscriptLinesProps {
   setHoveredLine: (n: number | null) => void
   authorName: string
   onAuthorChange: (n: string) => void
+  authorLocked?: boolean
   onAdd: (lineIndex: number | null, body: string) => Promise<void>
+  onRetry: (id: number) => void
   submitting: boolean
 }
 
 function TranscriptLines({
   lines, comments, openLine, hoveredLine,
   setOpenLine, setHoveredLine,
-  authorName, onAuthorChange, onAdd, submitting,
+  authorName, onAuthorChange, authorLocked, onAdd, onRetry, submitting,
 }: TranscriptLinesProps) {
   return (
     <div>
@@ -470,7 +538,9 @@ function TranscriptLines({
                   comments={lineComments}
                   authorName={authorName}
                   onAuthorChange={onAuthorChange}
+                  authorLocked={authorLocked}
                   onAdd={body => onAdd(l.line_index, body)}
+                  onRetry={onRetry}
                   submitting={submitting}
                 />
               </div>

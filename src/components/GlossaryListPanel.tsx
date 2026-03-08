@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef } from 'react'
+import ConfirmModal from './ConfirmModal'
 
 export interface GlossaryItem {
   id: number
@@ -10,16 +11,20 @@ export interface GlossaryItem {
 interface Props {
   items: GlossaryItem[]
   onDelete: (term: string) => void
+  onPatchNote?: (term: string, note: string | null) => void
   onClose: () => void
   onWordClick?: (term: string) => void
   onAdd?: (term: string) => void
 }
 
-export default function GlossaryListPanel({ items, onDelete, onClose, onWordClick, onAdd }: Props) {
+export default function GlossaryListPanel({ items, onDelete, onPatchNote, onClose, onWordClick, onAdd }: Props) {
   const [search, setSearch] = useState('')
   const [addingTerm, setAddingTerm] = useState(false)
   const [newTerm, setNewTerm] = useState('')
   const [copied, setCopied] = useState(false)
+  const [confirmTerm, setConfirmTerm] = useState<string | null>(null)
+  const [editingNote, setEditingNote] = useState<string | null>(null)  // term being edited
+  const [noteDraft, setNoteDraft] = useState('')
   const addInputRef = useRef<HTMLInputElement>(null)
 
   const filtered = useMemo(() => {
@@ -253,7 +258,7 @@ export default function GlossaryListPanel({ items, onDelete, onClose, onWordClic
                     {item.term}
                   </button>
                   <button
-                    onClick={() => onDelete(item.term)}
+                    onClick={() => setConfirmTerm(item.term)}
                     style={{
                       background: 'none', border: 'none',
                       color: 'var(--text-muted)', fontSize: 16,
@@ -266,19 +271,50 @@ export default function GlossaryListPanel({ items, onDelete, onClose, onWordClic
                     title={`Remove "${item.term}" from glossary`}
                   >×</button>
                 </div>
-                {/* Cached definition */}
-                {item.note && (
-                  <p style={{
-                    fontSize: 12,
-                    color: 'var(--text-muted)',
-                    lineHeight: 1.55,
-                    margin: '4px 0 0',
-                    display: '-webkit-box',
-                    WebkitLineClamp: 2,
-                    WebkitBoxOrient: 'vertical',
-                    overflow: 'hidden',
-                  }}>
-                    {item.note}
+                {/* Note — clickable to edit inline */}
+                {editingNote === item.term ? (
+                  <textarea
+                    autoFocus
+                    value={noteDraft}
+                    onChange={e => setNoteDraft(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault()
+                        onPatchNote?.(item.term, noteDraft.trim() || null)
+                        setEditingNote(null)
+                      }
+                      if (e.key === 'Escape') setEditingNote(null)
+                    }}
+                    onBlur={() => {
+                      onPatchNote?.(item.term, noteDraft.trim() || null)
+                      setEditingNote(null)
+                    }}
+                    rows={2}
+                    style={{
+                      width: '100%', marginTop: 4,
+                      background: 'var(--surface-2)',
+                      border: '1px solid var(--accent)',
+                      borderRadius: 5, padding: '5px 8px',
+                      fontSize: 12, color: 'var(--text)', lineHeight: 1.55,
+                      resize: 'none', outline: 'none', fontFamily: 'inherit',
+                    }}
+                  />
+                ) : (
+                  <p
+                    onClick={onPatchNote ? () => { setEditingNote(item.term); setNoteDraft(item.note ?? '') } : undefined}
+                    title={onPatchNote ? 'Click to edit note' : undefined}
+                    style={{
+                      fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.55,
+                      margin: '4px 0 0',
+                      display: '-webkit-box', WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical', overflow: 'hidden',
+                      cursor: onPatchNote ? 'text' : 'default',
+                      minHeight: item.note ? undefined : 18,
+                    }}
+                  >
+                    {item.note || (onPatchNote
+                      ? <span style={{ color: 'var(--text-muted)', opacity: 0.5, fontStyle: 'italic' }}>+ add note</span>
+                      : null)}
                   </p>
                 )}
               </div>
@@ -286,6 +322,16 @@ export default function GlossaryListPanel({ items, onDelete, onClose, onWordClic
           </div>
         )}
       </div>
+
+      <ConfirmModal
+        isOpen={confirmTerm !== null}
+        title="Remove term"
+        message={`Remove "${confirmTerm}" from the glossary? This cannot be undone.`}
+        confirmLabel="Remove"
+        dangerous
+        onConfirm={() => { if (confirmTerm) { onDelete(confirmTerm); setConfirmTerm(null) } }}
+        onCancel={() => setConfirmTerm(null)}
+      />
     </div>
   )
 }
