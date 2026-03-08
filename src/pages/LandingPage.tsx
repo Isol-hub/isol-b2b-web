@@ -63,8 +63,7 @@ export default function LandingPage() {
       {/* ── NAV ──────────────────────────────────────────────── */}
       <nav style={{
         position: 'sticky', top: 0, zIndex: 100,
-        background: 'rgba(250,250,248,0.96)',
-        backdropFilter: 'blur(16px)',
+        background: '#FAFAF8',
         borderBottom: '1px solid var(--divider)',
         display: 'flex', alignItems: 'center',
         padding: '0 40px', height: 56,

@@ -19,11 +19,21 @@ export default function ViewerPage() {
   const [transcript, setTranscript] = useState<TranscriptLine[]>([])
   const [joined, setJoined] = useState(false)
   const [sessionEnded, setSessionEnded] = useState(false)
+  const [endedShareToken, setEndedShareToken] = useState<string | null | undefined>(undefined)
   const [showModal, setShowModal] = useState(false)
   const [glossaryWord, setGlossaryWord] = useState<{ word: string; sentence: string } | null>(null)
   const wordIndex = useRef<Map<string, string[]>>(new Map())
   const transcriptRef = useRef<TranscriptLine[]>([])
   useEffect(() => { transcriptRef.current = transcript }, [transcript])
+
+  // Fetch share token when session ends
+  useEffect(() => {
+    if (!sessionEnded || !sessionId) return
+    fetch(`/api/viewer/${sessionId}/meta`)
+      .then(r => r.ok ? r.json() : null)
+      .then((d: { share_token: string | null } | null) => setEndedShareToken(d?.share_token ?? null))
+      .catch(() => setEndedShareToken(null))
+  }, [sessionEnded, sessionId])
 
   // AI state
   const [aiFormatted, setAiFormatted] = useState<string | undefined>()
@@ -132,7 +142,7 @@ export default function ViewerPage() {
             const w = raw.toLowerCase().replace(/[^\w]/g, '')
             if (w.length < 3) return
             const existing = wordIndex.current.get(w) ?? []
-            wordIndex.current.set(w, [...existing, finalText])
+            if (existing.length < 5) wordIndex.current.set(w, [...existing, finalText])
           })
         })
         .catch(() => {
@@ -220,9 +230,16 @@ export default function ViewerPage() {
 
   const handleAddComment = useCallback(async (lineIndex: number, body: string): Promise<void> => {
     if (!body.trim() || !sessionId) return
-    setCommentSubmitting(true)
     const name = commentAuthor.trim() || 'Anonymous'
     saveCommentAuthor(name)
+    const tempId = Date.now()
+    setLineComments(prev => {
+      const next = new Map(prev)
+      const existing = next.get(lineIndex) ?? []
+      next.set(lineIndex, [...existing, { id: tempId, author: name, body: body.trim(), created_at: Date.now(), pending: true }])
+      return next
+    })
+    setCommentSubmitting(true)
     try {
       const res = await fetch(`/api/viewer/${sessionId}/comments`, {
         method: 'POST',
@@ -233,12 +250,26 @@ export default function ViewerPage() {
         const c = await res.json() as { id: number; line_index: number | null; author: string; body: string; created_at: number }
         setLineComments(prev => {
           const next = new Map(prev)
-          const idx = c.line_index ?? -1
+          const idx = c.line_index ?? lineIndex
           const existing = next.get(idx) ?? []
-          next.set(idx, [...existing, { id: c.id, author: c.author, body: c.body, created_at: c.created_at }])
+          next.set(idx, existing.map(x => x.id === tempId ? { id: c.id, author: c.author, body: c.body, created_at: c.created_at } : x))
+          return next
+        })
+      } else {
+        setLineComments(prev => {
+          const next = new Map(prev)
+          const existing = next.get(lineIndex) ?? []
+          next.set(lineIndex, existing.map(x => x.id === tempId ? { ...x, pending: false, failed: true } : x))
           return next
         })
       }
+    } catch {
+      setLineComments(prev => {
+        const next = new Map(prev)
+        const existing = next.get(lineIndex) ?? []
+        next.set(lineIndex, existing.map(x => x.id === tempId ? { ...x, pending: false, failed: true } : x))
+        return next
+      })
     } finally {
       setCommentSubmitting(false)
     }
@@ -323,8 +354,16 @@ export default function ViewerPage() {
               <span style={{ width: 6, height: 6, borderRadius: '50%', background: statusColor, transition: 'all 0.3s', flexShrink: 0 }} />
               <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>{statusText}</span>
             </div>
+            {ws.viewerCount > 0 && (
+              <div className="status-pill mobile-hidden" style={{ flexShrink: 0 }}>
+                <span style={{ fontSize: 11 }}>👁</span>
+                <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>
+                  {ws.viewerCount} {ws.viewerCount === 1 ? 'viewer' : 'viewers'}
+                </span>
+              </div>
+            )}
             {transcript.length > 0 && (
-              <button onClick={() => setShowModal(true)} className="btn-icon" style={{ fontSize: 11, padding: '4px 10px', flexShrink: 0 }}>
+              <button onClick={() => setShowModal(true)} className="btn-icon mobile-hidden" style={{ fontSize: 11, padding: '4px 10px', flexShrink: 0 }}>
                 Export
               </button>
             )}
@@ -362,7 +401,50 @@ export default function ViewerPage() {
 
         ) : (
           /* ── Joined — DocumentView fills remaining height ── */
-          <div style={{ flex: 1, overflow: 'hidden', minWidth: 0 }}>
+          <div style={{ flex: 1, overflow: 'hidden', minWidth: 0, position: 'relative' }}>
+            {sessionEnded && (
+              <div style={{
+                position: 'absolute', top: 0, left: 0, right: 0, zIndex: 100,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                padding: '12px 16px',
+                background: '#FAFAF8',
+                borderBottom: '1px solid var(--divider)',
+                gap: 12,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
+                  <span style={{
+                    width: 8, height: 8, borderRadius: '50%',
+                    background: 'var(--text-muted)', flexShrink: 0,
+                  }} />
+                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-dim)', whiteSpace: 'nowrap' }}>
+                    Session has ended
+                  </span>
+                  {transcript.length > 0 && (
+                    <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                      — {transcript.length} lines recorded
+                    </span>
+                  )}
+                </div>
+                {endedShareToken && (
+                  <a
+                    href={`/share/${endedShareToken}`}
+                    style={{
+                      fontSize: 12, fontWeight: 600,
+                      color: 'var(--accent)', textDecoration: 'none',
+                      background: 'rgba(99,102,241,0.08)',
+                      border: '1px solid rgba(99,102,241,0.18)',
+                      borderRadius: 6, padding: '5px 12px',
+                      whiteSpace: 'nowrap', flexShrink: 0,
+                      transition: 'background 0.15s',
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(99,102,241,0.14)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'rgba(99,102,241,0.08)')}
+                  >
+                    View full transcript →
+                  </a>
+                )}
+              </div>
+            )}
             <DocumentView
               transcript={displayTranscript}
               currentLine={currentLine}

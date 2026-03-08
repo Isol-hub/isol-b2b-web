@@ -35,13 +35,6 @@ interface Props {
   commentSubmitting?: boolean
 }
 
-function elapsed(start: Date, now: Date): string {
-  const s = Math.floor((now.getTime() - start.getTime()) / 1000)
-  const m = Math.floor(s / 60)
-  const ss = s % 60
-  return `${String(m).padStart(2, '0')}:${String(ss).padStart(2, '0')}`
-}
-
 function renderInline(
   text: string,
   sentence: string,
@@ -149,16 +142,9 @@ export default function DocumentView({
 }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
-  const [sessionStart] = useState(() => new Date())
-  const [now, setNow] = useState(new Date())
   const [editingIndex, setEditingIndex] = useState<number | null>(null)
-  const [editingText, setEditingText] = useState('')
 
-  useEffect(() => {
-    if (!isActive) return
-    const t = setInterval(() => setNow(new Date()), 1000)
-    return () => clearInterval(t)
-  }, [isActive])
+  const [editingText, setEditingText] = useState('')
 
   const isNearBottom = () => {
     const el = scrollContainerRef.current
@@ -167,10 +153,12 @@ export default function DocumentView({
   }
 
   useEffect(() => {
+    // Don't auto-scroll while a comment form is open (conflicts with autoFocus scroll)
+    if (openCommentLine !== null && openCommentLine !== undefined) return
     if (isNearBottom()) {
       bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
     }
-  }, [transcript.length, currentLine])
+  }, [transcript.length, currentLine, openCommentLine])
 
   const prevViewMode = useRef(viewMode)
   useEffect(() => {
@@ -323,7 +311,7 @@ export default function DocumentView({
                     borderRadius: 6,
                     background: isOpenC ? 'rgba(99,102,241,0.03)' : 'transparent',
                     opacity: lineOpacity,
-                    transition: 'opacity 0.5s ease, background 0.15s',
+                    transition: 'opacity 0.3s ease',
                   }}>
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
                       <p

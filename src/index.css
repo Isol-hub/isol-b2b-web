@@ -160,9 +160,7 @@ input, select { font-family: inherit; outline: none; }
 
 /* ─── Top system bar ─────────────────────────────── */
 .header-glass {
-  background: rgba(250,250,248,0.96);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: #FAFAF8;
   border-bottom: 1px solid var(--divider);
   flex-shrink: 0;
 }
@@ -235,9 +233,7 @@ input, select { font-family: inherit; outline: none; }
   left: 50%;
   transform: translateX(-50%);
   z-index: 10;
-  background: rgba(255,255,255,0.88);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
+  background: rgba(255,255,255,0.97);
   border: 1px solid rgba(0,0,0,0.07);
   border-radius: 999px;
   padding: 5px 6px;
@@ -521,9 +517,7 @@ input, select { font-family: inherit; outline: none; }
     left: 0;
     right: 0;
     z-index: 20;
-    background: rgba(255,255,255,0.96);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+    background: #FFFFFF;
     border-top: 1px solid var(--divider);
     padding: 10px 16px;
     padding-bottom: calc(10px + env(safe-area-inset-bottom));
@@ -553,5 +547,10 @@ input, select { font-family: inherit; outline: none; }
   /* Document surface — compact padding on small screens */
   .doc-surface {
     padding: 24px 20px 80px !important;
+  }
+
+  /* Utility: hide on mobile */
+  .mobile-hidden {
+    display: none !important;
   }
 }

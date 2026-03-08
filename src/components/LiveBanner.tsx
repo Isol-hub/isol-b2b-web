@@ -38,8 +38,14 @@ export default function LiveBanner({ currentLine, previousLine, isActive }: Prop
   const phaseRef = useRef(0)
   const lastTimeRef = useRef(0)
 
-  // Canvas ocean animation
+  // Canvas ocean animation — only runs when session is active to avoid GPU pressure on navigation
   useEffect(() => {
+    if (!isActive) {
+      cancelAnimationFrame(animRef.current)
+      lastTimeRef.current = 0
+      return
+    }
+
     const canvas = canvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')
@@ -78,7 +84,7 @@ export default function LiveBanner({ currentLine, previousLine, isActive }: Prop
 
     animRef.current = requestAnimationFrame(frame)
     return () => cancelAnimationFrame(animRef.current)
-  }, [])
+  }, [isActive])
 
   // Sync canvas size to display size
   useEffect(() => {
@@ -105,9 +111,11 @@ export default function LiveBanner({ currentLine, previousLine, isActive }: Prop
       minHeight: 80,
       display: 'flex',
       alignItems: 'center',
+      // Static CSS gradient — visible when canvas animation is not running (session inactive)
+      background: 'linear-gradient(90deg, #05081A 0%, #12263F 55%, #1AD2FF 100%)',
     }}>
 
-      {/* Ocean canvas background */}
+      {/* Ocean canvas background — rendered but only animated when isActive */}
       <canvas
         ref={canvasRef}
         style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', display: 'block' }}
@@ -121,7 +129,7 @@ export default function LiveBanner({ currentLine, previousLine, isActive }: Prop
         display: 'flex', flexDirection: 'column', gap: 6,
       }}>
         {isEmpty ? (
-          /* Waiting / idle state — pulsing ISOL */
+          /* Waiting / idle state */
           <span style={{
             fontSize: 22,
             fontWeight: 900,
@@ -129,7 +137,9 @@ export default function LiveBanner({ currentLine, previousLine, isActive }: Prop
             color: '#fff',
             textShadow: '0 0 4px rgba(26,210,255,0.5)',
             textAlign: 'center',
-            animation: 'isolPulse 3s ease-in-out infinite',
+            // Only pulse when active — avoids creating a compositor layer on idle mount
+            opacity: isActive ? undefined : 0.5,
+            animation: isActive ? 'isolPulse 3s ease-in-out infinite' : undefined,
             userSelect: 'none',
           }}>
             ISOL

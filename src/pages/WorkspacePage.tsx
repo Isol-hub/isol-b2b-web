@@ -13,6 +13,8 @@ import GlossaryListPanel, { type GlossaryItem } from '../components/GlossaryList
 import LanguageSelector from '../components/LanguageSelector'
 import ErrorBanner from '../components/ErrorBanner'
 import StickyNote from '../components/StickyNote'
+import RecoveryBanner from '../components/RecoveryBanner'
+import OnboardingModal from '../components/OnboardingModal'
 import { LANGUAGES } from '../lib/languages'
 
 interface TranscriptLine { text: string; time: Date }
@@ -95,6 +97,18 @@ export default function WorkspacePage() {
   const [glossaryItems, setGlossaryItems] = useState<GlossaryItem[]>([])
   const glossaryTermsSet = useMemo(() => new Set(glossaryItems.map(i => i.term)), [glossaryItems])
 
+  // Onboarding
+  const [showOnboarding, setShowOnboarding] = useState(() =>
+    !localStorage.getItem(`isol_onboarded_${workspaceSlug}`)
+  )
+
+  // Draft recovery
+  const [recoveryDraft, setRecoveryDraft] = useState<{
+    lines: Array<{ text: string }>
+    started_at: number
+    target_lang: string
+  } | null>(null)
+
   // Auto-switch to AI only the first time format arrives — never override user's choice after that
   const hasAutoSwitchedRef = useRef(false)
   useEffect(() => {
@@ -115,7 +129,7 @@ export default function WorkspacePage() {
       const snapLength = transcript.length
       fetch('/api/ai/format', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
         body: JSON.stringify({ lines: transcript.map(l => l.text), targetLang: targetLangRef.current }),
       })
         .then(r => {
@@ -140,7 +154,7 @@ export default function WorkspacePage() {
       setAiNotesLoading(true)
       fetch('/api/ai/notes', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
         body: JSON.stringify({ lines: transcript.map(l => l.text), targetLang: targetLangRef.current }),
       })
         .then(r => r.ok ? r.json() : null)
@@ -162,7 +176,7 @@ export default function WorkspacePage() {
         const w = raw.toLowerCase().replace(/[^\w]/g, '')
         if (w.length < 3) return
         const existing = wordIndex.current.get(w) ?? []
-        wordIndex.current.set(w, [...existing, msg.line_final])
+        if (existing.length < 5) wordIndex.current.set(w, [...existing, msg.line_final])
       })
     }
     setCurrentLine(msg.line_next || '')
@@ -214,6 +228,54 @@ export default function WorkspacePage() {
 
   useEffect(() => { fetchGlossary() }, [fetchGlossary])
 
+  // Apply workspace default language on first mount (before any session starts)
+  useEffect(() => {
+    const token = getToken()
+    if (!token || !workspaceSlug) return
+    fetch(`/api/workspace?workspace_slug=${workspaceSlug}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then((d: { workspace: { default_lang: string } } | null) => {
+        if (d?.workspace?.default_lang) setTargetLang(d.workspace.default_lang)
+      })
+      .catch(() => {})
+  }, [workspaceSlug]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Fetch draft on mount — show recovery banner if stale session found
+  useEffect(() => {
+    const token = getToken()
+    if (!token || !workspaceSlug) return
+    fetch(`/api/sessions/draft?workspace_slug=${workspaceSlug}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then((d: { draft: { lines: Array<{ text: string }>; started_at: number; target_lang: string } | null } | null) => {
+        if (d?.draft && d.draft.lines.length > 0) setRecoveryDraft(d.draft)
+      })
+      .catch(() => {})
+  }, [workspaceSlug])
+
+  // Autosave every 30s while session is active
+  useEffect(() => {
+    if (!sessionActive || transcript.length === 0) return
+    const id = setInterval(() => {
+      const token = getToken()
+      if (!token) return
+      fetch('/api/sessions/draft', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          wss_session_id: ws.sessionId ?? undefined,
+          target_lang: targetLang,
+          started_at: Math.floor(sessionStartRef.current / 1000),
+          lines: transcript.map(l => ({ text: l.text })),
+        }),
+      }).catch(() => {})
+    }, 30_000)
+    return () => clearInterval(id)
+  }, [sessionActive, transcript, targetLang, ws.sessionId])
+
   // Poll comments so host sees viewer notes
   useEffect(() => {
     if (!ws.sessionId) {
@@ -257,6 +319,20 @@ export default function WorkspacePage() {
       await fetchGlossary()
     } catch { /* silent */ }
   }, [workspaceSlug, fetchGlossary])
+
+  const handlePatchGlossaryNote = useCallback(async (term: string, note: string | null) => {
+    const token = getToken()
+    if (!token || !workspaceSlug) return
+    // Optimistic update
+    setGlossaryItems(prev => prev.map(i => i.term === term ? { ...i, note } : i))
+    try {
+      await fetch('/api/glossary', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ workspace_slug: workspaceSlug, term, note }),
+      })
+    } catch { /* revert on error if needed, silent for now */ }
+  }, [workspaceSlug])
 
   const handleDeleteGlossaryTerm = useCallback(async (term: string) => {
     const token = getToken()
@@ -343,13 +419,18 @@ export default function WorkspacePage() {
         }),
       })
       fetchSessions()
+      // Clear draft now that session is saved
+      fetch('/api/sessions/draft', {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      }).catch(() => {})
       if (res.ok) {
         const { session_id } = await res.json() as { session_id: number }
         // Generate AI title from first 10 lines, then patch session
         try {
           const titleRes = await fetch('/api/ai/title', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
             body: JSON.stringify({ lines: lines.slice(0, 10).map(l => l.text) }),
           })
           if (titleRes.ok) {
@@ -367,6 +448,23 @@ export default function WorkspacePage() {
       }
     } catch { /* silent */ }
   }, [workspaceSlug, targetLang, fetchSessions])
+
+  const handleRestoreDraft = useCallback(() => {
+    if (!recoveryDraft) return
+    setTranscript(recoveryDraft.lines.map(l => ({ text: l.text, time: new Date(recoveryDraft.started_at * 1000) })))
+    setTargetLang(recoveryDraft.target_lang)
+    setRecoveryDraft(null)
+  }, [recoveryDraft])
+
+  const handleDiscardDraft = useCallback(() => {
+    setRecoveryDraft(null)
+    const token = getToken()
+    if (!token) return
+    fetch('/api/sessions/draft', {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    }).catch(() => {})
+  }, [])
 
   const handleLineEdit = useCallback((index: number, text: string) => {
     setTranscript(prev => prev.map((l, i) => i === index ? { ...l, text } : l))
@@ -460,16 +558,27 @@ export default function WorkspacePage() {
       }
       if (e.code === 'Escape') {
         if (compact) setCompact(false)
+        if (glossaryWord) setGlossaryWord(null)
+        if (showGlossaryList) setShowGlossaryList(false)
         return
       }
       if ((e.metaKey || e.ctrlKey) && e.code === 'KeyE') {
         e.preventDefault()
         if (transcript.length > 0) setShowModal(true)
+        return
       }
+      if ((e.metaKey || e.ctrlKey) && e.code === 'KeyG') {
+        e.preventDefault()
+        setShowGlossaryList(v => !v)
+        return
+      }
+      if (e.key === '1') { setViewMode('raw'); return }
+      if (e.key === '2') { setViewMode('ai'); return }
+      if (e.key === '3') { setViewMode('notes'); return }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [sessionActive, compact, transcript.length, handleStop, handleStart])
+  }, [sessionActive, compact, transcript.length, handleStop, handleStart, glossaryWord, showGlossaryList])
 
   if (!session) { navigate('/login', { replace: true }); return null }
 
@@ -604,6 +713,18 @@ export default function WorkspacePage() {
 
         <div style={{ flex: 1 }} />
 
+        <Link
+          to={`/${workspaceSlug}/settings`}
+          title="Settings"
+          style={{
+            display: 'flex', alignItems: 'center',
+            fontSize: 15, color: 'var(--text-muted)',
+            textDecoration: 'none', padding: '3px 6px', borderRadius: 5,
+            transition: 'color 0.15s',
+          }}
+          onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = 'var(--text)'}
+          onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)'}
+        >⚙</Link>
         <span style={{
           fontSize: 11, color: 'var(--text-muted)',
           maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
@@ -612,6 +733,15 @@ export default function WorkspacePage() {
           Sign out
         </button>
       </header>
+
+      {/* Draft recovery banner */}
+      {recoveryDraft && !sessionActive && (
+        <RecoveryBanner
+          draft={recoveryDraft}
+          onRestore={handleRestoreDraft}
+          onDiscard={handleDiscardDraft}
+        />
+      )}
 
       {/* ━━ BODY ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
@@ -953,8 +1083,7 @@ export default function WorkspacePage() {
         <div
           style={{
             position: 'fixed', inset: 0, zIndex: 10000,
-            background: 'rgba(0,0,0,0.40)',
-            backdropFilter: 'blur(20px)',
+            background: 'rgba(0,0,0,0.50)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             padding: 24,
           }}
@@ -1125,6 +1254,7 @@ export default function WorkspacePage() {
             <GlossaryListPanel
               items={[...glossaryItems].sort((a, b) => a.term.localeCompare(b.term))}
               onDelete={handleDeleteGlossaryTerm}
+              onPatchNote={handlePatchGlossaryNote}
               onClose={() => setShowGlossaryList(false)}
               onWordClick={(term) => {
                 setShowGlossaryList(false)
@@ -1137,6 +1267,12 @@ export default function WorkspacePage() {
         </>
       )}
 
+      {showOnboarding && workspaceSlug && (
+        <OnboardingModal
+          workspaceSlug={workspaceSlug}
+          onDone={() => setShowOnboarding(false)}
+        />
+      )}
     </div>
   )
 }

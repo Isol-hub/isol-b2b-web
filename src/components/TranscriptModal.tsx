@@ -267,8 +267,7 @@ export default function TranscriptModal({ transcript, targetLang, aiFormatted, o
     <div
       style={{
         position: 'fixed', inset: 0, zIndex: 10000,
-        background: 'rgba(0,0,0,0.40)',
-        backdropFilter: 'blur(20px)',
+        background: 'rgba(0,0,0,0.50)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         padding: 24,
       }}
