@@ -1,4 +1,7 @@
-interface Env {
+import { verifyJwt } from '../../lib/jwt'
+import { checkRateLimit, type RateLimitEnv } from '../../lib/ratelimit'
+
+interface Env extends RateLimitEnv {
   ANTHROPIC_API_KEY: string
 }
 
@@ -8,6 +11,14 @@ const CORS = {
 }
 
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
+  const auth = await verifyJwt(request).catch(() => null)
+  const ip = request.headers.get('CF-Connecting-IP') ?? 'unknown'
+  const rlKey = auth?.workspaceSlug ?? `ip:${ip}`
+  const rl = await checkRateLimit(env, rlKey, 'define', auth?.workspaceSlug)
+  if (!rl.allowed) {
+    return Response.json({ error: 'rate_limit', remaining: 0, resetAt: rl.resetAt }, { status: 429, headers: CORS })
+  }
+
   try {
     const { word, sentence, targetLang } = await request.json<{ word: string; sentence: string; targetLang?: string }>()
     if (!word || !sentence) {
@@ -75,6 +86,6 @@ export const onRequestOptions: PagesFunction = async () =>
     headers: {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     },
   })

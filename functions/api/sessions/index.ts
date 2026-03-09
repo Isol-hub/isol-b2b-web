@@ -1,4 +1,4 @@
-import { decodeJwt } from '../../lib/jwt'
+import { verifyJwt } from '../../lib/jwt'
 
 interface Env {
   DB: D1Database
@@ -10,7 +10,7 @@ const CORS = {
 }
 
 export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
-  const auth = decodeJwt(request)
+  const auth = await verifyJwt(request)
   if (!auth) {
     return Response.json({ error: 'Unauthorized' }, { status: 401, headers: CORS })
   }

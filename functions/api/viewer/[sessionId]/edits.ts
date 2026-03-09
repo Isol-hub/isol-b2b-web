@@ -1,4 +1,4 @@
-import { decodeJwt } from '../../../lib/jwt'
+import { verifyJwt } from '../../../lib/jwt'
 
 interface Env { DB: D1Database }
 
@@ -18,7 +18,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ env, params }) => {
 }
 
 export const onRequestPost: PagesFunction<Env> = async ({ request, env, params }) => {
-  const auth = decodeJwt(request)
+  const auth = await verifyJwt(request)
   if (!auth) return Response.json({ error: 'Unauthorized' }, { status: 401, headers: CORS })
 
   const sessionId = params.sessionId as string

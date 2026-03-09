@@ -1,4 +1,4 @@
-import { decodeJwt } from '../../lib/jwt'
+import { verifyJwt } from '../../lib/jwt'
 
 interface Env {
   DB: D1Database
@@ -10,7 +10,7 @@ const CORS = {
 }
 
 export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
-  const auth = decodeJwt(request)
+  const auth = await verifyJwt(request)
   if (!auth) return Response.json({ error: 'Unauthorized' }, { status: 401, headers: CORS })
 
   const url = new URL(request.url)
@@ -33,7 +33,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
 }
 
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
-  const auth = decodeJwt(request)
+  const auth = await verifyJwt(request)
   if (!auth) return Response.json({ error: 'Unauthorized' }, { status: 401, headers: CORS })
 
   const body = await request.json<{ workspace_slug?: string; term?: string; note?: string }>()
@@ -58,12 +58,40 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   }
 }
 
+export const onRequestPatch: PagesFunction<Env> = async ({ request, env }) => {
+  const auth = await verifyJwt(request)
+  if (!auth) return Response.json({ error: 'Unauthorized' }, { status: 401, headers: CORS })
+
+  const body = await request.json<{ workspace_slug?: string; term?: string; note?: string | null }>()
+  const workspace_slug = body.workspace_slug ?? auth.workspaceSlug
+  const { term, note = null } = body
+
+  if (!term?.trim()) return Response.json({ error: 'term required' }, { status: 400, headers: CORS })
+  if (workspace_slug !== auth.workspaceSlug) {
+    return Response.json({ error: 'Forbidden' }, { status: 403, headers: CORS })
+  }
+
+  try {
+    const result = await env.DB.prepare(
+      'UPDATE glossary_terms SET note = ? WHERE workspace_slug = ? AND term = ?'
+    ).bind(note ?? null, workspace_slug, term.trim().toLowerCase()).run()
+
+    if (result.meta.changes === 0) {
+      return Response.json({ error: 'Term not found' }, { status: 404, headers: CORS })
+    }
+    return Response.json({ ok: true }, { headers: CORS })
+  } catch (err) {
+    console.error('glossary patch error', err)
+    return Response.json({ error: 'Server error' }, { status: 500, headers: CORS })
+  }
+}
+
 export const onRequestOptions: PagesFunction = async () =>
   new Response(null, {
     status: 204,
     headers: {
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Methods': 'GET, POST, PATCH, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     },
   })

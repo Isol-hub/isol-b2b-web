@@ -9,26 +9,42 @@ const CORS = {
   'Access-Control-Allow-Origin': '*',
 }
 
-export const onRequestDelete: PagesFunction<Env> = async ({ request, env, params }) => {
+export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
   const auth = await verifyJwt(request)
   if (!auth) return Response.json({ error: 'Unauthorized' }, { status: 401, headers: CORS })
 
-  const term = decodeURIComponent(params.term as string).toLowerCase()
   const url = new URL(request.url)
+  const q = url.searchParams.get('q')?.trim()
   const workspaceSlug = url.searchParams.get('workspace_slug') ?? auth.workspaceSlug
 
   if (workspaceSlug !== auth.workspaceSlug) {
     return Response.json({ error: 'Forbidden' }, { status: 403, headers: CORS })
   }
+  if (!q || q.length < 2) {
+    return Response.json({ results: [] }, { headers: CORS })
+  }
 
   try {
-    await env.DB.prepare(
-      'DELETE FROM glossary_terms WHERE workspace_slug = ? AND term = ?'
-    ).bind(workspaceSlug, term).run()
+    const { results } = await env.DB.prepare(`
+      SELECT DISTINCT
+        s.id AS session_id,
+        s.title,
+        s.started_at,
+        s.target_lang,
+        s.line_count,
+        s.share_token,
+        snippet(sessions_fts, 1, '<b>', '</b>', '…', 10) AS snippet
+      FROM sessions_fts
+      JOIN sessions s ON CAST(s.id AS TEXT) = sessions_fts.session_id
+      WHERE sessions_fts MATCH ?
+        AND s.workspace_slug = ?
+      ORDER BY s.started_at DESC
+      LIMIT 20
+    `).bind(q + '*', workspaceSlug).all()
 
-    return Response.json({ ok: true }, { headers: CORS })
+    return Response.json({ results }, { headers: CORS })
   } catch (err) {
-    console.error('glossary delete error', err)
+    console.error('fts search error', err)
     return Response.json({ error: 'Server error' }, { status: 500, headers: CORS })
   }
 }
@@ -38,7 +54,7 @@ export const onRequestOptions: PagesFunction = async () =>
     status: 204,
     headers: {
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'DELETE, OPTIONS',
+      'Access-Control-Allow-Methods': 'GET, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     },
   })

@@ -10,6 +10,11 @@ binding = "CF_KV_OTP"
 id = "74d6c66c1ef344fdb062c23728927f6a"
 preview_id = "74d6c66c1ef344fdb062c23728927f6a"
 
+[[kv_namespaces]]
+binding = "CF_KV_RL"
+id = "8dfe8a4e78484ff4b99f0ce4d1ff769e"
+preview_id = "9ce666e3996f4406b9ee905992b1bf6f"
+
 [[d1_databases]]
 binding = "DB"
 database_name = "isol-studio"

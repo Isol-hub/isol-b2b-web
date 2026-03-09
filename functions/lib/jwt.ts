@@ -1,18 +1,31 @@
+import { createRemoteJWKSet, jwtVerify } from 'jose'
+
+const JWKS = createRemoteJWKSet(
+  new URL('https://api.isol.live/auth/.well-known/isol-jwks.json')
+)
+
 /**
- * Minimal JWT decode for Cloudflare Pages Functions.
- * Matches client-side getSession() logic in src/lib/auth.ts.
- * No RS256 signature verification — acceptable for early product.
+ * Verifies a B2B ISOL access token (RS256) issued by lsol-auth.
+ * Validates signature, issuer, audience, expiry, and token_use claim.
+ * JWKS is fetched from lsol-auth and cached module-scope per Worker instance.
  */
-export function decodeJwt(request: Request): { email: string; workspaceSlug: string } | null {
+export async function verifyJwt(
+  request: Request
+): Promise<{ email: string; workspaceSlug: string } | null> {
   const auth = request.headers.get('Authorization')
   if (!auth?.startsWith('Bearer ')) return null
+  const token = auth.slice(7)
   try {
-    const parts = auth.slice(7).split('.')
-    if (parts.length !== 3) return null
-    const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')))
-    if (!payload.exp || payload.exp * 1000 < Date.now()) return null
-    if (!payload.sub || !payload.wsp) return null
-    return { email: payload.sub, workspaceSlug: payload.wsp }
+    const { payload } = await jwtVerify(token, JWKS, {
+      algorithms: ['RS256'],
+      issuer: 'lsol-auth',
+      audience: 'isol-api',
+    })
+    const sub = payload.sub
+    const wsp = payload['wsp']
+    if (typeof sub !== 'string' || typeof wsp !== 'string') return null
+    if (payload['token_use'] !== 'access') return null
+    return { email: sub, workspaceSlug: wsp }
   } catch {
     return null
   }
