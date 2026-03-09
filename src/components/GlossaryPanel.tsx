@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { getToken } from '../lib/auth'
 
 interface Props {
@@ -30,26 +30,33 @@ export default function GlossaryPanel({ word, sentences, currentSentence, target
   // pass AI definition as note when saving so the list can show it without re-fetching
   const [aiDef, setAiDef] = useState<AiDef | null>(null)
   const [aiLoading, setAiLoading] = useState(true)
+  const [aiError, setAiError] = useState(false)
 
-  useEffect(() => {
+  const retryAiDef = useCallback(() => {
     let cancelled = false
     setAiDef(null)
     setAiLoading(true)
-
+    setAiError(false)
     fetch('/api/ai/define', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken() ?? ''}` },
       body: JSON.stringify({ word, sentence: currentSentence, targetLang }),
     })
-      .then(r => r.ok ? r.json() : null)
+      .then(r => r.ok ? r.json() : Promise.reject(r.status))
       .then((data: AiDef | null) => {
-        if (!cancelled && data?.definition) setAiDef(data)
+        if (!cancelled) {
+          if (data?.definition) setAiDef(data)
+          else setAiError(true)
+        }
       })
-      .catch(() => {})
+      .catch(() => { if (!cancelled) setAiError(true) })
       .finally(() => { if (!cancelled) setAiLoading(false) })
-
     return () => { cancelled = true }
-  }, [word, currentSentence])
+  }, [word, currentSentence, targetLang])
+
+  useEffect(() => {
+    return retryAiDef()
+  }, [retryAiDef])
 
   function highlight(text: string, w: string) {
     const re = new RegExp(`(${w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi')
@@ -98,22 +105,23 @@ export default function GlossaryPanel({ word, sentences, currentSentence, target
               borderRadius: 5, padding: '2px 6px',
             }}>{aiDef.register}</span>
           )}
-          {/* Save to workspace glossary — only shown after AI definition loads */}
+          {/* Save to workspace glossary */}
           {onSave && !aiLoading && (
             <button
               onClick={() => !isSaved && onSave(word, aiDef?.definition ?? undefined)}
               disabled={isSaved}
               style={{
-                background: isSaved ? 'rgba(34,197,94,0.08)' : 'rgba(99,102,241,0.08)',
-                border: `1px solid ${isSaved ? 'rgba(34,197,94,0.20)' : 'rgba(99,102,241,0.20)'}`,
-                color: isSaved ? 'var(--live)' : 'var(--accent)',
+                background: isSaved ? 'rgba(34,197,94,0.08)' : aiError ? 'rgba(245,158,11,0.08)' : 'rgba(99,102,241,0.08)',
+                border: `1px solid ${isSaved ? 'rgba(34,197,94,0.20)' : aiError ? 'rgba(245,158,11,0.25)' : 'rgba(99,102,241,0.20)'}`,
+                color: isSaved ? 'var(--live)' : aiError ? '#D97706' : 'var(--accent)',
                 fontSize: 10, fontWeight: 700, letterSpacing: '0.04em',
                 padding: '2px 8px', borderRadius: 5,
                 cursor: isSaved ? 'default' : 'pointer',
                 transition: 'all 0.2s',
               }}
+              title={aiError ? 'AI lookup failed — term will be saved without definition' : undefined}
             >
-              {isSaved ? '✓ Saved' : '+ Save'}
+              {isSaved ? '✓ Saved' : aiError ? '+ Save (no definition)' : '+ Save'}
             </button>
           )}
         </div>
@@ -148,6 +156,19 @@ export default function GlossaryPanel({ word, sentences, currentSentence, target
               display: 'inline-block', flexShrink: 0,
             }} />
             <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Looking up definition…</span>
+          </div>
+        ) : aiError && !aiDef ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0' }}>
+            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>AI lookup unavailable.</span>
+            <button
+              onClick={retryAiDef}
+              style={{
+                background: 'none', border: 'none',
+                color: 'var(--accent)', fontSize: 12,
+                padding: 0, cursor: 'pointer',
+                textDecoration: 'underline',
+              }}
+            >Retry</button>
           </div>
         ) : aiDef ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>

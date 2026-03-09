@@ -455,15 +455,21 @@ export default function SessionsPage() {
                     onClick={() => handleGenerateOrCopy(shareModalSession)}
                     style={{
                       flex: 1, background: 'var(--accent)', color: '#fff', border: 'none',
-                      borderRadius: 8, fontSize: 13, fontWeight: 600, padding: '9px 16px', cursor: 'pointer',
+                      borderRadius: 8, fontSize: 13, fontWeight: 600, padding: '10px 16px', cursor: 'pointer',
                     }}
                   >
                     {shareCopied === shareModalSession.id ? '✓ Copied!' : 'Copy link'}
                   </button>
                   <button
                     onClick={() => setConfirmRevoke(shareModalSession)}
-                    className="btn-icon"
-                    style={{ fontSize: 12, color: 'var(--red)' }}
+                    style={{
+                      background: 'rgba(239,68,68,0.08)',
+                      border: '1px solid rgba(239,68,68,0.25)',
+                      color: 'var(--red)',
+                      borderRadius: 8, fontSize: 13, fontWeight: 600,
+                      padding: '10px 16px', cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                    }}
                   >Revoke</button>
                 </div>
               </div>

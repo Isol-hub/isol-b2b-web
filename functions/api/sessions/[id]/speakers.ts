@@ -1,4 +1,4 @@
-import { decodeJwt } from '../../../lib/jwt'
+import { verifyJwt } from '../../../lib/jwt'
 
 interface Env {
   DB: D1Database
@@ -10,7 +10,7 @@ const CORS = {
 }
 
 async function authedSession(request: Request, env: Env, sessionId: number) {
-  const auth = decodeJwt(request)
+  const auth = await verifyJwt(request)
   if (!auth) return null
   const session = await env.DB.prepare(
     'SELECT workspace_slug FROM sessions WHERE id = ?'

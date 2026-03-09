@@ -405,6 +405,34 @@ export default function WorkspacePage() {
     return () => clearInterval(id)
   }, [sessionActive, transcript, targetLang, ws.sessionId])
 
+  // Immediate autosave on page hide/close — keepalive survives tab close
+  useEffect(() => {
+    const save = () => {
+      if (!sessionActive || transcript.length === 0) return
+      const token = getToken()
+      if (!token) return
+      fetch('/api/sessions/draft', {
+        method: 'PUT',
+        keepalive: true,
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          wss_session_id: ws.sessionId ?? undefined,
+          target_lang: targetLang,
+          started_at: Math.floor(sessionStartRef.current / 1000),
+          lines: transcript.map(l => ({ text: l.text })),
+        }),
+      }).catch(() => {})
+    }
+    const onBeforeUnload = () => save()
+    const onVisibilityChange = () => { if (document.visibilityState === 'hidden') save() }
+    window.addEventListener('beforeunload', onBeforeUnload)
+    document.addEventListener('visibilitychange', onVisibilityChange)
+    return () => {
+      window.removeEventListener('beforeunload', onBeforeUnload)
+      document.removeEventListener('visibilitychange', onVisibilityChange)
+    }
+  }, [sessionActive, transcript, targetLang, ws.sessionId])
+
   // Poll comments so host sees viewer notes
   useEffect(() => {
     if (!ws.sessionId) {
