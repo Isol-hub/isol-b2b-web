@@ -10,6 +10,12 @@ interface TranscriptLineInput {
   offset_ms?: number | null
 }
 
+interface HighlightInput {
+  line_index?: number | null
+  text: string
+  category?: string | null
+}
+
 interface SavePayload {
   workspace_slug: string
   target_lang: string
@@ -17,6 +23,7 @@ interface SavePayload {
   ended_at: number
   transcript_lines: TranscriptLineInput[]
   ai_formatted_text?: string
+  highlights?: HighlightInput[]
 }
 
 const CORS = {
@@ -32,7 +39,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
 
   try {
     const body = await request.json<SavePayload>()
-    const { workspace_slug, target_lang, started_at, ended_at, transcript_lines, ai_formatted_text } = body
+    const { workspace_slug, target_lang, started_at, ended_at, transcript_lines, ai_formatted_text, highlights } = body
 
     if (!workspace_slug || !target_lang || !started_at || !ended_at) {
       return Response.json({ error: 'Missing required fields' }, { status: 400, headers: CORS })
@@ -71,6 +78,17 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
         ).bind(sessionId, line.index, line.text, now, line.offset_ms ?? null)
       )
       await env.DB.batch(stmts)
+    }
+
+    // Batch insert highlights
+    if (highlights && highlights.length > 0) {
+      const now = Date.now()
+      const hlStmts = highlights.map(h =>
+        env.DB.prepare(
+          'INSERT INTO session_highlights (session_id, line_index, text, category, created_at) VALUES (?, ?, ?, ?, ?)'
+        ).bind(sessionId, h.line_index ?? null, h.text, h.category ?? null, now)
+      )
+      await env.DB.batch(hlStmts)
     }
 
     return Response.json({ session_id: sessionId }, { status: 200, headers: CORS })

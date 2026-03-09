@@ -37,7 +37,11 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env, params })
       'SELECT line_index, text, offset_ms FROM transcript_lines WHERE session_id = ? ORDER BY line_index ASC'
     ).bind(sessionId).all()
 
-    return Response.json({ session, lines: linesResult.results }, { status: 200, headers: CORS })
+    const highlightsResult = await env.DB.prepare(
+      'SELECT id, line_index, text, category, created_at FROM session_highlights WHERE session_id = ? ORDER BY created_at ASC'
+    ).bind(sessionId).all()
+
+    return Response.json({ session, lines: linesResult.results, highlights: highlightsResult.results }, { status: 200, headers: CORS })
   } catch (err) {
     console.error('session detail error', err)
     return Response.json({ error: 'Server error' }, { status: 500, headers: CORS })

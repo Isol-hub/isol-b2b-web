@@ -6,6 +6,8 @@ import { useWebSocket } from '../hooks/useWebSocket'
 import type { SubtitleMessage } from '../hooks/useWebSocket'
 import DocumentView from '../components/DocumentView'
 import type { CommentItem } from '../components/CommentThread'
+import HighlightsSection from '../components/HighlightsSection'
+import type { HighlightItem, HighlightCategory } from '../components/HighlightPopup'
 import CompactPanel from '../components/CompactPanel'
 import TranscriptModal from '../components/TranscriptModal'
 import GlossaryPanel from '../components/GlossaryPanel'
@@ -70,10 +72,11 @@ export default function WorkspacePage() {
 
   // Session history
   interface SessionMeta { id: number; started_at: number; target_lang: string; line_count: number; title?: string; share_token?: string }
-  interface SessionDetail { session: Record<string, unknown>; lines: Array<{ line_index: number; text: string }> }
+  interface SessionDetail { session: Record<string, unknown>; lines: Array<{ line_index: number; text: string }>; highlights: HighlightItem[] }
   const [sessions, setSessions] = useState<SessionMeta[]>([])
   const [viewingSession, setViewingSession] = useState<SessionDetail | null>(null)
   const [sessionDetailLoading, setSessionDetailLoading] = useState(false)
+  const [highlights, setHighlights] = useState<HighlightItem[]>([])
   const [editingTitle, setEditingTitle] = useState('')
   const [shareCopied, setShareCopied] = useState(false)
 
@@ -400,7 +403,8 @@ export default function WorkspacePage() {
   const saveSession = useCallback(async (
     lines: { text: string; time: Date }[],
     formatted: string | undefined,
-    startedAt: number
+    startedAt: number,
+    highlightItems: HighlightItem[]
   ) => {
     if (!workspaceSlug || lines.length === 0) return
     const token = getToken()
@@ -415,11 +419,12 @@ export default function WorkspacePage() {
           started_at: startedAt,
           ended_at: Date.now(),
           transcript_lines: lines.map((l, i) => ({
-          index: i,
-          text: l.text,
-          offset_ms: startedAt > 0 ? l.time.getTime() - startedAt : null,
-        })),
+            index: i,
+            text: l.text,
+            offset_ms: startedAt > 0 ? l.time.getTime() - startedAt : null,
+          })),
           ai_formatted_text: formatted ?? null,
+          highlights: highlightItems.map(h => ({ line_index: h.line_index, text: h.text, category: h.category })),
         }),
       })
       fetchSessions()
@@ -482,6 +487,14 @@ export default function WorkspacePage() {
     }).catch(() => {})
   }, [ws.sessionId])
 
+  const handleAddHighlight = useCallback((text: string, lineIndex: number | null, category: HighlightCategory | null) => {
+    setHighlights(prev => [...prev, { id: Date.now(), line_index: lineIndex, text, category }])
+  }, [])
+
+  const handleRemoveHighlight = useCallback((id: number) => {
+    setHighlights(prev => prev.filter(h => h.id !== id))
+  }, [])
+
   const handleAddComment = useCallback(async (lineIndex: number, body: string) => {
     if (!body.trim() || !ws.sessionId) return
     setCommentSubmitting(true)
@@ -507,7 +520,7 @@ export default function WorkspacePage() {
   }, [ws.sessionId, commentAuthor])
 
   const handleStart = useCallback(async () => {
-    setError(''); setCurrentLine(''); setTranscript([])
+    setError(''); setCurrentLine(''); setTranscript([]); setHighlights([])
     setAiFormatted(undefined); setAiFormattedAt(undefined); setAiLoading(false)
     setAiNotes(undefined); setAiNotesLoading(false); setViewMode('raw')
     hasAutoSwitchedRef.current = false
@@ -529,10 +542,10 @@ export default function WorkspacePage() {
     setOpenCommentLine(null)
     // Fire-and-forget session save
     setTranscript(prev => {
-      saveSession(prev, aiFormatted, sessionStartRef.current)
+      saveSession(prev, aiFormatted, sessionStartRef.current, highlights)
       return prev
     })
-  }, [audio, ws, saveSession, aiFormatted])
+  }, [audio, ws, saveSession, aiFormatted, highlights])
 
   const handleLogout = useCallback(() => {
     handleStop(); clearSession()
@@ -977,6 +990,9 @@ export default function WorkspacePage() {
                 onAddComment={handleAddComment}
                 commentSubmitting={commentSubmitting}
                 sessionStartMs={sessionStartRef.current > 0 ? sessionStartRef.current : undefined}
+                highlights={highlights}
+                onAddHighlight={handleAddHighlight}
+                onRemoveHighlight={handleRemoveHighlight}
               />
             </div>
           )}
@@ -1179,6 +1195,9 @@ export default function WorkspacePage() {
                         }}>{l.text}</p>
                       ))}
                     </div>
+                  )}
+                  {viewingSession.highlights?.length > 0 && (
+                    <HighlightsSection highlights={viewingSession.highlights} />
                   )}
                 </>
               ) : null}

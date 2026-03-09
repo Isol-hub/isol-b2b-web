@@ -3,6 +3,8 @@ import MatrixText from './MatrixText'
 import CommentThread, { type CommentItem } from './CommentThread'
 import LiveBanner from './LiveBanner'
 import SessionTimeline, { type TimelineSegment } from './SessionTimeline'
+import HighlightPopup, { type HighlightCategory, type HighlightItem } from './HighlightPopup'
+import HighlightsSection from './HighlightsSection'
 
 interface TranscriptLine {
   text: string
@@ -37,6 +39,10 @@ interface Props {
   // Timeline
   sessionStartMs?: number  // unix ms; if provided, timeline is shown
   sessionEndMs?: number    // unix ms; undefined = live
+  // Highlights
+  highlights?: HighlightItem[]
+  onAddHighlight?: (text: string, lineIndex: number | null, category: HighlightCategory | null) => void
+  onRemoveHighlight?: (id: number) => void
 }
 
 function renderInline(
@@ -144,6 +150,7 @@ export default function DocumentView({
   lineComments, openCommentLine, onOpenCommentLine,
   commentAuthor, onCommentAuthorChange, onAddComment, commentSubmitting,
   sessionStartMs, sessionEndMs,
+  highlights, onAddHighlight, onRemoveHighlight,
 }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
@@ -346,6 +353,7 @@ export default function DocumentView({
                   <div
                     key={i}
                     ref={el => { lineRefs.current[i] = el }}
+                    data-line-index={i}
                     onMouseEnter={() => setHoveredLine(i)}
                     onMouseLeave={() => setHoveredLine(null)}
                     style={{
@@ -443,11 +451,28 @@ export default function DocumentView({
                 </div>
               )}
               {isActive && !currentLine && <span className="doc-cursor" />}
+
+              {/* Highlights section — below transcript in raw view */}
+              {highlights && highlights.length > 0 && (
+                <HighlightsSection
+                  highlights={highlights}
+                  onRemove={onRemoveHighlight}
+                  onJumpTo={scrollToLine}
+                />
+              )}
             </div>
           )}
         </div>
         <div ref={bottomRef} />
       </div>
+
+      {/* Highlight selection popup — fixed positioned, outside scroll container */}
+      {onAddHighlight && (
+        <HighlightPopup
+          containerRef={scrollContainerRef}
+          onHighlight={onAddHighlight}
+        />
+      )}
     </div>
   )
 }
