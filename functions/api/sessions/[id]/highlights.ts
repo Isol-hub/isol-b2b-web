@@ -1,4 +1,4 @@
-import { decodeJwt } from '../../../../lib/jwt'
+import { decodeJwt } from '../../../lib/jwt'
 
 interface Env {
   DB: D1Database
