@@ -9,6 +9,9 @@ export interface SubtitleMessage {
   original_text?: string
   type?: string
   is_final?: boolean
+  // Fase 2: populated by pipeline when online diarization is active
+  speaker_id?: string | null
+  speaker_confidence?: number | null
 }
 
 interface UseWebSocketOptions {

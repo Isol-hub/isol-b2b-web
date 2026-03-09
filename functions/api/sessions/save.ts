@@ -8,12 +8,25 @@ interface TranscriptLineInput {
   index: number
   text: string
   offset_ms?: number | null
+  end_ms?: number | null
+  speaker_id?: string | null
+  speaker_confidence?: number | null
+  speaker_state?: string | null
+  speaker_source?: string | null
 }
 
 interface HighlightInput {
   line_index?: number | null
   text: string
   category?: string | null
+}
+
+interface SpeakerInput {
+  id: string
+  label: string
+  color: string
+  source: string
+  is_user_edited: boolean
 }
 
 interface SavePayload {
@@ -24,6 +37,7 @@ interface SavePayload {
   transcript_lines: TranscriptLineInput[]
   ai_formatted_text?: string
   highlights?: HighlightInput[]
+  speakers?: SpeakerInput[]
 }
 
 const CORS = {
@@ -39,7 +53,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
 
   try {
     const body = await request.json<SavePayload>()
-    const { workspace_slug, target_lang, started_at, ended_at, transcript_lines, ai_formatted_text, highlights } = body
+    const { workspace_slug, target_lang, started_at, ended_at, transcript_lines, ai_formatted_text, highlights, speakers } = body
 
     if (!workspace_slug || !target_lang || !started_at || !ended_at) {
       return Response.json({ error: 'Missing required fields' }, { status: 400, headers: CORS })
@@ -74,10 +88,33 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       const now = Date.now()
       const stmts = transcript_lines.map(line =>
         env.DB.prepare(
-          'INSERT INTO transcript_lines (session_id, line_index, text, created_at, offset_ms) VALUES (?, ?, ?, ?, ?)'
-        ).bind(sessionId, line.index, line.text, now, line.offset_ms ?? null)
+          `INSERT INTO transcript_lines
+           (session_id, line_index, text, created_at, offset_ms, end_ms,
+            speaker_id, speaker_confidence, speaker_state, speaker_source)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        ).bind(
+          sessionId, line.index, line.text, now,
+          line.offset_ms ?? null, line.end_ms ?? null,
+          line.speaker_id ?? null, line.speaker_confidence ?? null,
+          line.speaker_state ?? null, line.speaker_source ?? null,
+        )
       )
       await env.DB.batch(stmts)
+    }
+
+    // Batch insert session speakers
+    if (speakers && speakers.length > 0) {
+      const now = Date.now()
+      const spkStmts = speakers.map(s =>
+        env.DB.prepare(`
+          INSERT INTO session_speakers (session_id, speaker_id, label, color, source, is_user_edited, created_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?)
+          ON CONFLICT (session_id, speaker_id) DO UPDATE SET
+            label = excluded.label, color = excluded.color,
+            source = excluded.source, is_user_edited = excluded.is_user_edited
+        `).bind(sessionId, s.id, s.label, s.color, s.source, s.is_user_edited ? 1 : 0, now)
+      )
+      await env.DB.batch(spkStmts)
     }
 
     // Batch insert highlights

@@ -15,10 +15,12 @@ interface Props {
   targetLang: string
   aiFormatted?: string
   onClose: () => void
+  speakerAssignments?: Array<{ speakerId: string | null; state: string; source: string }>
+  speakerProfiles?: Map<string, { label: string; color: string }>
 }
 
 const SPEAKER_GAP_MS = 3500
-const SPEAKERS = ['Speaker A', 'Speaker B', 'Speaker C', 'Speaker D']
+const SPEAKERS = ['Voice 1', 'Voice 2', 'Voice 3', 'Voice 4']
 
 function formatTime(d: Date): string {
   return d.toLocaleTimeString('en-GB', { hour12: false })
@@ -55,6 +57,29 @@ function toDialogue(lines: TranscriptLine[]): string {
     }
   }
   if (buffer.length) sections.push(`${currentSpeaker}:\n  ${buffer.join(' ')}`)
+  return sections.join('\n\n')
+}
+
+function toDialogueWithSpeakers(
+  lines: TranscriptLine[],
+  assignments: Array<{ speakerId: string | null; state: string; source: string }>,
+  profiles: Map<string, { label: string; color: string }>
+): string {
+  const sections: string[] = []
+  let currentLabel = ''
+  let buffer: string[] = []
+  for (let i = 0; i < lines.length; i++) {
+    const spId = assignments[i]?.speakerId
+    const label = spId ? (profiles.get(spId)?.label ?? 'Voice ?') : '?'
+    if (label !== currentLabel) {
+      if (buffer.length) sections.push(`[${currentLabel}]\n${buffer.join(' ')}`)
+      currentLabel = label
+      buffer = [`[${formatTime(lines[i].time)}] ${lines[i].text}`]
+    } else {
+      buffer.push(lines[i].text)
+    }
+  }
+  if (buffer.length) sections.push(`[${currentLabel}]\n${buffer.join(' ')}`)
   return sections.join('\n\n')
 }
 
@@ -169,9 +194,23 @@ async function downloadDocx(content: string, filename: string) {
   URL.revokeObjectURL(url)
 }
 
-function serialize(content: string, lines: TranscriptLine[], format: FileFormat, mode: ViewMode): string {
+function serialize(
+  content: string,
+  lines: TranscriptLine[],
+  format: FileFormat,
+  mode: ViewMode,
+  speakerAssignments?: Array<{ speakerId: string | null; state: string; source: string }>,
+  speakerProfiles?: Map<string, { label: string; color: string }>
+): string {
   if (format === 'json') {
     if (mode === 'dialogue') {
+      const hasSpeakers = !!(speakerAssignments && speakerProfiles && speakerAssignments.length > 0)
+      if (hasSpeakers) {
+        return JSON.stringify(lines.map((l, i) => {
+          const spId = speakerAssignments![i]?.speakerId
+          return { speaker: spId ? (speakerProfiles!.get(spId)?.label ?? 'Voice ?') : '?', text: l.text, time: l.time.toISOString() }
+        }), null, 2)
+      }
       return JSON.stringify(detectSpeakers(lines).map(l => ({ speaker: l.speaker, text: l.text, time: l.time.toISOString() })), null, 2)
     }
     return JSON.stringify(lines.map(l => ({ text: l.text, time: l.time.toISOString() })), null, 2)
@@ -180,17 +219,22 @@ function serialize(content: string, lines: TranscriptLine[], format: FileFormat,
   return content
 }
 
-export default function TranscriptModal({ transcript, targetLang, aiFormatted, onClose }: Props) {
+export default function TranscriptModal({ transcript, targetLang, aiFormatted, onClose, speakerAssignments, speakerProfiles }: Props) {
   const [mode, setMode] = useState<ViewMode>(aiFormatted ? 'ai' : 'dialogue')
   const [format, setFormat] = useState<FileFormat>('md')
   const [downloading, setDownloading] = useState(false)
 
+  const hasSpeakerData = !!(speakerAssignments && speakerProfiles && speakerAssignments.length > 0)
+
   const generated = useMemo(() => {
     if (mode === 'ai') return aiFormatted ?? toNotes(transcript)
     if (mode === 'raw') return toRaw(transcript)
-    if (mode === 'dialogue') return toDialogue(transcript)
+    if (mode === 'dialogue') {
+      if (hasSpeakerData) return toDialogueWithSpeakers(transcript, speakerAssignments!, speakerProfiles!)
+      return toDialogue(transcript)
+    }
     return toNotes(transcript)
-  }, [mode, transcript, aiFormatted])
+  }, [mode, transcript, aiFormatted, hasSpeakerData, speakerAssignments, speakerProfiles])
 
   const [edited, setEdited] = useState<string | null>(null)
   const content = edited ?? generated
@@ -215,7 +259,7 @@ export default function TranscriptModal({ transcript, targetLang, aiFormatted, o
         URL.revokeObjectURL(url)
       } else {
         const mime = format === 'json' ? 'application/json' : 'text/plain'
-        const data = serialize(content, transcript, format, mode)
+        const data = serialize(content, transcript, format, mode, speakerAssignments, speakerProfiles)
         const blob = new Blob([data], { type: mime })
         const url = URL.createObjectURL(blob)
         const a = document.createElement('a')
@@ -347,7 +391,9 @@ export default function TranscriptModal({ transcript, targetLang, aiFormatted, o
           <p style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5 }}>
             {mode === 'ai' && 'AI-formatted text with punctuation, titles and structure. Edit freely before exporting.'}
             {mode === 'raw' && 'Timestamped lines exactly as captured. Edit before downloading.'}
-            {mode === 'dialogue' && 'Speakers detected from pauses (A, B, C…). Rename speakers before exporting.'}
+            {mode === 'dialogue' && (hasSpeakerData
+              ? 'Speaker turns from live session. Click speaker labels in the transcript to rename before exporting.'
+              : 'Speakers detected from pauses (Voice 1, Voice 2…). Edit before downloading.')}
             {mode === 'notes' && 'Sections by topic pauses. Add titles, highlights, and action items.'}
             {format === 'ics' && ' · Opens in Apple Calendar, Google Calendar, and Outlook.'}
           </p>

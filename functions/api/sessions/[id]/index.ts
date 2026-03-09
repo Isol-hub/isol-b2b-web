@@ -34,14 +34,25 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env, params })
     }
 
     const linesResult = await env.DB.prepare(
-      'SELECT line_index, text, offset_ms FROM transcript_lines WHERE session_id = ? ORDER BY line_index ASC'
+      `SELECT line_index, text, offset_ms, end_ms,
+              speaker_id, speaker_confidence, speaker_state, speaker_source
+       FROM transcript_lines WHERE session_id = ? ORDER BY line_index ASC`
     ).bind(sessionId).all()
 
     const highlightsResult = await env.DB.prepare(
       'SELECT id, line_index, text, category, created_at FROM session_highlights WHERE session_id = ? ORDER BY created_at ASC'
     ).bind(sessionId).all()
 
-    return Response.json({ session, lines: linesResult.results, highlights: highlightsResult.results }, { status: 200, headers: CORS })
+    const speakersResult = await env.DB.prepare(
+      'SELECT speaker_id, label, color, source, is_user_edited FROM session_speakers WHERE session_id = ? ORDER BY id ASC'
+    ).bind(sessionId).all()
+
+    return Response.json({
+      session,
+      lines: linesResult.results,
+      highlights: highlightsResult.results,
+      speakers: speakersResult.results,
+    }, { status: 200, headers: CORS })
   } catch (err) {
     console.error('session detail error', err)
     return Response.json({ error: 'Server error' }, { status: 500, headers: CORS })
@@ -113,6 +124,8 @@ export const onRequestDelete: PagesFunction<Env> = async ({ request, env, params
     await env.DB.batch([
       env.DB.prepare('DELETE FROM transcript_lines WHERE session_id = ?').bind(sessionId),
       env.DB.prepare('DELETE FROM share_comments WHERE session_id = ?').bind(sessionId),
+      env.DB.prepare('DELETE FROM session_highlights WHERE session_id = ?').bind(sessionId),
+      env.DB.prepare('DELETE FROM session_speakers WHERE session_id = ?').bind(sessionId),
       env.DB.prepare('DELETE FROM sessions WHERE id = ?').bind(sessionId),
     ])
 

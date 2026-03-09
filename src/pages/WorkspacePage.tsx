@@ -19,6 +19,26 @@ import RecoveryBanner from '../components/RecoveryBanner'
 import OnboardingModal from '../components/OnboardingModal'
 import { LANGUAGES } from '../lib/languages'
 
+// ── Speaker diarization ──────────────────────────────────────────────────────
+type SpeakerState = 'confirmed' | 'tentative' | 'overlap' | 'uncertain'
+type SpeakerSource = 'heuristic' | 'manual' | 'online' | 'refined' | 'workspace_match'
+
+interface LineAssignment {
+  speakerId: string | null
+  state: SpeakerState
+  source: SpeakerSource
+}
+
+interface SpeakerProfile {
+  label: string
+  color: string
+  is_user_edited?: boolean
+}
+
+const SPEAKER_COLORS = ['#6366F1', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4']
+const TURN_GAP_MS = 2500
+// ────────────────────────────────────────────────────────────────────────────
+
 interface TranscriptLine { text: string; time: Date }
 
 function buildCommentMap(arr: (CommentItem & { line_index: number | null })[]): Map<number, CommentItem[]> {
@@ -72,11 +92,25 @@ export default function WorkspacePage() {
 
   // Session history
   interface SessionMeta { id: number; started_at: number; target_lang: string; line_count: number; title?: string; share_token?: string }
-  interface SessionDetail { session: Record<string, unknown>; lines: Array<{ line_index: number; text: string }>; highlights: HighlightItem[] }
+  interface SessionDetail {
+    session: Record<string, unknown>
+    lines: Array<{ line_index: number; text: string; speaker_id?: string | null; speaker_state?: string }>
+    highlights: HighlightItem[]
+    speakers: Array<{ speaker_id: string; label: string; color: string }>
+  }
   const [sessions, setSessions] = useState<SessionMeta[]>([])
   const [viewingSession, setViewingSession] = useState<SessionDetail | null>(null)
   const [sessionDetailLoading, setSessionDetailLoading] = useState(false)
   const [highlights, setHighlights] = useState<HighlightItem[]>([])
+
+  // Speaker diarization state
+  const [speakerAssignments, setSpeakerAssignments] = useState<LineAssignment[]>([])
+  const [speakerLabels, setSpeakerLabels] = useState<Map<string, SpeakerProfile>>(new Map())
+  const speakerAssignmentsRef = useRef<LineAssignment[]>([])
+  const speakerProfilesRef = useRef<Map<string, SpeakerProfile>>(new Map())
+  const heuristicProcRef = useRef<number>(0)
+  const currentTurnSpeakerRef = useRef<string | null>(null)
+
   const [editingTitle, setEditingTitle] = useState('')
   const [shareCopied, setShareCopied] = useState(false)
 
@@ -168,6 +202,60 @@ export default function WorkspacePage() {
         .finally(() => { setAiNotesLoading(false); notesRunningRef.current = false })
     }, 3000)
   }, [transcript.length])
+
+  // Speaker heuristic — incremental, runs only during live sessions
+  useEffect(() => {
+    if (!sessionActive) return
+    const start = heuristicProcRef.current
+    if (transcript.length <= start) return
+
+    const profiles = speakerProfilesRef.current
+    const newAssignments: LineAssignment[] = []
+
+    for (let i = start; i < transcript.length; i++) {
+      const prevLine = i > 0 ? transcript[i - 1] : null
+      const currLine = transcript[i]
+      const gapMs = prevLine ? currLine.time.getTime() - prevLine.time.getTime() : Infinity
+      const isNewTurn = gapMs > TURN_GAP_MS
+
+      if (isNewTurn) {
+        const knownSpeakers = [...profiles.keys()]
+        if (knownSpeakers.length === 0) {
+          const spId = 'sp-1'
+          profiles.set(spId, { label: 'Voice 1', color: SPEAKER_COLORS[0] })
+          currentTurnSpeakerRef.current = spId
+          newAssignments.push({ speakerId: spId, state: 'tentative', source: 'heuristic' })
+        } else if (knownSpeakers.length === 1) {
+          const spId = 'sp-2'
+          profiles.set(spId, { label: 'Voice 2', color: SPEAKER_COLORS[1] })
+          currentTurnSpeakerRef.current = spId
+          newAssignments.push({ speakerId: spId, state: 'tentative', source: 'heuristic' })
+        } else if (knownSpeakers.length === 2) {
+          const other = knownSpeakers.find(s => s !== currentTurnSpeakerRef.current) ?? knownSpeakers[0]
+          currentTurnSpeakerRef.current = other
+          newAssignments.push({ speakerId: other, state: 'tentative', source: 'heuristic' })
+        } else {
+          currentTurnSpeakerRef.current = null
+          newAssignments.push({ speakerId: null, state: 'uncertain', source: 'heuristic' })
+        }
+      } else {
+        newAssignments.push({
+          speakerId: currentTurnSpeakerRef.current,
+          state: currentTurnSpeakerRef.current ? 'tentative' : 'uncertain',
+          source: 'heuristic',
+        })
+      }
+    }
+
+    heuristicProcRef.current = transcript.length
+
+    setSpeakerAssignments(prev => {
+      const next = [...prev, ...newAssignments]
+      speakerAssignmentsRef.current = next
+      return next
+    })
+    setSpeakerLabels(new Map(profiles))
+  }, [transcript.length, sessionActive])
 
   const wssUrl = import.meta.env.VITE_WSS_URL ?? 'wss://api.isol.live/audio'
 
@@ -404,7 +492,8 @@ export default function WorkspacePage() {
     lines: { text: string; time: Date }[],
     formatted: string | undefined,
     startedAt: number,
-    highlightItems: HighlightItem[]
+    highlightItems: HighlightItem[],
+    speakerData?: { assignments: LineAssignment[]; profiles: Map<string, SpeakerProfile> }
   ) => {
     if (!workspaceSlug || lines.length === 0) return
     const token = getToken()
@@ -418,13 +507,30 @@ export default function WorkspacePage() {
           target_lang: targetLang,
           started_at: startedAt,
           ended_at: Date.now(),
-          transcript_lines: lines.map((l, i) => ({
-            index: i,
-            text: l.text,
-            offset_ms: startedAt > 0 ? l.time.getTime() - startedAt : null,
-          })),
+          transcript_lines: lines.map((l, i) => {
+            const a = speakerData?.assignments[i]
+            return {
+              index: i,
+              text: l.text,
+              offset_ms: startedAt > 0 ? l.time.getTime() - startedAt : null,
+              end_ms: startedAt > 0 && i < lines.length - 1 ? lines[i + 1].time.getTime() - startedAt : null,
+              speaker_id: a?.speakerId ?? null,
+              speaker_confidence: a?.state === 'confirmed' ? 1.0 : a?.state === 'tentative' ? 0.6 : null,
+              speaker_state: a?.state ?? null,
+              speaker_source: a?.source ?? null,
+            }
+          }),
           ai_formatted_text: formatted ?? null,
           highlights: highlightItems.map(h => ({ line_index: h.line_index, text: h.text, category: h.category })),
+          speakers: speakerData
+            ? [...speakerData.profiles.entries()].map(([id, p]) => ({
+                id,
+                label: p.label,
+                color: p.color,
+                source: p.is_user_edited ? 'manual' : 'heuristic',
+                is_user_edited: p.is_user_edited ?? false,
+              }))
+            : [],
         }),
       })
       fetchSessions()
@@ -495,6 +601,36 @@ export default function WorkspacePage() {
     setHighlights(prev => prev.filter(h => h.id !== id))
   }, [])
 
+  const handleSpeakerRename = useCallback((speakerId: string, label: string) => {
+    const existing = speakerProfilesRef.current.get(speakerId)
+    if (!existing) return
+    speakerProfilesRef.current.set(speakerId, { ...existing, label, is_user_edited: true })
+    setSpeakerLabels(new Map(speakerProfilesRef.current))
+    // Confirm all lines for this speaker (user made an explicit choice)
+    setSpeakerAssignments(prev => {
+      const next = prev.map(a =>
+        a.speakerId === speakerId ? { ...a, state: 'confirmed' as SpeakerState, source: 'manual' as SpeakerSource } : a
+      )
+      speakerAssignmentsRef.current = next
+      return next
+    })
+  }, [])
+
+  const handleSpeakerSetSame = useCallback((lineIndex: number) => {
+    setSpeakerAssignments(prev => {
+      if (lineIndex <= 0 || lineIndex >= prev.length) return prev
+      const prevA = prev[lineIndex - 1]
+      if (!prevA?.speakerId) return prev
+      const next = prev.map((a, i) =>
+        i === lineIndex
+          ? { speakerId: prevA.speakerId, state: 'confirmed' as SpeakerState, source: 'manual' as SpeakerSource }
+          : a
+      )
+      speakerAssignmentsRef.current = next
+      return next
+    })
+  }, [])
+
   const handleAddComment = useCallback(async (lineIndex: number, body: string) => {
     if (!body.trim() || !ws.sessionId) return
     setCommentSubmitting(true)
@@ -526,6 +662,13 @@ export default function WorkspacePage() {
     hasAutoSwitchedRef.current = false
     wordIndex.current.clear()
     sessionStartRef.current = Date.now()
+    // Reset speaker state for new session
+    setSpeakerAssignments([])
+    setSpeakerLabels(new Map())
+    speakerAssignmentsRef.current = []
+    speakerProfilesRef.current = new Map()
+    heuristicProcRef.current = 0
+    currentTurnSpeakerRef.current = null
     ws.open()
     await audio.start(audioSource)
     setSessionActive(true)
@@ -542,7 +685,10 @@ export default function WorkspacePage() {
     setOpenCommentLine(null)
     // Fire-and-forget session save
     setTranscript(prev => {
-      saveSession(prev, aiFormatted, sessionStartRef.current, highlights)
+      saveSession(prev, aiFormatted, sessionStartRef.current, highlights, {
+        assignments: speakerAssignmentsRef.current,
+        profiles: speakerProfilesRef.current,
+      })
       return prev
     })
   }, [audio, ws, saveSession, aiFormatted, highlights])
@@ -993,6 +1139,10 @@ export default function WorkspacePage() {
                 highlights={highlights}
                 onAddHighlight={handleAddHighlight}
                 onRemoveHighlight={handleRemoveHighlight}
+                speakerAssignments={speakerAssignments}
+                speakerProfiles={speakerLabels}
+                onSpeakerRename={sessionActive ? handleSpeakerRename : undefined}
+                onSpeakerSetSame={sessionActive ? handleSpeakerSetSame : undefined}
               />
             </div>
           )}
@@ -1094,6 +1244,8 @@ export default function WorkspacePage() {
           transcript={transcript}
           targetLang={targetLang}
           aiFormatted={aiFormatted}
+          speakerAssignments={speakerAssignments}
+          speakerProfiles={speakerLabels}
           onClose={() => setShowModal(false)}
         />
       )}

@@ -5,6 +5,7 @@ import LiveBanner from './LiveBanner'
 import SessionTimeline, { type TimelineSegment } from './SessionTimeline'
 import HighlightPopup, { type HighlightCategory, type HighlightItem } from './HighlightPopup'
 import HighlightsSection from './HighlightsSection'
+import SpeakerLabel, { type SpeakerState } from './SpeakerLabel'
 
 interface TranscriptLine {
   text: string
@@ -43,6 +44,11 @@ interface Props {
   highlights?: HighlightItem[]
   onAddHighlight?: (text: string, lineIndex: number | null, category: HighlightCategory | null) => void
   onRemoveHighlight?: (id: number) => void
+  // Speaker diarization
+  speakerAssignments?: Array<{ speakerId: string | null; state: string; source: string }>
+  speakerProfiles?: Map<string, { label: string; color: string }>
+  onSpeakerRename?: (speakerId: string, label: string) => void
+  onSpeakerSetSame?: (lineIndex: number) => void
 }
 
 function renderInline(
@@ -151,6 +157,7 @@ export default function DocumentView({
   commentAuthor, onCommentAuthorChange, onAddComment, commentSubmitting,
   sessionStartMs, sessionEndMs,
   highlights, onAddHighlight, onRemoveHighlight,
+  speakerAssignments, speakerProfiles, onSpeakerRename, onSpeakerSetSame,
 }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
@@ -360,6 +367,19 @@ export default function DocumentView({
 
                 const isNewest = isActive && i === newestLineIdx
 
+                // Speaker label — shown at turn boundaries (speaker change)
+                const assignment = speakerAssignments?.[i]
+                const prevAssignment = i > 0 ? speakerAssignments?.[i - 1] : undefined
+                const isSpeakerTurn = speakerAssignments
+                  ? !prevAssignment || prevAssignment.speakerId !== assignment?.speakerId
+                  : false
+                const speakerId = assignment?.speakerId ?? null
+                const speakerProfile = speakerId ? speakerProfiles?.get(speakerId) : undefined
+                const speakerState = (assignment?.state ?? 'uncertain') as SpeakerState
+
+                // "Same speaker" hint for uncertain lines when we know the previous speaker
+                const showSameHint = speakerState === 'uncertain' && !!prevAssignment?.speakerId && !!onSpeakerSetSame
+
                 return (
                   <div
                     key={i}
@@ -378,6 +398,35 @@ export default function DocumentView({
                       animation: isNewest ? 'lineEnter 0.35s ease-out, lineFlash 1.1s ease-out' : undefined,
                     }}
                   >
+                    {/* Speaker label — at turn boundaries only */}
+                    {isSpeakerTurn && speakerAssignments && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <SpeakerLabel
+                          speakerId={speakerId}
+                          state={speakerState}
+                          label={speakerProfile?.label ?? ''}
+                          color={speakerProfile?.color ?? 'var(--text-muted)'}
+                          onRename={speakerId && onSpeakerRename ? (label) => onSpeakerRename(speakerId, label) : undefined}
+                        />
+                        {showSameHint && (
+                          <button
+                            onClick={() => onSpeakerSetSame?.(i)}
+                            style={{
+                              fontSize: 10, padding: '2px 8px', borderRadius: 4,
+                              border: '1px solid var(--border)', background: 'transparent',
+                              color: 'var(--text-muted)', cursor: 'pointer',
+                              transition: 'all 0.12s',
+                            }}
+                            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface-1)' }}
+                            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
+                            title="Same speaker as previous turn"
+                          >
+                            same speaker
+                          </button>
+                        )}
+                      </div>
+                    )}
+
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
                       <p
                         style={{ flex: 1, margin: 0, fontSize: 18, color: 'var(--text)', lineHeight: 1.85, fontWeight: lineWeight, cursor: isEditable ? 'text' : undefined, padding: '2px 0' }}
