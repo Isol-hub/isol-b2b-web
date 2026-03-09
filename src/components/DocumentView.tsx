@@ -157,8 +157,17 @@ export default function DocumentView({
   const lineRefs = useRef<(HTMLDivElement | null)[]>([])
   const [editingIndex, setEditingIndex] = useState<number | null>(null)
   const [hoveredLine, setHoveredLine] = useState<number | null>(null)
-
   const [editingText, setEditingText] = useState('')
+
+  // Track newest line for enter animation (only during live sessions)
+  const prevLengthRef = useRef(transcript.length)
+  const [newestLineIdx, setNewestLineIdx] = useState(-1)
+  useEffect(() => {
+    if (isActive && transcript.length > prevLengthRef.current) {
+      setNewestLineIdx(transcript.length - 1)
+    }
+    prevLengthRef.current = transcript.length
+  }, [transcript.length, isActive])
 
   const isNearBottom = () => {
     const el = scrollContainerRef.current
@@ -349,6 +358,8 @@ export default function DocumentView({
 
                 const isLineHovered = hoveredLine === i
 
+                const isNewest = isActive && i === newestLineIdx
+
                 return (
                   <div
                     key={i}
@@ -364,6 +375,7 @@ export default function DocumentView({
                       background: isOpenC ? 'rgba(99,102,241,0.03)' : 'transparent',
                       opacity: lineOpacity,
                       transition: 'opacity 0.3s ease',
+                      animation: isNewest ? 'lineEnter 0.35s ease-out, lineFlash 1.1s ease-out' : undefined,
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>

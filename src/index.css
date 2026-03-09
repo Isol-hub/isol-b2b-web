@@ -522,6 +522,17 @@ input, select { font-family: inherit; outline: none; }
   to   { opacity: 1; }
 }
 
+@keyframes lineEnter {
+  from { opacity: 0; transform: translateY(9px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes lineFlash {
+  0%   { background: rgba(99, 102, 241, 0.08); }
+  50%  { background: rgba(99, 102, 241, 0.08); }
+  100% { background: transparent; }
+}
+
 /* ─── Cursor ─────────────────────────────────────── */
 .doc-cursor {
   display: inline-block;
