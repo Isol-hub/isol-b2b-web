@@ -46,12 +46,14 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params 
       is_user_edited = 1
   `).bind(sessionId, body.speaker_id, body.label ?? null, body.color ?? null, now).run()
 
-  // Confirm all lines attributed to this speaker (manual > heuristic)
+  // Confirm all lines attributed to this speaker (manual > heuristic).
+  // speaker_confidence = 1.0: a human decision is always maximum confidence.
   await env.DB.prepare(`
     UPDATE transcript_lines
-    SET speaker_state    = 'confirmed',
-        speaker_source   = 'manual',
-        speaker_revision = speaker_revision + 1
+    SET speaker_state      = 'confirmed',
+        speaker_source     = 'manual',
+        speaker_confidence = 1.0,
+        speaker_revision   = speaker_revision + 1
     WHERE session_id = ? AND speaker_id = ? AND COALESCE(speaker_source, '') != 'manual'
   `).bind(sessionId, body.speaker_id).run()
 

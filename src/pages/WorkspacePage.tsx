@@ -103,9 +103,15 @@ export default function WorkspacePage() {
   const [sessionDetailLoading, setSessionDetailLoading] = useState(false)
   const [highlights, setHighlights] = useState<HighlightItem[]>([])
 
-  // Speaker diarization state
+  // Speaker diarization state (live session)
   const [speakerAssignments, setSpeakerAssignments] = useState<LineAssignment[]>([])
   const [speakerLabels, setSpeakerLabels] = useState<Map<string, SpeakerProfile>>(new Map())
+
+  // Speaker map for archived session modal — built from API response
+  const archivedSpeakerMap = useMemo((): Map<string, { label: string; color: string }> => {
+    if (!viewingSession?.speakers?.length) return new Map()
+    return new Map(viewingSession.speakers.map(s => [s.speaker_id, { label: s.label, color: s.color }]))
+  }, [viewingSession])
   const speakerAssignmentsRef = useRef<LineAssignment[]>([])
   const speakerProfilesRef = useRef<Map<string, SpeakerProfile>>(new Map())
   const heuristicProcRef = useRef<number>(0)
@@ -513,6 +519,9 @@ export default function WorkspacePage() {
               index: i,
               text: l.text,
               offset_ms: startedAt > 0 ? l.time.getTime() - startedAt : null,
+              // Phase 1 convention: end_ms = next segment's start offset (approximate).
+              // Last segment → null (session end is unknown at save time).
+              // Future pipeline jobs (online diarization, refinement) will supply exact VAD boundaries.
               end_ms: startedAt > 0 && i < lines.length - 1 ? lines[i + 1].time.getTime() - startedAt : null,
               speaker_id: a?.speakerId ?? null,
               speaker_confidence: a?.state === 'confirmed' ? 1.0 : a?.state === 'tentative' ? 0.6 : null,
@@ -1341,11 +1350,29 @@ export default function WorkspacePage() {
                         fontSize: 10, fontWeight: 700, letterSpacing: '0.09em',
                         textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 14,
                       }}>Transcript</p>
-                      {viewingSession.lines.map(l => (
-                        <p key={l.line_index} style={{
-                          fontSize: 15, color: 'var(--text)', lineHeight: 1.75, marginBottom: 12,
-                        }}>{l.text}</p>
-                      ))}
+                      {viewingSession.lines.map((l, idx) => {
+                        const prev = idx > 0 ? viewingSession.lines[idx - 1] : null
+                        const isNewTurn = l.speaker_id && l.speaker_id !== prev?.speaker_id
+                        const profile = l.speaker_id ? archivedSpeakerMap.get(l.speaker_id) : null
+                        return (
+                          <div key={l.line_index}>
+                            {isNewTurn && profile && (
+                              <div style={{
+                                display: 'flex', alignItems: 'center', gap: 6,
+                                marginTop: idx > 0 ? 14 : 0, marginBottom: 5,
+                              }}>
+                                <span style={{ width: 6, height: 6, borderRadius: '50%', background: profile.color, flexShrink: 0 }} />
+                                <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: profile.color }}>
+                                  {profile.label}
+                                </span>
+                              </div>
+                            )}
+                            <p style={{ fontSize: 15, color: 'var(--text)', lineHeight: 1.75, marginBottom: 12 }}>
+                              {l.text}
+                            </p>
+                          </div>
+                        )
+                      })}
                     </div>
                   )}
                   {viewingSession.highlights?.length > 0 && (
