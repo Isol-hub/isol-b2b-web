@@ -39,7 +39,12 @@ const SPEAKER_COLORS = ['#6366F1', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '
 const TURN_GAP_MS = 2500
 // ────────────────────────────────────────────────────────────────────────────
 
-interface TranscriptLine { text: string; time: Date }
+interface TranscriptLine {
+  text: string
+  time: Date
+  /** speaker_id from pipeline diarization — null when unavailable (Phase 1 heuristic only) */
+  pipelineSpeakerId?: string | null
+}
 
 function buildCommentMap(arr: (CommentItem & { line_index: number | null })[]): Map<number, CommentItem[]> {
   const m = new Map<number, CommentItem[]>()
@@ -219,37 +224,54 @@ export default function WorkspacePage() {
     const newAssignments: LineAssignment[] = []
 
     for (let i = start; i < transcript.length; i++) {
-      const prevLine = i > 0 ? transcript[i - 1] : null
-      const currLine = transcript[i]
-      const gapMs = prevLine ? currLine.time.getTime() - prevLine.time.getTime() : Infinity
-      const isNewTurn = gapMs > TURN_GAP_MS
+      const pipelineId = transcript[i].pipelineSpeakerId ?? null
 
-      if (isNewTurn) {
-        const knownSpeakers = [...profiles.keys()]
-        if (knownSpeakers.length === 0) {
-          const spId = 'sp-1'
-          profiles.set(spId, { label: 'Voice 1', color: SPEAKER_COLORS[0] })
-          currentTurnSpeakerRef.current = spId
-          newAssignments.push({ speakerId: spId, state: 'tentative', source: 'heuristic' })
-        } else if (knownSpeakers.length === 1) {
-          const spId = 'sp-2'
-          profiles.set(spId, { label: 'Voice 2', color: SPEAKER_COLORS[1] })
-          currentTurnSpeakerRef.current = spId
-          newAssignments.push({ speakerId: spId, state: 'tentative', source: 'heuristic' })
-        } else if (knownSpeakers.length === 2) {
-          const other = knownSpeakers.find(s => s !== currentTurnSpeakerRef.current) ?? knownSpeakers[0]
-          currentTurnSpeakerRef.current = other
-          newAssignments.push({ speakerId: other, state: 'tentative', source: 'heuristic' })
-        } else {
-          currentTurnSpeakerRef.current = null
-          newAssignments.push({ speakerId: null, state: 'uncertain', source: 'heuristic' })
+      if (pipelineId) {
+        // ── Pipeline mode: backend diarization result available ───────────────
+        // Ensure a profile exists for this speaker ID (sp-1, sp-2, …).
+        if (!profiles.has(pipelineId)) {
+          const idx = profiles.size
+          profiles.set(pipelineId, {
+            label: `Voice ${idx + 1}`,
+            color: SPEAKER_COLORS[idx % SPEAKER_COLORS.length],
+          })
         }
+        currentTurnSpeakerRef.current = pipelineId
+        newAssignments.push({ speakerId: pipelineId, state: 'confirmed', source: 'online' })
       } else {
-        newAssignments.push({
-          speakerId: currentTurnSpeakerRef.current,
-          state: currentTurnSpeakerRef.current ? 'tentative' : 'uncertain',
-          source: 'heuristic',
-        })
+        // ── Heuristic mode: no pipeline speaker — fall back to pause detection ─
+        const prevLine = i > 0 ? transcript[i - 1] : null
+        const currLine = transcript[i]
+        const gapMs = prevLine ? currLine.time.getTime() - prevLine.time.getTime() : Infinity
+        const isNewTurn = gapMs > TURN_GAP_MS
+
+        if (isNewTurn) {
+          const knownSpeakers = [...profiles.keys()]
+          if (knownSpeakers.length === 0) {
+            const spId = 'sp-1'
+            profiles.set(spId, { label: 'Voice 1', color: SPEAKER_COLORS[0] })
+            currentTurnSpeakerRef.current = spId
+            newAssignments.push({ speakerId: spId, state: 'tentative', source: 'heuristic' })
+          } else if (knownSpeakers.length === 1) {
+            const spId = 'sp-2'
+            profiles.set(spId, { label: 'Voice 2', color: SPEAKER_COLORS[1] })
+            currentTurnSpeakerRef.current = spId
+            newAssignments.push({ speakerId: spId, state: 'tentative', source: 'heuristic' })
+          } else if (knownSpeakers.length === 2) {
+            const other = knownSpeakers.find(s => s !== currentTurnSpeakerRef.current) ?? knownSpeakers[0]
+            currentTurnSpeakerRef.current = other
+            newAssignments.push({ speakerId: other, state: 'tentative', source: 'heuristic' })
+          } else {
+            currentTurnSpeakerRef.current = null
+            newAssignments.push({ speakerId: null, state: 'uncertain', source: 'heuristic' })
+          }
+        } else {
+          newAssignments.push({
+            speakerId: currentTurnSpeakerRef.current,
+            state: currentTurnSpeakerRef.current ? 'tentative' : 'uncertain',
+            source: 'heuristic',
+          })
+        }
       }
     }
 
@@ -267,7 +289,13 @@ export default function WorkspacePage() {
 
   const handleMessage = useCallback((msg: SubtitleMessage) => {
     if (msg.line_final) {
-      const entry: TranscriptLine = { text: msg.line_final, time: new Date() }
+      const entry: TranscriptLine = {
+        text: msg.line_final,
+        time: new Date(),
+        // Capture pipeline speaker if backend diarization is active (Phase 3).
+        // null/undefined → heuristic will run instead.
+        pipelineSpeakerId: msg.speaker_id ?? null,
+      }
       setTranscript(prev => [...prev, entry])
       msg.line_final.split(/\s+/).forEach(raw => {
         const w = raw.toLowerCase().replace(/[^\w]/g, '')
