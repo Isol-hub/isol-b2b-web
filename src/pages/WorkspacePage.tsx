@@ -121,6 +121,9 @@ export default function WorkspacePage() {
   const speakerProfilesRef = useRef<Map<string, SpeakerProfile>>(new Map())
   const heuristicProcRef = useRef<number>(0)
   const currentTurnSpeakerRef = useRef<string | null>(null)
+  // Deduplicate line_final additions: Session Engine sends line_final = <last finalized text>
+  // on every partial of the NEXT segment, causing the same text to be added multiple times.
+  const lastLineFinalRef = useRef<string>('')
 
   const [editingTitle, setEditingTitle] = useState('')
   const [shareCopied, setShareCopied] = useState(false)
@@ -288,7 +291,8 @@ export default function WorkspacePage() {
   const wssUrl = import.meta.env.VITE_WSS_URL ?? 'wss://api.isol.live/audio'
 
   const handleMessage = useCallback((msg: SubtitleMessage) => {
-    if (msg.line_final) {
+    if (msg.line_final && msg.line_final !== lastLineFinalRef.current) {
+      lastLineFinalRef.current = msg.line_final
       const entry: TranscriptLine = {
         text: msg.line_final,
         time: new Date(),
@@ -706,6 +710,7 @@ export default function WorkspacePage() {
     speakerProfilesRef.current = new Map()
     heuristicProcRef.current = 0
     currentTurnSpeakerRef.current = null
+    lastLineFinalRef.current = ''
     ws.open()
     await audio.start(audioSource)
     setSessionActive(true)
