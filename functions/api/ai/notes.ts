@@ -30,8 +30,8 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
 
     const rawText = lines.join('\n')
     const langName = targetLang ? (LANG_NAMES[targetLang] ?? targetLang) : null
-    const langInstruction = langName && langName !== 'English'
-      ? `\nCRITICAL: The transcript is in ${langName}. Write all notes, headings, and quotes in ${langName} — do not translate or switch to any other language.\n`
+    const langInstruction = langName
+      ? `\nCRITICAL: Write all notes, headings, and quotes in ${langName}. Detect the source language automatically and translate if needed.\n`
       : ''
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
