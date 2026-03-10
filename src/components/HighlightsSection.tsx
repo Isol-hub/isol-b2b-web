@@ -8,8 +8,6 @@ interface Props {
 }
 
 export default function HighlightsSection({ highlights, onRemove, onJumpTo }: Props) {
-  if (highlights.length === 0) return null
-
   // Group by category. Uncategorized (null) goes to '_'
   const groups = new Map<HighlightCategory | '_', HighlightItem[]>()
   for (const h of highlights) {
@@ -22,18 +20,38 @@ export default function HighlightsSection({ highlights, onRemove, onJumpTo }: Pr
   const orderedKeys = CATEGORY_ORDER.filter(k => groups.has(k))
 
   return (
-    <div style={{ marginTop: 48, paddingTop: 28, borderTop: '1px solid var(--divider)' }}>
+    <div style={{
+      padding: '18px 18px 16px',
+      borderRadius: 16,
+      border: '1px solid var(--border)',
+      background: 'linear-gradient(180deg, rgba(255,255,255,0.78), rgba(255,248,235,0.72))',
+      boxShadow: '0 12px 30px rgba(15,23,42,0.05)',
+    }}>
       {/* Section header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
-        <div style={{ flex: 1, height: 1, background: 'var(--divider)' }} />
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
         <span style={{
           fontSize: 11, color: 'var(--text-muted)', fontWeight: 700,
           letterSpacing: '0.08em', textTransform: 'uppercase', whiteSpace: 'nowrap',
         }}>
           Highlights ({highlights.length})
         </span>
-        <div style={{ flex: 1, height: 1, background: 'var(--divider)' }} />
       </div>
+
+      {highlights.length === 0 && (
+        <div style={{
+          padding: '14px 14px 12px',
+          borderRadius: 12,
+          border: '1px dashed rgba(217,119,6,0.22)',
+          background: 'rgba(255,255,255,0.62)',
+        }}>
+          <p style={{ margin: 0, fontSize: 13, color: 'var(--text)', lineHeight: 1.55 }}>
+            Save the important moments here as the session unfolds.
+          </p>
+          <p style={{ margin: '6px 0 0', fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5 }}>
+            Quotes, decisions, action items and open questions will stay visible in this panel.
+          </p>
+        </div>
+      )}
 
       {orderedKeys.map(key => {
         const meta = CATEGORY_META[key]

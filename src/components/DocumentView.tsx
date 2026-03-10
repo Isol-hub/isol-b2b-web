@@ -5,7 +5,6 @@ import LiveBanner from './LiveBanner'
 import SessionTimeline, { type TimelineSegment } from './SessionTimeline'
 import HighlightPopup, { type HighlightCategory, type HighlightItem } from './HighlightPopup'
 import HighlightsSection from './HighlightsSection'
-import SpeakerLabel, { type SpeakerState } from './SpeakerLabel'
 
 interface TranscriptLine {
   text: string
@@ -44,11 +43,12 @@ interface Props {
   highlights?: HighlightItem[]
   onAddHighlight?: (text: string, lineIndex: number | null, category: HighlightCategory | null) => void
   onRemoveHighlight?: (id: number) => void
-  // Speaker diarization
-  speakerAssignments?: Array<{ speakerId: string | null; state: string; source: string }>
-  speakerProfiles?: Map<string, { label: string; color: string }>
-  onSpeakerRename?: (speakerId: string, label: string) => void
-  onSpeakerSetSame?: (lineIndex: number) => void
+}
+
+interface MarginNoteItem {
+  lineIndex: number
+  lineText: string
+  comment: CommentItem
 }
 
 function renderInline(
@@ -90,30 +90,102 @@ function timeAgoDoc(ts: number): string {
   return new Date(ts).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })
 }
 
-function AnnotationsPanel({ items }: { items: Array<{ lineText: string; comment: CommentItem }> }) {
+function CommentMarginalia({ items, onJumpTo }: { items: MarginNoteItem[]; onJumpTo?: (lineIndex: number) => void }) {
   return (
-    <div style={{ marginTop: 40, paddingTop: 24, borderTop: '1px solid var(--divider)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-        <div style={{ flex: 1, height: 1, background: 'var(--divider)' }} />
-        <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
-          Annotations ({items.length})
+    <div style={{
+      padding: '18px 18px 16px',
+      borderRadius: 16,
+      border: '1px solid rgba(220,38,38,0.14)',
+      background: 'linear-gradient(180deg, rgba(255,255,255,0.80), rgba(255,244,244,0.82))',
+      boxShadow: '0 12px 30px rgba(15,23,42,0.05)',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+        <span style={{ fontSize: 11, color: '#B91C1C', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+          Margin Notes ({items.length})
         </span>
-        <div style={{ flex: 1, height: 1, background: 'var(--divider)' }} />
       </div>
-      {items.map(({ lineText, comment }) => (
-        <div key={comment.id} style={{ marginBottom: 16 }}>
-          {lineText && (
-            <p style={{ fontSize: 13, color: 'var(--text-muted)', fontStyle: 'italic', marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {lineText.length > 80 ? lineText.slice(0, 80) + '…' : lineText}
-            </p>
-          )}
-          <div style={{ fontFamily: 'var(--font-note)', fontSize: 14, color: 'var(--text-dim)', lineHeight: 1.45 }}>
+      {items.length === 0 ? (
+        <p style={{ margin: 0, fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.55 }}>
+          Comments stay visible here as handwritten notes while you read AI Enhanced and Notes.
+        </p>
+      ) : items.map(({ lineIndex, lineText, comment }) => (
+        <button
+          key={comment.id}
+          onClick={() => onJumpTo?.(lineIndex)}
+          style={{
+            display: 'block',
+            width: '100%',
+            textAlign: 'left',
+            marginBottom: 14,
+            padding: '10px 12px',
+            borderRadius: 12,
+            border: '1px solid rgba(220,38,38,0.14)',
+            background: 'rgba(255,255,255,0.72)',
+            cursor: onJumpTo ? 'pointer' : 'default',
+            transform: 'rotate(-0.6deg)',
+          }}
+          title={onJumpTo ? 'Jump to annotated line' : undefined}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+            <span style={{ color: '#DC2626', fontSize: 15, lineHeight: 1 }}>↖</span>
+            <span style={{ fontSize: 11, color: '#B91C1C', fontWeight: 700, letterSpacing: '0.03em' }}>
+              {comment.author} · {timeAgoDoc(comment.created_at)}
+            </span>
+          </div>
+          <div style={{ fontFamily: 'var(--font-note)', fontSize: 16, color: '#991B1B', lineHeight: 1.45 }}>
             {comment.body}
           </div>
-          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
-            {comment.author} · {timeAgoDoc(comment.created_at)}
+          {lineText && (
+            <p style={{ margin: '8px 0 0', fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.45 }}>
+              {lineText.length > 88 ? lineText.slice(0, 88) + '…' : lineText}
+            </p>
+          )}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function InlineMarginNotes({
+  comments,
+  lineIndex,
+  onJumpTo,
+}: {
+  comments: CommentItem[]
+  lineIndex: number
+  onJumpTo?: (lineIndex: number) => void
+}) {
+  if (comments.length === 0) return null
+  return (
+    <div style={{ margin: '-4px 0 18px 18px', paddingLeft: 14, borderLeft: '2px dashed rgba(220,38,38,0.26)' }}>
+      {comments.map(comment => (
+        <button
+          key={comment.id}
+          onClick={() => onJumpTo?.(lineIndex)}
+          style={{
+            display: 'block',
+            width: '100%',
+            textAlign: 'left',
+            background: 'rgba(254,242,242,0.9)',
+            border: '1px solid rgba(220,38,38,0.16)',
+            borderRadius: 10,
+            padding: '10px 12px',
+            marginBottom: 8,
+            cursor: onJumpTo ? 'pointer' : 'default',
+            transform: 'rotate(-0.4deg)',
+          }}
+          title={onJumpTo ? 'Jump to line' : undefined}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+            <span style={{ color: '#DC2626', fontSize: 15, lineHeight: 1 }}>↖</span>
+            <span style={{ fontSize: 11, color: '#B91C1C', fontWeight: 700 }}>
+              {comment.author} · {timeAgoDoc(comment.created_at)}
+            </span>
           </div>
-        </div>
+          <div style={{ fontFamily: 'var(--font-note)', fontSize: 17, color: '#991B1B', lineHeight: 1.45 }}>
+            {comment.body}
+          </div>
+        </button>
       ))}
     </div>
   )
@@ -157,7 +229,6 @@ export default function DocumentView({
   commentAuthor, onCommentAuthorChange, onAddComment, commentSubmitting,
   sessionStartMs, sessionEndMs,
   highlights, onAddHighlight, onRemoveHighlight,
-  speakerAssignments, speakerProfiles, onSpeakerRename, onSpeakerSetSame,
 }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
@@ -222,11 +293,11 @@ export default function DocumentView({
   const showModeBar = hasAi || hasNotes || !!aiLoading || !!aiNotesLoading
 
   // Flat list of annotations for read-only panel in AI/Notes views
-  const annotationsForPanel: Array<{ lineText: string; comment: CommentItem }> = []
+  const annotationsForPanel: MarginNoteItem[] = []
   if (lineComments) {
     lineComments.forEach((comments, lineIndex) => {
       const lineText = lineIndex >= 0 && lineIndex < transcript.length ? transcript[lineIndex].text : ''
-      comments.forEach(c => annotationsForPanel.push({ lineText, comment: c }))
+      comments.forEach(c => annotationsForPanel.push({ lineIndex, lineText, comment: c }))
     })
   }
 
@@ -304,7 +375,19 @@ export default function DocumentView({
 
       {/* ━━ DOCUMENT SURFACE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
       <div ref={scrollContainerRef} style={{ flex: 1, overflowY: 'auto', background: 'var(--surface-1)' }}>
-        <div className="doc-surface" style={{ maxWidth: 860, margin: '0 auto', padding: '48px 64px calc(48px + 80px)' }}>
+        <div
+          className="doc-surface"
+          style={{
+            maxWidth: 1220,
+            margin: '0 auto',
+            padding: '40px 32px calc(40px + 80px)',
+            display: 'grid',
+            gridTemplateColumns: 'minmax(0, 1fr) 300px',
+            gap: 28,
+            alignItems: 'start',
+          }}
+        >
+          <div style={{ minWidth: 0 }}>
 
           {isEmpty ? (
             <div style={{ paddingTop: 80, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14, color: 'var(--text-muted)', textAlign: 'center' }}>
@@ -322,14 +405,12 @@ export default function DocumentView({
                 </p>
               ))}
               {isActive && !currentLine && <span className="doc-cursor" />}
-              {annotationsForPanel.length > 0 && <AnnotationsPanel items={annotationsForPanel} />}
             </div>
 
           ) : viewMode === 'notes' && aiNotes ? (
             <div className="doc-ai-update">
               <AiContent text={aiNotes} onWordClick={onWordClick} />
               {isActive && <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 16, fontStyle: 'italic' }}>Notes update as session progresses…</p>}
-              {annotationsForPanel.length > 0 && <AnnotationsPanel items={annotationsForPanel} />}
             </div>
 
           ) : (
@@ -367,19 +448,6 @@ export default function DocumentView({
 
                 const isNewest = isActive && i === newestLineIdx
 
-                // Speaker label — shown at turn boundaries (speaker change)
-                const assignment = speakerAssignments?.[i]
-                const prevAssignment = i > 0 ? speakerAssignments?.[i - 1] : undefined
-                const isSpeakerTurn = speakerAssignments
-                  ? !prevAssignment || prevAssignment.speakerId !== assignment?.speakerId
-                  : false
-                const speakerId = assignment?.speakerId ?? null
-                const speakerProfile = speakerId ? speakerProfiles?.get(speakerId) : undefined
-                const speakerState = (assignment?.state ?? 'uncertain') as SpeakerState
-
-                // "Same speaker" hint for uncertain lines when we know the previous speaker
-                const showSameHint = speakerState === 'uncertain' && !!prevAssignment?.speakerId && !!onSpeakerSetSame
-
                 return (
                   <div
                     key={i}
@@ -398,35 +466,6 @@ export default function DocumentView({
                       animation: isNewest ? 'lineEnter 0.35s ease-out, lineFlash 1.1s ease-out' : undefined,
                     }}
                   >
-                    {/* Speaker label — at turn boundaries only */}
-                    {isSpeakerTurn && speakerAssignments && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <SpeakerLabel
-                          speakerId={speakerId}
-                          state={speakerState}
-                          label={speakerProfile?.label ?? ''}
-                          color={speakerProfile?.color ?? 'var(--text-muted)'}
-                          onRename={speakerId && onSpeakerRename ? (label) => onSpeakerRename(speakerId, label) : undefined}
-                        />
-                        {showSameHint && (
-                          <button
-                            onClick={() => onSpeakerSetSame?.(i)}
-                            style={{
-                              fontSize: 10, padding: '2px 8px', borderRadius: 4,
-                              border: '1px solid var(--border)', background: 'transparent',
-                              color: 'var(--text-muted)', cursor: 'pointer',
-                              transition: 'all 0.12s',
-                            }}
-                            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface-1)' }}
-                            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
-                            title="Same speaker as previous turn"
-                          >
-                            same speaker
-                          </button>
-                        )}
-                      </div>
-                    )}
-
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
                       <p
                         style={{ flex: 1, margin: 0, fontSize: 18, color: 'var(--text)', lineHeight: 1.85, fontWeight: lineWeight, cursor: isEditable ? 'text' : undefined, padding: '2px 0' }}
@@ -479,6 +518,8 @@ export default function DocumentView({
                       )}
                     </div>
 
+                    <InlineMarginNotes comments={lineC} lineIndex={i} onJumpTo={scrollToLine} />
+
                     {/* Inline comment thread */}
                     {isOpenC && onAddComment && (
                       <div style={{ paddingTop: 4, paddingBottom: 8 }}>
@@ -513,16 +554,17 @@ export default function DocumentView({
               )}
               {isActive && !currentLine && <span className="doc-cursor" />}
 
-              {/* Highlights section — below transcript in raw view */}
-              {highlights && highlights.length > 0 && (
-                <HighlightsSection
-                  highlights={highlights}
-                  onRemove={onRemoveHighlight}
-                  onJumpTo={scrollToLine}
-                />
-              )}
             </div>
           )}
+          </div>
+          <aside style={{ position: 'sticky', top: 18, display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <HighlightsSection
+              highlights={highlights ?? []}
+              onRemove={onRemoveHighlight}
+              onJumpTo={scrollToLine}
+            />
+            <CommentMarginalia items={annotationsForPanel} onJumpTo={scrollToLine} />
+          </aside>
         </div>
         <div ref={bottomRef} />
       </div>
