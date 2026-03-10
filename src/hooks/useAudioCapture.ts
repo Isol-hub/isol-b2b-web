@@ -114,5 +114,10 @@ export function useAudioCapture({ chunkMs = 200, onChunk, onError }: AudioCaptur
     setState('idle')
   }, [])
 
+  // Stop all audio resources when the component unmounts (e.g. navigating away
+  // while a session is active). Without this, ScriptProcessorNode keeps running
+  // on Chrome's main thread and screen-capture streams stay alive, freezing the browser.
+  useEffect(() => () => { stop() }, [stop])
+
   return { state, start, stop }
 }
