@@ -454,7 +454,7 @@ export default function ViewerPage() {
           <div style={{ flex: 1, overflow: 'hidden', minWidth: 0, position: 'relative' }}>
             {sessionEnded && (
               <div style={{
-                position: 'absolute', top: 0, left: 0, right: 0, zIndex: 100,
+                position: 'fixed', top: 'var(--header-h)', left: 0, right: 0, zIndex: 200,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 padding: '12px 16px',
                 background: '#FAFAF8',
