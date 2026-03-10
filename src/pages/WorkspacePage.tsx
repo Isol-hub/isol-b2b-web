@@ -1200,7 +1200,10 @@ export default function WorkspacePage() {
                 aiNotes={aiNotes}
                 aiNotesLoading={aiNotesLoading}
                 viewMode={viewMode}
-                onViewModeChange={setViewMode}
+                onViewModeChange={(mode) => {
+                  setViewMode(mode)
+                  if (mode === 'notes') { setGlossaryWord(null); setShowGlossaryList(false) }
+                }}
                 onWordClick={handleWordClick}
                 isEditable={sessionActive}
                 onLineEdit={handleLineEdit}
@@ -1222,25 +1225,12 @@ export default function WorkspacePage() {
           {/* ── FLOATING TOOLBAR ────────────────────────────── */}
           <div className="workspace-toolbar">
 
-            {/* AI Enhanced */}
-            <button
-              onClick={() => canAi && setViewMode(m => m === 'ai' ? 'raw' : 'ai')}
-              className={`toolbar-btn${viewMode === 'ai' && canAi ? ' active' : ''}`}
-              disabled={!canAi}
-              title={canAi ? undefined : 'Available after 5+ lines are captured'}
-            >
-              <span>✦</span>
-              AI Enhanced
-            </button>
-
-            <div className="toolbar-sep" />
-
             {/* Glossary */}
             <button
               onClick={() => {
                 if (glossaryWord) { setGlossaryWord(null); setShowGlossaryList(false) }
                 else if (showGlossaryList) { setShowGlossaryList(false) }
-                else { setShowGlossaryList(true) }
+                else { setShowGlossaryList(true); setShowHighlights(false) }
               }}
               className={`toolbar-btn${(glossaryWord || showGlossaryList) ? ' active' : ''}`}
               title={glossaryWord ? undefined : 'Open workspace glossary'}
@@ -1253,7 +1243,10 @@ export default function WorkspacePage() {
 
             {/* Highlights */}
             <button
-              onClick={() => setShowHighlights(v => !v)}
+              onClick={() => {
+                if (showHighlights) { setShowHighlights(false) }
+                else { setShowHighlights(true); setGlossaryWord(null); setShowGlossaryList(false) }
+              }}
               className={`toolbar-btn${showHighlights ? ' active' : ''}`}
             >
               <span>◈</span>
