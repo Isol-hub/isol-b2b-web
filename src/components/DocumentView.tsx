@@ -495,7 +495,7 @@ export default function DocumentView({
                     </div>
 
                     {/* Zero-height handwriting annotation overlay — doesn't affect line spacing */}
-                    {lineC.length > 0 && !isOpenC && (
+                    {lineC.length > 0 && (
                       <div style={{ position: 'relative', height: 0, overflow: 'visible' }}>
                         {lineC.map((comment, ci) => (
                           <div
@@ -527,11 +527,11 @@ export default function DocumentView({
                       </div>
                     )}
 
-                    {/* Inline comment thread */}
+                    {/* Inline comment thread — existing comments shown as handwriting above, so pass [] to avoid block re-render */}
                     {isOpenC && onAddComment && (
                       <div style={{ paddingTop: 4, paddingBottom: 8 }}>
                         <CommentThread
-                          comments={lineC}
+                          comments={[]}
                           authorName={commentAuthor ?? ''}
                           onAuthorChange={onCommentAuthorChange ?? (() => {})}
                           onAdd={body => onAddComment(i, body)}
