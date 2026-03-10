@@ -206,8 +206,10 @@ export default function WorkspacePage() {
             r.json().then((body: { resetAt?: number }) => {
               const retryAt = body.resetAt ? body.resetAt * 1000 : Date.now() + 60_000
               aiRetryAfterRef.current = retryAt
+              const resetIn = Math.ceil((retryAt - Date.now()) / 60000)
+              setError(`AI rate limit reached — retry in ${resetIn}m`)
               const delay = Math.max(5_000, retryAt - Date.now())
-              setTimeout(() => { aiRunningRef.current = false; setAiRetryTick(t => t + 1) }, delay)
+              setTimeout(() => { aiRunningRef.current = false; setAiRetryTick(t => t + 1); setError('') }, delay)
             }).catch(() => { aiRunningRef.current = false })
             return null
           }
