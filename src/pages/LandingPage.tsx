@@ -15,7 +15,7 @@ const USE_CASES = [
   { title: 'Meetings',   desc: 'Every meeting understood and captured, in any language.' },
   { title: 'Lectures',   desc: 'Every lecture, even across languages.' },
   { title: 'Podcasts',   desc: 'Every spoken idea becomes accessible.' },
-  { title: 'Interviews', desc: 'Every insight captured the moment it's spoken.' },
+  { title: 'Interviews', desc: "Every insight captured the moment it's spoken." },
 ]
 
 const fmt = (s: number) =>
