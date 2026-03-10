@@ -154,31 +154,39 @@ export default function ViewerPage() {
     }, 6000)
   }, [transcript.length, notesRetryTick])
 
-  // Flush queued line indices → POST /api/translate → update translatedLines
+  // Flush queued line indices → POST /api/ai/translate (one per line) → update translatedLines
   const flushTranslateQueue = useCallback(() => {
     const indices = [...translateQueueRef.current]
     translateQueueRef.current = []
     if (!indices.length) return
     const lang = targetLangRef.current
-    const lines = indices.map(i => transcriptRef.current[i]?.text).filter(Boolean)
-    if (!lines.length) return
-    fetch('/api/translate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ lines, target_lang: lang }),
-    })
-      .then(r => r.ok ? r.json() : null)
-      .then((data: { translations: string[] } | null) => {
-        if (!data?.translations) return
-        setTranslatedLines(prev => {
-          const next = new Map(prev)
-          indices.forEach((lineIdx, i) => {
-            if (data.translations[i]) next.set(lineIdx, data.translations[i])
-          })
-          return next
+    const allLines = transcriptRef.current
+    const requests = indices.map(i => ({
+      idx: i,
+      text: allLines[i]?.text,
+      context: i > 0 ? [allLines[i - 1]?.text].filter(Boolean) : [],
+    })).filter(r => r.text)
+    if (!requests.length) return
+    Promise.all(
+      requests.map(({ idx, text, context }) =>
+        fetch('/api/ai/translate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ current: text, context, targetLang: lang }),
         })
+          .then(r => r.ok ? r.json() : null)
+          .then((data: { translated?: string } | null) => ({ idx, translated: data?.translated }))
+          .catch(() => ({ idx, translated: undefined }))
+      )
+    ).then(results => {
+      setTranslatedLines(prev => {
+        const next = new Map(prev)
+        results.forEach(({ idx, translated }) => {
+          if (translated) next.set(idx, translated)
+        })
+        return next
       })
-      .catch(() => {})
+    })
   }, [])
 
   const scheduleTranslate = useCallback((lineIdx: number) => {
