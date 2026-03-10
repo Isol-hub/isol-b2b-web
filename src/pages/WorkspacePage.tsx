@@ -484,10 +484,7 @@ export default function WorkspacePage() {
 
   // Poll comments so host sees viewer notes
   useEffect(() => {
-    if (!ws.sessionId) {
-      setLineComments(new Map())
-      return
-    }
+    if (!ws.sessionId) return
     const fetchComments = () =>
       fetch(`/api/viewer/${ws.sessionId}/comments`)
         .then(r => r.ok ? r.json() : null)
