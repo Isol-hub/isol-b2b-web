@@ -68,6 +68,8 @@ export default function WorkspacePage() {
   const [error, setError] = useState('')
   const [compact, setCompact] = useState(false)
   const [sessionActive, setSessionActive] = useState(false)
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const saveStatusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   // Default to microphone on mobile (screen capture not available)
   const [audioSource, setAudioSource] = useState<AudioSource>(
     () => 'getDisplayMedia' in navigator.mediaDevices ? 'display' : 'microphone'
@@ -567,9 +569,9 @@ export default function WorkspacePage() {
     highlightItems: HighlightItem[],
     speakerData?: { assignments: LineAssignment[]; profiles: Map<string, SpeakerProfile> }
   ) => {
-    if (!workspaceSlug || lines.length === 0) return
+    if (!workspaceSlug || lines.length === 0) { setSaveStatus('idle'); return }
     const token = getToken()
-    if (!token) return
+    if (!token) { setSaveStatus('idle'); return }
     try {
       const res = await fetch('/api/sessions/save', {
         method: 'POST',
@@ -636,7 +638,14 @@ export default function WorkspacePage() {
           }
         } catch { /* silent */ }
       }
-    } catch { /* silent */ }
+      setSaveStatus('saved')
+      if (saveStatusTimerRef.current) clearTimeout(saveStatusTimerRef.current)
+      saveStatusTimerRef.current = setTimeout(() => setSaveStatus('idle'), 2500)
+    } catch {
+      setSaveStatus('error')
+      if (saveStatusTimerRef.current) clearTimeout(saveStatusTimerRef.current)
+      saveStatusTimerRef.current = setTimeout(() => setSaveStatus('idle'), 4000)
+    }
   }, [workspaceSlug, targetLang, fetchSessions])
 
   const handleRestoreDraft = useCallback(() => {
@@ -753,6 +762,7 @@ export default function WorkspacePage() {
   const handleStop = useCallback(() => {
     audio.stop(); ws.close()
     setSessionActive(false); setCurrentLine('')
+    setSaveStatus('saving')
     if (shareHintTimerRef.current) clearTimeout(shareHintTimerRef.current)
     setShowShareHint(false)
     prevSessionIdRef.current = null
@@ -1178,6 +1188,43 @@ export default function WorkspacePage() {
 
         {/* ── MAIN CANVAS ────────────────────────────────────── */}
         <main className="workspace-canvas">
+
+          {/* Save status banner */}
+          {saveStatus !== 'idle' && (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              padding: '8px 20px',
+              background: saveStatus === 'error' ? 'rgba(239,68,68,0.07)' : 'rgba(99,102,241,0.06)',
+              borderBottom: `1px solid ${saveStatus === 'error' ? 'rgba(239,68,68,0.15)' : 'rgba(99,102,241,0.12)'}`,
+              flexShrink: 0,
+              animation: saveStatus === 'saved' ? 'docFade 0.4s ease-out' : undefined,
+            }}>
+              {saveStatus === 'saving' && (
+                <span style={{
+                  width: 10, height: 10, flexShrink: 0,
+                  border: '1.5px solid rgba(99,102,241,0.25)',
+                  borderTopColor: 'var(--accent)',
+                  borderRadius: '50%',
+                  animation: 'spin 0.9s linear infinite',
+                  display: 'inline-block',
+                }} />
+              )}
+              {saveStatus === 'saved' && (
+                <span style={{ color: 'var(--live)', fontSize: 13, lineHeight: 1 }}>✓</span>
+              )}
+              {saveStatus === 'error' && (
+                <span style={{ color: 'var(--red)', fontSize: 13, lineHeight: 1 }}>!</span>
+              )}
+              <span style={{
+                fontSize: 12, fontWeight: 500,
+                color: saveStatus === 'error' ? 'var(--red)' : saveStatus === 'saved' ? 'var(--text-dim)' : 'var(--accent)',
+              }}>
+                {saveStatus === 'saving' && 'Saving session…'}
+                {saveStatus === 'saved' && 'Session saved'}
+                {saveStatus === 'error' && 'Could not save session'}
+              </span>
+            </div>
+          )}
 
           {/* Error */}
           {error && (
