@@ -129,15 +129,16 @@ export default function HighlightPopup({ containerRef, onHighlight }: Props) {
         padding: 4,
         gap: 2,
       }}
-      // Prevent mousedown inside popup from propagating (avoids selection clearing)
-      onMouseDown={e => e.preventDefault()}
     >
       {CATEGORY_ORDER.map(cat => {
         const m = CATEGORY_META[cat]
         return (
           <button
             key={cat}
-            onClick={() => handleSelect(cat)}
+            // Use onMouseDown instead of onClick: fires before the browser's
+            // mouseup clears the text selection, so popup.text is still valid.
+            // e.preventDefault() prevents focus-steal that would collapse selection.
+            onMouseDown={e => { e.preventDefault(); handleSelect(cat) }}
             title={m.label}
             style={{
               display: 'flex',
