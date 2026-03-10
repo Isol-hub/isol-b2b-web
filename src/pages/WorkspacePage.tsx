@@ -102,6 +102,10 @@ export default function WorkspacePage() {
   const [notesRetryTick, setNotesRetryTick] = useState(0)
   const targetLangRef = useRef(targetLang)
   useEffect(() => { targetLangRef.current = targetLang }, [targetLang])
+  // Refs for fresh values inside debounce callbacks (avoid stale closures)
+  const aiFormattedAtRef = useRef<number | undefined>(undefined)
+  const notesRunCountRef = useRef(0)
+  useEffect(() => { aiFormattedAtRef.current = aiFormattedAt }, [aiFormattedAt])
 
   const wordIndex = useRef<Map<string, string[]>>(new Map())
   const sessionStartRef = useRef<number>(0)
@@ -177,21 +181,25 @@ export default function WorkspacePage() {
     }
   }, [aiFormatted])
 
+  // Fires after 1.5s silence OR every 5 new lines (handles continuous speech)
+  const transcriptLenMod5 = Math.floor(transcript.length / 5)
   useEffect(() => {
     if (transcript.length < 5) return
     if (Date.now() < aiRetryAfterRef.current) return
     if (aiDebounceRef.current) clearTimeout(aiDebounceRef.current)
+    const currentLines = transcript  // capture fresh transcript in closure
     aiDebounceRef.current = setTimeout(() => {
       if (aiRunningRef.current) return
       if (Date.now() < aiRetryAfterRef.current) return
-      if (aiFormattedAt !== undefined && transcript.length <= aiFormattedAt) return
+      const formattedAt = aiFormattedAtRef.current
+      if (formattedAt !== undefined && currentLines.length <= formattedAt) return
       aiRunningRef.current = true
       setAiLoading(true)
-      const snapLength = transcript.length
+      const snapLength = currentLines.length
       fetch('/api/ai/format', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
-        body: JSON.stringify({ lines: transcript.map(l => l.text), targetLang: targetLangRef.current }),
+        body: JSON.stringify({ lines: currentLines.map(l => l.text), targetLang: targetLangRef.current }),
       })
         .then(r => {
           if (r.status === 429) {
@@ -207,18 +215,20 @@ export default function WorkspacePage() {
           return r.json()
         })
         .then((data: { formatted?: string } | null) => {
-          if (data?.formatted) { setAiFormatted(data.formatted); setAiFormattedAt(snapLength) }
+          if (data?.formatted) { setAiFormatted(data.formatted); setAiFormattedAt(snapLength); aiFormattedAtRef.current = snapLength }
         })
         .catch(() => {})
         .finally(() => { setAiLoading(false); aiRunningRef.current = false })
-    }, 4000)
-  }, [transcript.length, aiRetryTick])
+    }, 1500)
+  }, [transcript.length, transcriptLenMod5, aiRetryTick])  // eslint-disable-line react-hooks/exhaustive-deps
 
-  // AI notes — runs in parallel, slightly delayed
+  // AI notes — same dual-trigger pattern
+  const transcriptLenMod8 = Math.floor(transcript.length / 8)
   useEffect(() => {
     if (transcript.length < 5) return
     if (Date.now() < notesRetryAfterRef.current) return
     if (notesDebounceRef.current) clearTimeout(notesDebounceRef.current)
+    const currentLines = transcript
     notesDebounceRef.current = setTimeout(() => {
       if (notesRunningRef.current) return
       if (Date.now() < notesRetryAfterRef.current) return
@@ -227,7 +237,7 @@ export default function WorkspacePage() {
       fetch('/api/ai/notes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
-        body: JSON.stringify({ lines: transcript.map(l => l.text), targetLang: targetLangRef.current }),
+        body: JSON.stringify({ lines: currentLines.map(l => l.text), targetLang: targetLangRef.current }),
       })
         .then(r => {
           if (r.status === 429) {
@@ -246,8 +256,8 @@ export default function WorkspacePage() {
         })
         .catch(() => {})
         .finally(() => { setAiNotesLoading(false); notesRunningRef.current = false })
-    }, 6000)
-  }, [transcript.length, notesRetryTick])
+    }, 2000)
+  }, [transcript.length, transcriptLenMod8, notesRetryTick])  // eslint-disable-line react-hooks/exhaustive-deps
 
   // Speaker heuristic — incremental, runs only during live sessions
   useEffect(() => {

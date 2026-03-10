@@ -55,6 +55,8 @@ export default function ViewerPage() {
   const notesRetryAfterRef = useRef<number>(0)
   const [aiRetryTick, setAiRetryTick] = useState(0)
   const [notesRetryTick, setNotesRetryTick] = useState(0)
+  const aiFormattedAtRef = useRef<number | undefined>(undefined)
+  useEffect(() => { aiFormattedAtRef.current = aiFormattedAt }, [aiFormattedAt])
 
   // Comments (per line)
   const [lineComments, setLineComments] = useState<Map<number, CommentItem[]>>(new Map())
@@ -80,22 +82,25 @@ export default function ViewerPage() {
     }
   }, [aiFormatted])
 
-  // AI format
+  // AI format — fires after 1.5s silence OR every 5 new lines
+  const transcriptLenMod5 = Math.floor(transcript.length / 5)
   useEffect(() => {
     if (transcript.length < 5) return
     if (Date.now() < aiRetryAfterRef.current) return
     if (aiDebounceRef.current) clearTimeout(aiDebounceRef.current)
+    const currentLines = transcript
     aiDebounceRef.current = setTimeout(() => {
       if (aiRunningRef.current) return
       if (Date.now() < aiRetryAfterRef.current) return
-      if (aiFormattedAt !== undefined && transcript.length <= aiFormattedAt) return
+      const formattedAt = aiFormattedAtRef.current
+      if (formattedAt !== undefined && currentLines.length <= formattedAt) return
       aiRunningRef.current = true
       setAiLoading(true)
-      const snapLength = transcript.length
+      const snapLength = currentLines.length
       fetch('/api/ai/format', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lines: transcript.map(l => l.text), targetLang: targetLangRef.current }),
+        body: JSON.stringify({ lines: currentLines.map(l => l.text), targetLang: targetLangRef.current }),
       })
         .then(r => {
           if (r.status === 429) {
@@ -110,18 +115,20 @@ export default function ViewerPage() {
           return r.ok ? r.json() : null
         })
         .then((data: { formatted?: string } | null) => {
-          if (data?.formatted) { setAiFormatted(data.formatted); setAiFormattedAt(snapLength) }
+          if (data?.formatted) { setAiFormatted(data.formatted); setAiFormattedAt(snapLength); aiFormattedAtRef.current = snapLength }
         })
         .catch(() => {})
         .finally(() => { setAiLoading(false); aiRunningRef.current = false })
-    }, 4000)
-  }, [transcript.length, aiRetryTick])
+    }, 1500)
+  }, [transcript.length, transcriptLenMod5, aiRetryTick])  // eslint-disable-line react-hooks/exhaustive-deps
 
-  // AI notes
+  // AI notes — fires after 2s silence OR every 8 new lines
+  const transcriptLenMod8 = Math.floor(transcript.length / 8)
   useEffect(() => {
     if (transcript.length < 5) return
     if (Date.now() < notesRetryAfterRef.current) return
     if (notesDebounceRef.current) clearTimeout(notesDebounceRef.current)
+    const currentLines = transcript
     notesDebounceRef.current = setTimeout(() => {
       if (notesRunningRef.current) return
       if (Date.now() < notesRetryAfterRef.current) return
@@ -130,7 +137,7 @@ export default function ViewerPage() {
       fetch('/api/ai/notes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lines: transcript.map(l => l.text), targetLang: targetLangRef.current }),
+        body: JSON.stringify({ lines: currentLines.map(l => l.text), targetLang: targetLangRef.current }),
       })
         .then(r => {
           if (r.status === 429) {
@@ -149,8 +156,8 @@ export default function ViewerPage() {
         })
         .catch(() => {})
         .finally(() => { setAiNotesLoading(false); notesRunningRef.current = false })
-    }, 6000)
-  }, [transcript.length, notesRetryTick])
+    }, 2000)
+  }, [transcript.length, transcriptLenMod8, notesRetryTick])  // eslint-disable-line react-hooks/exhaustive-deps
 
   // Flush queued line indices → POST /api/ai/translate (one per line) → update translatedLines
   const flushTranslateQueue = useCallback(() => {
