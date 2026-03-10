@@ -895,7 +895,10 @@ export default function WorkspacePage() {
           <div className="logo-mark" style={{ width: 24, height: 24 }}>
             <span style={{ color: '#fff', fontWeight: 800, fontSize: 12 }}>i</span>
           </div>
-          <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: '-0.01em' }}>ISOL Studio</span>
+          {!sessionActive
+            ? <HeroQuotes fontSize={12} />
+            : <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: '-0.01em' }}>ISOL Studio</span>
+          }
         </div>
 
         {workspaceSlug && (
@@ -1189,18 +1192,6 @@ export default function WorkspacePage() {
 
         {/* ── MAIN CANVAS ────────────────────────────────────── */}
         <main className="workspace-canvas">
-
-          {/* Hero quotes banner — shown when idle, no session */}
-          {!sessionActive && saveStatus === 'idle' && (
-            <div style={{
-              display: 'flex', alignItems: 'center',
-              padding: '6px 20px',
-              borderBottom: '1px solid var(--divider)',
-              flexShrink: 0,
-            }}>
-              <HeroQuotes fontSize={11} />
-            </div>
-          )}
 
           {/* Save status banner */}
           {saveStatus !== 'idle' && (
