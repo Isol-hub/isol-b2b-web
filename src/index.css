@@ -477,6 +477,16 @@ input, select { font-family: inherit; outline: none; }
 /* ─── Animations ─────────────────────────────────── */
 @keyframes spin { to { transform: rotate(360deg); } }
 
+@keyframes waveBar {
+  from { transform: scaleY(0.35); }
+  to   { transform: scaleY(1); }
+}
+
+@keyframes lineAppear {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 @keyframes lineReveal {
   from { opacity: 0; transform: translateY(3px); }
   to   { opacity: 1; transform: translateY(0); }
