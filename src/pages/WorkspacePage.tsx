@@ -116,10 +116,6 @@ export default function WorkspacePage() {
   const [speakerLabels, setSpeakerLabels] = useState<Map<string, SpeakerProfile>>(new Map())
 
   // Speaker map for archived session modal — built from API response
-  const archivedSpeakerMap = useMemo((): Map<string, { label: string; color: string }> => {
-    if (!viewingSession?.speakers?.length) return new Map()
-    return new Map(viewingSession.speakers.map(s => [s.speaker_id, { label: s.label, color: s.color }]))
-  }, [viewingSession])
   const speakerAssignmentsRef = useRef<LineAssignment[]>([])
   const speakerProfilesRef = useRef<Map<string, SpeakerProfile>>(new Map())
   const heuristicProcRef = useRef<number>(0)
@@ -1218,10 +1214,6 @@ export default function WorkspacePage() {
                 highlights={highlights}
                 onAddHighlight={handleAddHighlight}
                 onRemoveHighlight={handleRemoveHighlight}
-                speakerAssignments={speakerAssignments}
-                speakerProfiles={speakerLabels}
-                onSpeakerRename={sessionActive ? handleSpeakerRename : undefined}
-                onSpeakerSetSame={sessionActive ? handleSpeakerSetSame : undefined}
               />
             </div>
           )}
@@ -1323,8 +1315,6 @@ export default function WorkspacePage() {
           transcript={transcript}
           targetLang={targetLang}
           aiFormatted={aiFormatted}
-          speakerAssignments={speakerAssignments}
-          speakerProfiles={speakerLabels}
           onClose={() => setShowModal(false)}
         />
       )}
@@ -1420,29 +1410,13 @@ export default function WorkspacePage() {
                         fontSize: 10, fontWeight: 700, letterSpacing: '0.09em',
                         textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 14,
                       }}>Transcript</p>
-                      {viewingSession.lines.map((l, idx) => {
-                        const prev = idx > 0 ? viewingSession.lines[idx - 1] : null
-                        const isNewTurn = l.speaker_id && l.speaker_id !== prev?.speaker_id
-                        const profile = l.speaker_id ? archivedSpeakerMap.get(l.speaker_id) : null
-                        return (
-                          <div key={l.line_index}>
-                            {isNewTurn && profile && (
-                              <div style={{
-                                display: 'flex', alignItems: 'center', gap: 6,
-                                marginTop: idx > 0 ? 14 : 0, marginBottom: 5,
-                              }}>
-                                <span style={{ width: 6, height: 6, borderRadius: '50%', background: profile.color, flexShrink: 0 }} />
-                                <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: profile.color }}>
-                                  {profile.label}
-                                </span>
-                              </div>
-                            )}
-                            <p style={{ fontSize: 15, color: 'var(--text)', lineHeight: 1.75, marginBottom: 12 }}>
-                              {l.text}
-                            </p>
-                          </div>
-                        )
-                      })}
+                      {viewingSession.lines.map((l) => (
+                        <div key={l.line_index}>
+                          <p style={{ fontSize: 15, color: 'var(--text)', lineHeight: 1.75, marginBottom: 12 }}>
+                            {l.text}
+                          </p>
+                        </div>
+                      ))}
                     </div>
                   )}
                   {viewingSession.highlights?.length > 0 && (

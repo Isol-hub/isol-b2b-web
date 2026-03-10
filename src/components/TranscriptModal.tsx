@@ -224,7 +224,7 @@ export default function TranscriptModal({ transcript, targetLang, aiFormatted, o
   const [format, setFormat] = useState<FileFormat>('md')
   const [downloading, setDownloading] = useState(false)
 
-  const hasSpeakerData = !!(speakerAssignments && speakerProfiles && speakerAssignments.length > 0)
+  const hasSpeakerData = false
 
   const generated = useMemo(() => {
     if (mode === 'ai') return aiFormatted ?? toNotes(transcript)
@@ -391,9 +391,7 @@ export default function TranscriptModal({ transcript, targetLang, aiFormatted, o
           <p style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5 }}>
             {mode === 'ai' && 'AI-formatted text with punctuation, titles and structure. Edit freely before exporting.'}
             {mode === 'raw' && 'Timestamped lines exactly as captured. Edit before downloading.'}
-            {mode === 'dialogue' && (hasSpeakerData
-              ? 'Speaker turns from live session. Click speaker labels in the transcript to rename before exporting.'
-              : 'Speakers detected from pauses (Voice 1, Voice 2…). Edit before downloading.')}
+            {mode === 'dialogue' && 'Continuous transcript formatted as dialogue blocks, without speaker labels.'}
             {mode === 'notes' && 'Sections by topic pauses. Add titles, highlights, and action items.'}
             {format === 'ics' && ' · Opens in Apple Calendar, Google Calendar, and Outlook.'}
           </p>
