@@ -142,6 +142,33 @@ function CommentMarginalia({
 }
 
 
+function InlineComments({ comments, rotateOffset = 0 }: { comments: CommentItem[]; rotateOffset?: number }) {
+  return (
+    <div style={{ paddingLeft: 6, paddingTop: 3, paddingBottom: 2 }}>
+      {comments.map((comment, ci) => (
+        <div
+          key={comment.id}
+          style={{
+            color: '#B91C1C',
+            fontFamily: 'var(--font-note)',
+            fontSize: 16,
+            fontStyle: 'italic',
+            lineHeight: 1.35,
+            transform: `rotate(${-0.7 - (ci + rotateOffset) * 0.4}deg)`,
+            marginTop: ci === 0 ? 0 : 5,
+            wordBreak: 'break-word',
+            userSelect: 'none',
+            opacity: (comment as CommentItem & { pending?: boolean }).pending ? 0.5 : 1,
+            pointerEvents: 'none',
+          }}
+        >
+          — {comment.body}
+        </div>
+      ))}
+    </div>
+  )
+}
+
 function AiContent({ text, onWordClick }: { text: string; onWordClick?: (w: string, s: string) => void }) {
   const lines = text.split('\n')
   const elements: React.ReactNode[] = []
@@ -366,34 +393,41 @@ export default function DocumentView({
             </div>
 
           ) : viewMode === 'ai' && aiFormatted ? (
-            <div style={{ display: 'flex', gap: 28, alignItems: 'flex-start' }}>
-              <div className="doc-ai-update" style={{ flex: 1, minWidth: 0 }}>
-                <AiContent text={aiFormatted} onWordClick={onWordClick} />
-                {(aiFormattedAt !== undefined ? transcript.slice(aiFormattedAt) : []).map((line, i) => (
-                  <p key={i} className="transcript-line" style={{ margin: '0 0 18px', fontSize: 17, color: 'var(--text)', lineHeight: 1.78 }}>
-                    {renderInline(line.text, line.text, onWordClick)}
-                  </p>
-                ))}
-                {isActive && !currentLine && <span className="doc-cursor" />}
-              </div>
-              {annotationsForPanel.length > 0 && (
-                <div style={{ width: 180, flexShrink: 0, paddingTop: 8 }}>
-                  <CommentMarginalia items={annotationsForPanel} onJumpTo={scrollToLine} totalLines={transcript.length} />
+            <div className="doc-ai-update">
+              <AiContent text={aiFormatted} onWordClick={onWordClick} />
+              {(aiFormattedAt !== undefined ? transcript.slice(aiFormattedAt) : []).map((line, i) => {
+                const lineIdx = (aiFormattedAt ?? 0) + i
+                const lineC = lineComments?.get(lineIdx) ?? []
+                return (
+                  <div key={i}>
+                    <p className="transcript-line" style={{ margin: '0 0 18px', fontSize: 17, color: 'var(--text)', lineHeight: 1.78 }}>
+                      {renderInline(line.text, line.text, onWordClick)}
+                    </p>
+                    {lineC.length > 0 && <InlineComments comments={lineC} />}
+                  </div>
+                )
+              })}
+              {annotationsForPanel.filter(a => a.lineIndex < (aiFormattedAt ?? 0)).length > 0 && (
+                <div style={{ marginTop: 32, paddingTop: 20, borderTop: '1px solid var(--divider)' }}>
+                  {annotationsForPanel.filter(a => a.lineIndex < (aiFormattedAt ?? 0)).map((item, i) => (
+                    <InlineComments key={item.comment.id} comments={[item.comment]} rotateOffset={i} />
+                  ))}
                 </div>
               )}
+              {isActive && !currentLine && <span className="doc-cursor" />}
             </div>
 
           ) : viewMode === 'notes' && aiNotes ? (
-            <div style={{ display: 'flex', gap: 28, alignItems: 'flex-start' }}>
-              <div className="doc-ai-update" style={{ flex: 1, minWidth: 0 }}>
-                <AiContent text={aiNotes} onWordClick={onWordClick} />
-                {isActive && <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 16, fontStyle: 'italic' }}>Notes update as session progresses…</p>}
-              </div>
+            <div className="doc-ai-update">
+              <AiContent text={aiNotes} onWordClick={onWordClick} />
               {annotationsForPanel.length > 0 && (
-                <div style={{ width: 180, flexShrink: 0, paddingTop: 8 }}>
-                  <CommentMarginalia items={annotationsForPanel} onJumpTo={scrollToLine} totalLines={transcript.length} />
+                <div style={{ marginTop: 32, paddingTop: 20, borderTop: '1px solid var(--divider)' }}>
+                  {annotationsForPanel.map((item, i) => (
+                    <InlineComments key={item.comment.id} comments={[item.comment]} rotateOffset={i} />
+                  ))}
                 </div>
               )}
+              {isActive && <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 16, fontStyle: 'italic' }}>Notes update as session progresses…</p>}
             </div>
 
           ) : (

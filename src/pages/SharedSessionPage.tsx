@@ -322,6 +322,29 @@ export default function SharedSessionPage() {
                   {activeTab === 'ai' && (
                     <>
                       <AiMarkdown text={session.ai_formatted_text} />
+                      {comments.filter(c => c.line_index !== null).length > 0 && (
+                        <div style={{ marginTop: 32, paddingTop: 20, borderTop: '1px solid var(--divider)' }}>
+                          {comments.filter(c => c.line_index !== null).map((c, i) => (
+                            <div
+                              key={c.id}
+                              style={{
+                                color: '#B91C1C',
+                                fontFamily: "'Caveat', cursive",
+                                fontSize: 16,
+                                fontStyle: 'italic',
+                                lineHeight: 1.35,
+                                transform: `rotate(${-0.7 - i * 0.4}deg)`,
+                                marginBottom: 6,
+                                wordBreak: 'break-word',
+                                userSelect: 'none',
+                                opacity: c.pending ? 0.5 : 1,
+                              }}
+                            >
+                              — {c.body}
+                            </div>
+                          ))}
+                        </div>
+                      )}
 
                       {/* Discussion section — form first, then list */}
                       <div style={{ borderTop: '1px solid var(--divider)', paddingTop: 28, marginTop: 40 }}>
@@ -544,29 +567,24 @@ function TranscriptLines({
               </button>
             </div>
 
-            {/* Zero-height handwriting annotation overlay */}
+            {/* Handwriting annotations — flow style, proportional spacing */}
             {hasComments && !isOpen && (
-              <div style={{ position: 'relative', height: 0, overflow: 'visible' }}>
+              <div style={{ paddingLeft: 6, paddingTop: 3, paddingBottom: 2 }}>
                 {lineComments.map((comment, ci) => (
                   <div
                     key={comment.id}
                     style={{
-                      position: 'absolute',
-                      top: ci * 21,
-                      left: 6,
                       color: '#B91C1C',
                       fontFamily: "'Caveat', cursive",
-                      fontSize: 17,
+                      fontSize: 16,
                       fontStyle: 'italic',
-                      lineHeight: 1.2,
-                      transform: `rotate(${-0.7 - ci * 0.5}deg)`,
-                      whiteSpace: 'nowrap',
-                      maxWidth: '80%',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      zIndex: 2,
+                      lineHeight: 1.35,
+                      transform: `rotate(${-0.7 - ci * 0.4}deg)`,
+                      marginTop: ci === 0 ? 0 : 5,
+                      wordBreak: 'break-word',
                       userSelect: 'none',
                       opacity: comment.pending ? 0.5 : 1,
+                      pointerEvents: 'none',
                     }}
                   >
                     — {comment.body}
