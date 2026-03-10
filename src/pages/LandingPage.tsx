@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getSession } from '../lib/auth'
+import HeroQuotes from '../components/HeroQuotes'
 
 // Demo script — English source → Italian translation, simulates a live meeting
 const SCRIPT = [
@@ -18,58 +19,8 @@ const USE_CASES = [
   { title: 'Interviews', desc: "Every insight captured the moment it's spoken." },
 ]
 
-const HERO_QUOTES = [
-  'Every meeting understood.',
-  'Any language, any speaker.',
-  'Real-time. Zero friction.',
-  'From speech to knowledge.',
-  'No word left behind.',
-]
-
 const fmt = (s: number) =>
   `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
-
-function HeroQuotes() {
-  const [idx, setIdx] = useState(0)
-  const [phase, setPhase] = useState<'in' | 'out'>('in')
-
-  useEffect(() => {
-    const t = setInterval(() => {
-      setPhase('out')
-      setTimeout(() => {
-        setIdx(i => (i + 1) % HERO_QUOTES.length)
-        setPhase('in')
-      }, 380)
-    }, 3200)
-    return () => clearInterval(t)
-  }, [])
-
-  return (
-    <div style={{
-      height: 22,
-      overflow: 'hidden',
-      display: 'flex',
-      alignItems: 'center',
-    }}>
-      <span
-        key={idx}
-        style={{
-          fontSize: 12,
-          color: 'var(--text-muted)',
-          fontWeight: 500,
-          letterSpacing: '0.01em',
-          display: 'inline-block',
-          transformOrigin: 'center center',
-          animation: phase === 'in'
-            ? 'quoteFlipIn 0.38s cubic-bezier(0.22,1,0.36,1) forwards'
-            : 'quoteFlipOut 0.32s cubic-bezier(0.64,0,0.78,0) forwards',
-        }}
-      >
-        {HERO_QUOTES[idx]}
-      </span>
-    </div>
-  )
-}
 
 export default function LandingPage() {
   const navigate = useNavigate()

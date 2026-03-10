@@ -5,6 +5,7 @@ import { useAudioCapture, type AudioSource } from '../hooks/useAudioCapture'
 import { useWebSocket } from '../hooks/useWebSocket'
 import type { SubtitleMessage } from '../hooks/useWebSocket'
 import DocumentView from '../components/DocumentView'
+import HeroQuotes from '../components/HeroQuotes'
 import type { CommentItem } from '../components/CommentThread'
 import HighlightsSection from '../components/HighlightsSection'
 import type { HighlightItem, HighlightCategory } from '../components/HighlightPopup'
@@ -1188,6 +1189,18 @@ export default function WorkspacePage() {
 
         {/* ── MAIN CANVAS ────────────────────────────────────── */}
         <main className="workspace-canvas">
+
+          {/* Hero quotes banner — shown when idle, no session */}
+          {!sessionActive && saveStatus === 'idle' && (
+            <div style={{
+              display: 'flex', alignItems: 'center',
+              padding: '6px 20px',
+              borderBottom: '1px solid var(--divider)',
+              flexShrink: 0,
+            }}>
+              <HeroQuotes fontSize={11} />
+            </div>
+          )}
 
           {/* Save status banner */}
           {saveStatus !== 'idle' && (
