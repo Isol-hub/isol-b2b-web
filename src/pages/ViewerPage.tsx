@@ -17,6 +17,9 @@ export default function ViewerPage() {
   const [targetLang, setTargetLang] = useState('en')
   const [currentLine, setCurrentLine] = useState('')
   const [transcript, setTranscript] = useState<TranscriptLine[]>([])
+  const [translatedLines, setTranslatedLines] = useState<Map<number, string>>(new Map())
+  const translateQueueRef = useRef<number[]>([])
+  const translateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [joined, setJoined] = useState(false)
   const [sessionEnded, setSessionEnded] = useState(false)
   const [endedShareToken, setEndedShareToken] = useState<string | null | undefined>(undefined)
@@ -119,6 +122,39 @@ export default function ViewerPage() {
     }, 3500)
   }, [transcript.length])
 
+  // Flush queued line indices → POST /api/translate → update translatedLines
+  const flushTranslateQueue = useCallback(() => {
+    const indices = [...translateQueueRef.current]
+    translateQueueRef.current = []
+    if (!indices.length) return
+    const lang = targetLangRef.current
+    const lines = indices.map(i => transcriptRef.current[i]?.text).filter(Boolean)
+    if (!lines.length) return
+    fetch('/api/translate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lines, target_lang: lang }),
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then((data: { translations: string[] } | null) => {
+        if (!data?.translations) return
+        setTranslatedLines(prev => {
+          const next = new Map(prev)
+          indices.forEach((lineIdx, i) => {
+            if (data.translations[i]) next.set(lineIdx, data.translations[i])
+          })
+          return next
+        })
+      })
+      .catch(() => {})
+  }, [])
+
+  const scheduleTranslate = useCallback((lineIdx: number) => {
+    translateQueueRef.current.push(lineIdx)
+    if (translateTimerRef.current) clearTimeout(translateTimerRef.current)
+    translateTimerRef.current = setTimeout(flushTranslateQueue, 600)
+  }, [flushTranslateQueue])
+
   const wssUrl = import.meta.env.VITE_WSS_URL ?? 'wss://api.isol.live/audio'
   const targetLangRef = useRef(targetLang)
   useEffect(() => { targetLangRef.current = targetLang }, [targetLang])
@@ -126,7 +162,11 @@ export default function ViewerPage() {
   const handleMessage = useCallback((msg: SubtitleMessage) => {
     if (msg.line_final) {
       const time = new Date()
-      setTranscript(prev => [...prev, { text: msg.line_final, time }])
+      setTranscript(prev => {
+        const lineIdx = prev.length
+        scheduleTranslate(lineIdx)
+        return [...prev, { text: msg.line_final, time }]
+      })
       msg.line_final.split(/\s+/).forEach(raw => {
         const w = raw.toLowerCase().replace(/[^\w]/g, '')
         if (w.length < 3) return
@@ -136,7 +176,7 @@ export default function ViewerPage() {
     }
     if (lineNextDebounceRef.current) clearTimeout(lineNextDebounceRef.current)
     setCurrentLine(msg.line_next || '')
-  }, [])
+  }, [scheduleTranslate])
 
   const ws = useWebSocket({ url: wssUrl, targetLang, onMessage: handleMessage, viewerSessionId: sessionId, onSessionEnd: () => setSessionEnded(true) })
 
@@ -238,10 +278,11 @@ export default function ViewerPage() {
     }
   }, [sessionId, commentAuthor])
 
-  // Apply edit overrides to transcript
-  const displayTranscript = editOverrides.size > 0
-    ? transcript.map((l, i) => editOverrides.has(i) ? { ...l, text: editOverrides.get(i)! } : l)
-    : transcript
+  // Apply edit overrides + viewer translations to transcript
+  const displayTranscript = transcript.map((l, i) => {
+    const text = editOverrides.get(i) ?? translatedLines.get(i) ?? l.text
+    return text !== l.text ? { ...l, text } : l
+  })
 
   const isActive = ws.state === 'connected'
   const statusColor = sessionEnded ? 'var(--text-muted)'
@@ -265,11 +306,19 @@ export default function ViewerPage() {
   const langInitRef = useRef(false)
   useEffect(() => {
     if (!langInitRef.current) { langInitRef.current = true; return }
-    if (!joinedRef.current) return
-    ws.close()
-    const t = setTimeout(() => ws.open(), 150)
-    return () => clearTimeout(t)
-  }, [targetLang])   // eslint-disable-line react-hooks/exhaustive-deps
+    // Clear old translations so the new language renders immediately
+    setTranslatedLines(new Map())
+    if (joinedRef.current) {
+      // Re-translate all accumulated lines in the new language
+      translateQueueRef.current = transcriptRef.current.map((_, i) => i)
+      if (translateTimerRef.current) clearTimeout(translateTimerRef.current)
+      translateTimerRef.current = setTimeout(flushTranslateQueue, 200)
+      // Reconnect WS with new target_lang
+      ws.close()
+      const t = setTimeout(() => ws.open(), 150)
+      return () => clearTimeout(t)
+    }
+  }, [targetLang, flushTranslateQueue])   // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'var(--bg)' }}>
