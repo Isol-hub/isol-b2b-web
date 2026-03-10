@@ -393,41 +393,34 @@ export default function DocumentView({
             </div>
 
           ) : viewMode === 'ai' && aiFormatted ? (
-            <div className="doc-ai-update">
-              <AiContent text={aiFormatted} onWordClick={onWordClick} />
-              {(aiFormattedAt !== undefined ? transcript.slice(aiFormattedAt) : []).map((line, i) => {
-                const lineIdx = (aiFormattedAt ?? 0) + i
-                const lineC = lineComments?.get(lineIdx) ?? []
-                return (
-                  <div key={i}>
-                    <p className="transcript-line" style={{ margin: '0 0 18px', fontSize: 17, color: 'var(--text)', lineHeight: 1.78 }}>
-                      {renderInline(line.text, line.text, onWordClick)}
-                    </p>
-                    {lineC.length > 0 && <InlineComments comments={lineC} />}
-                  </div>
-                )
-              })}
-              {annotationsForPanel.filter(a => a.lineIndex < (aiFormattedAt ?? 0)).length > 0 && (
-                <div style={{ marginTop: 32, paddingTop: 20, borderTop: '1px solid var(--divider)' }}>
-                  {annotationsForPanel.filter(a => a.lineIndex < (aiFormattedAt ?? 0)).map((item, i) => (
-                    <InlineComments key={item.comment.id} comments={[item.comment]} rotateOffset={i} />
-                  ))}
+            <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+              <div className="doc-ai-update" style={{ flex: '1 1 260px', minWidth: 0 }}>
+                <AiContent text={aiFormatted} onWordClick={onWordClick} />
+                {(aiFormattedAt !== undefined ? transcript.slice(aiFormattedAt) : []).map((line, i) => (
+                  <p key={i} className="transcript-line" style={{ margin: '0 0 18px', fontSize: 17, color: 'var(--text)', lineHeight: 1.78 }}>
+                    {renderInline(line.text, line.text, onWordClick)}
+                  </p>
+                ))}
+                {isActive && !currentLine && <span className="doc-cursor" />}
+              </div>
+              {annotationsForPanel.length > 0 && (
+                <div style={{ flex: '0 0 148px', paddingTop: 8 }}>
+                  <CommentMarginalia items={annotationsForPanel} onJumpTo={scrollToLine} totalLines={transcript.length} />
                 </div>
               )}
-              {isActive && !currentLine && <span className="doc-cursor" />}
             </div>
 
           ) : viewMode === 'notes' && aiNotes ? (
-            <div className="doc-ai-update">
-              <AiContent text={aiNotes} onWordClick={onWordClick} />
+            <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+              <div className="doc-ai-update" style={{ flex: '1 1 260px', minWidth: 0 }}>
+                <AiContent text={aiNotes} onWordClick={onWordClick} />
+                {isActive && <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 16, fontStyle: 'italic' }}>Notes update as session progresses…</p>}
+              </div>
               {annotationsForPanel.length > 0 && (
-                <div style={{ marginTop: 32, paddingTop: 20, borderTop: '1px solid var(--divider)' }}>
-                  {annotationsForPanel.map((item, i) => (
-                    <InlineComments key={item.comment.id} comments={[item.comment]} rotateOffset={i} />
-                  ))}
+                <div style={{ flex: '0 0 148px', paddingTop: 8 }}>
+                  <CommentMarginalia items={annotationsForPanel} onJumpTo={scrollToLine} totalLines={transcript.length} />
                 </div>
               )}
-              {isActive && <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 16, fontStyle: 'italic' }}>Notes update as session progresses…</p>}
             </div>
 
           ) : (
