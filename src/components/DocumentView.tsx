@@ -363,14 +363,6 @@ export default function DocumentView({
       <div ref={scrollContainerRef} style={{ flex: 1, overflowY: 'auto', background: 'var(--surface-1)' }}>
         <div className="doc-surface" style={{ maxWidth: 980, margin: '0 auto', padding: '40px 32px calc(40px + 80px)' }}>
           <div style={{ minWidth: 0, position: 'relative' }}>
-            <div style={{ marginBottom: 22 }}>
-              <HighlightsSection
-                highlights={highlights ?? []}
-                onRemove={onRemoveHighlight}
-                onJumpTo={scrollToLine}
-              />
-            </div>
-
           {isEmpty ? (
             <div style={{ paddingTop: 80, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14, color: 'var(--text-muted)', textAlign: 'center' }}>
               <span style={{ fontSize: 28, opacity: 0.15 }}>✦</span>
@@ -538,6 +530,22 @@ export default function DocumentView({
 
             </div>
           )}
+
+          {/* Highlights — shown below transcript, only when present */}
+          {(highlights ?? []).length > 0 && (
+            <div style={{
+              marginTop: 40,
+              paddingTop: 28,
+              borderTop: '1px solid var(--divider)',
+            }}>
+              <HighlightsSection
+                highlights={highlights ?? []}
+                onRemove={onRemoveHighlight}
+                onJumpTo={scrollToLine}
+              />
+            </div>
+          )}
+
             {(viewMode === 'ai' || viewMode === 'notes') && annotationsForPanel.length > 0 && (
               <div style={{
                 position: 'absolute',
