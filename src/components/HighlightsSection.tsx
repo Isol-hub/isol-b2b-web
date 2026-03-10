@@ -55,17 +55,22 @@ export default function HighlightsSection({ highlights, onRemove, onJumpTo }: Pr
           const items = groups.get(key)!
           return (
             <div key={key}>
-              {/* Category label */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+              {/* Category pill */}
+              <div style={{ marginBottom: 8 }}>
                 <span style={{
-                  display: 'inline-block', width: 5, height: 5,
-                  borderRadius: '50%', background: meta.color, flexShrink: 0,
-                }} />
-                <span style={{
-                  fontSize: 10, fontWeight: 700, letterSpacing: '0.08em',
-                  textTransform: 'uppercase', color: meta.color,
+                  display: 'inline-flex', alignItems: 'center', gap: 5,
+                  background: meta.bg,
+                  border: `1px solid ${meta.color}22`,
+                  borderRadius: 99,
+                  padding: '3px 10px 3px 8px',
                 }}>
-                  {meta.label}{items.length > 1 ? ` · ${items.length}` : ''}
+                  <span style={{ fontSize: 12, lineHeight: 1, color: meta.color }}>{meta.icon}</span>
+                  <span style={{
+                    fontSize: 10, fontWeight: 700, letterSpacing: '0.07em',
+                    textTransform: 'uppercase', color: meta.color,
+                  }}>
+                    {meta.label}{items.length > 1 ? ` · ${items.length}` : ''}
+                  </span>
                 </span>
               </div>
 
@@ -78,7 +83,7 @@ export default function HighlightsSection({ highlights, onRemove, onJumpTo }: Pr
                       display: 'flex', alignItems: 'flex-start', gap: 10,
                       padding: '9px 12px',
                       borderRadius: 'var(--radius)',
-                      background: 'var(--surface-1)',
+                      background: meta.bg.replace('0.10)', '0.06)'),
                       borderLeft: `2px solid ${meta.color}`,
                       cursor: h.line_index !== null && onJumpTo ? 'pointer' : 'default',
                     }}
