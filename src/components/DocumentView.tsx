@@ -393,8 +393,8 @@ export default function DocumentView({
             </div>
 
           ) : viewMode === 'ai' && aiFormatted ? (
-            <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-              <div className="doc-ai-update" style={{ flex: '1 1 260px', minWidth: 0 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: annotationsForPanel.length > 0 ? '1fr 110px' : '1fr', gap: 12, alignItems: 'start' }}>
+              <div className="doc-ai-update" style={{ minWidth: 0 }}>
                 <AiContent text={aiFormatted} onWordClick={onWordClick} />
                 {(aiFormattedAt !== undefined ? transcript.slice(aiFormattedAt) : []).map((line, i) => (
                   <p key={i} className="transcript-line" style={{ margin: '0 0 18px', fontSize: 17, color: 'var(--text)', lineHeight: 1.78 }}>
@@ -404,20 +404,20 @@ export default function DocumentView({
                 {isActive && !currentLine && <span className="doc-cursor" />}
               </div>
               {annotationsForPanel.length > 0 && (
-                <div style={{ flex: '0 0 148px', paddingTop: 8 }}>
+                <div style={{ paddingTop: 8 }}>
                   <CommentMarginalia items={annotationsForPanel} onJumpTo={scrollToLine} totalLines={transcript.length} />
                 </div>
               )}
             </div>
 
           ) : viewMode === 'notes' && aiNotes ? (
-            <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-              <div className="doc-ai-update" style={{ flex: '1 1 260px', minWidth: 0 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: annotationsForPanel.length > 0 ? '1fr 110px' : '1fr', gap: 12, alignItems: 'start' }}>
+              <div className="doc-ai-update" style={{ minWidth: 0 }}>
                 <AiContent text={aiNotes} onWordClick={onWordClick} />
                 {isActive && <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 16, fontStyle: 'italic' }}>Notes update as session progresses…</p>}
               </div>
               {annotationsForPanel.length > 0 && (
-                <div style={{ flex: '0 0 148px', paddingTop: 8 }}>
+                <div style={{ paddingTop: 8 }}>
                   <CommentMarginalia items={annotationsForPanel} onJumpTo={scrollToLine} totalLines={transcript.length} />
                 </div>
               )}
