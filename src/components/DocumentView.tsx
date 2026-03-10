@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import MatrixText from './MatrixText'
-import CommentThread, { type CommentItem } from './CommentThread'
+import { type CommentItem } from './CommentThread'
 import LiveBanner from './LiveBanner'
 import SessionTimeline, { type TimelineSegment } from './SessionTimeline'
 import HighlightPopup, { type HighlightCategory, type HighlightItem } from './HighlightPopup'
@@ -190,26 +190,33 @@ export default function DocumentView({
   const [editingText, setEditingText] = useState('')
 
   // Host comment card
-  const [openCard, setOpenCard] = useState<{ commentId: number; lineIndex: number; x: number; y: number } | null>(null)
-  const [cardMode, setCardMode] = useState<'view' | 'edit'>('view')
+  const [openCard, setOpenCard] = useState<{ lineIndex: number; x: number; y: number } | null>(null)
+  const [editingCommentId, setEditingCommentId] = useState<number | null>(null)
   const [editingCard, setEditingCard] = useState('')
+  const [addDraft, setAddDraft] = useState('')
+  const [cardSubmitting, setCardSubmitting] = useState(false)
   const cardRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (!openCard) return
     const handler = (e: MouseEvent) => {
-      if (!cardRef.current?.contains(e.target as Node)) setOpenCard(null)
+      if (!cardRef.current?.contains(e.target as Node)) {
+        setOpenCard(null)
+        setEditingCommentId(null)
+        setAddDraft('')
+      }
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [openCard])
 
-  const openHostCard = useCallback((commentId: number, lineIndex: number, body: string, e: React.MouseEvent) => {
+  const openHostCard = useCallback((lineIndex: number, e: React.MouseEvent) => {
+    if (!isHost) return
     e.stopPropagation()
-    setOpenCard({ commentId, lineIndex, x: e.clientX, y: e.clientY })
-    setEditingCard(body)
-    setCardMode('view')
-  }, [])
+    setOpenCard({ lineIndex, x: e.clientX, y: e.clientY })
+    setEditingCommentId(null)
+    setAddDraft('')
+  }, [isHost])
 
   // Track newest line for enter animation (only during live sessions)
   const prevLengthRef = useRef(transcript.length)
@@ -394,7 +401,6 @@ export default function DocumentView({
             <div>
               {transcript.map((line, i) => {
                 const lineC = lineComments?.get(i) ?? []
-                const isOpenC = openCommentLine === i
                 const hasComments = lineC.length > 0
 
                 // Progressive fade — distance from the most recent finalized line
@@ -420,8 +426,6 @@ export default function DocumentView({
                   )
                 }
 
-                const isLineHovered = hoveredLine === i
-
                 const isNewest = isActive && i === newestLineIdx
 
                 return (
@@ -429,70 +433,28 @@ export default function DocumentView({
                     key={i}
                     ref={el => { lineRefs.current[i] = el }}
                     data-line-index={i}
-                    onMouseEnter={() => setHoveredLine(i)}
-                    onMouseLeave={() => setHoveredLine(null)}
+                    onClick={isHost ? (e) => openHostCard(i, e) : undefined}
                     style={{
-                      marginBottom: isOpenC ? 28 : 20,
-                      borderLeft: `2px solid ${isOpenC ? 'var(--accent)' : hasComments ? 'rgba(99,102,241,0.30)' : 'transparent'}`,
-                      paddingLeft: isOpenC || hasComments ? 14 : 2,
+                      marginBottom: 20,
+                      borderLeft: `2px solid ${hasComments ? 'rgba(99,102,241,0.25)' : 'transparent'}`,
+                      paddingLeft: hasComments ? 14 : 2,
                       borderRadius: 6,
-                      background: isOpenC ? 'rgba(99,102,241,0.03)' : 'transparent',
                       opacity: lineOpacity,
+                      cursor: isHost ? 'text' : undefined,
                       transition: 'opacity 0.3s ease',
                       animation: isNewest ? 'lineEnter 0.35s ease-out, lineFlash 1.1s ease-out' : undefined,
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                      <p
-                        style={{ flex: 1, margin: 0, fontSize: 18, color: 'var(--text)', lineHeight: 1.85, fontWeight: lineWeight, cursor: isEditable ? 'text' : undefined, padding: '2px 0' }}
-                        onClick={() => {
-                          if (isEditable) { setEditingIndex(i); setEditingText(line.text) }
-                        }}
-                        onMouseEnter={e => { if (isEditable) (e.currentTarget as HTMLElement).style.background = 'rgba(99,102,241,0.04)' }}
-                        onMouseLeave={e => { if (isEditable) (e.currentTarget as HTMLElement).style.background = 'transparent' }}
-                      >
-                        {renderInline(line.text, line.text, onWordClick)}
-                      </p>
-
-                      {/* Annotation trigger */}
-                      {onAddComment && (
-                        <button
-                          onClick={() => onOpenCommentLine?.(isOpenC ? null : i)}
-                          title="Aggiungi annotazione"
-                          style={{
-                            flexShrink: 0,
-                            display: 'flex', alignItems: 'center', gap: 4,
-                            marginTop: 4,
-                            padding: '3px 7px',
-                            borderRadius: 6,
-                            border: hasComments
-                              ? '1px solid rgba(217,119,6,0.30)'
-                              : isOpenC
-                              ? '1px solid rgba(99,102,241,0.30)'
-                              : '1px solid transparent',
-                            background: hasComments
-                              ? 'rgba(217,119,6,0.08)'
-                              : isOpenC
-                              ? 'rgba(99,102,241,0.07)'
-                              : isLineHovered
-                              ? 'var(--surface-1)'
-                              : 'transparent',
-                            color: hasComments ? '#D97706' : isOpenC ? 'var(--accent)' : 'var(--text-muted)',
-                            cursor: 'pointer',
-                            opacity: isOpenC || hasComments || isLineHovered ? 1 : 0,
-                            transition: 'opacity 0.15s, background 0.15s, border-color 0.15s',
-                          }}
-                        >
-                          {/* Speech bubble SVG */}
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                          </svg>
-                          {hasComments && (
-                            <span style={{ fontSize: 11, fontWeight: 700, lineHeight: 1 }}>{lineC.length}</span>
-                          )}
-                        </button>
-                      )}
-                    </div>
+                    <p
+                      style={{ margin: 0, fontSize: 18, color: 'var(--text)', lineHeight: 1.85, fontWeight: lineWeight, padding: '2px 0', cursor: isEditable ? 'text' : isHost ? 'text' : undefined }}
+                      onClick={(e) => {
+                        if (isEditable) { e.stopPropagation(); setEditingIndex(i); setEditingText(line.text) }
+                      }}
+                      onMouseEnter={e => { if (isEditable) (e.currentTarget as HTMLElement).style.background = 'rgba(99,102,241,0.04)' }}
+                      onMouseLeave={e => { if (isEditable) (e.currentTarget as HTMLElement).style.background = 'transparent' }}
+                    >
+                      {renderInline(line.text, line.text, onWordClick)}
+                    </p>
 
                     {/* Zero-height handwriting annotation overlay — doesn't affect line spacing */}
                     {lineC.length > 0 && (
@@ -500,7 +462,6 @@ export default function DocumentView({
                         {lineC.map((comment, ci) => (
                           <div
                             key={comment.id}
-                            onClick={isHost ? (e) => openHostCard(comment.id, i, comment.body, e) : undefined}
                             style={{
                               position: 'absolute',
                               top: ci * 21,
@@ -511,7 +472,6 @@ export default function DocumentView({
                               fontStyle: 'italic',
                               lineHeight: 1.2,
                               transform: `rotate(${-0.7 - ci * 0.5}deg)`,
-                              cursor: isHost ? 'pointer' : 'default',
                               whiteSpace: 'nowrap',
                               maxWidth: '80%',
                               overflow: 'hidden',
@@ -519,24 +479,12 @@ export default function DocumentView({
                               zIndex: 2,
                               userSelect: 'none',
                               opacity: comment.pending ? 0.5 : 1,
+                              pointerEvents: 'none',
                             }}
                           >
                             — {comment.body}
                           </div>
                         ))}
-                      </div>
-                    )}
-
-                    {/* Inline comment thread — existing comments shown as handwriting above, so pass [] to avoid block re-render */}
-                    {isOpenC && onAddComment && (
-                      <div style={{ paddingTop: 4, paddingBottom: 8 }}>
-                        <CommentThread
-                          comments={[]}
-                          authorName={commentAuthor ?? ''}
-                          onAuthorChange={onCommentAuthorChange ?? (() => {})}
-                          onAdd={body => onAddComment(i, body)}
-                          submitting={commentSubmitting ?? false}
-                        />
                       </div>
                     )}
                   </div>
@@ -579,18 +527,17 @@ export default function DocumentView({
 
       {/* Host comment card — fixed, click-outside closes */}
       {openCard && isHost && (() => {
-        const allComments = lineComments?.get(openCard.lineIndex) ?? []
-        const comment = allComments.find(c => c.id === openCard.commentId)
-        if (!comment) return null
-        const cardX = Math.min(openCard.x + 14, window.innerWidth - 292)
-        const cardY = Math.min(openCard.y - 20, window.innerHeight - 220)
+        const cardComments = lineComments?.get(openCard.lineIndex) ?? []
+        const cardX = Math.min(openCard.x + 14, window.innerWidth - 296)
+        const cardY = Math.min(openCard.y - 10, window.innerHeight - 320)
         return (
           <div
             ref={cardRef}
+            onClick={e => e.stopPropagation()}
             style={{
               position: 'fixed',
               left: cardX, top: cardY,
-              width: 272,
+              width: 280,
               background: 'var(--canvas)',
               border: '1px solid var(--border)',
               borderRadius: 'var(--radius-lg)',
@@ -599,96 +546,97 @@ export default function DocumentView({
               zIndex: 1000,
             }}
           >
-            {/* Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
-              <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-dim)' }}>{comment.author}</span>
-              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{timeAgoDoc(comment.created_at)}</span>
-            </div>
+            {/* Existing comments */}
+            {cardComments.map(c => (
+              <div key={c.id} style={{ marginBottom: 12 }}>
+                {editingCommentId === c.id ? (
+                  <>
+                    <textarea
+                      autoFocus
+                      value={editingCard}
+                      onChange={e => setEditingCard(e.target.value)}
+                      rows={2}
+                      style={{
+                        width: '100%', resize: 'none', boxSizing: 'border-box',
+                        fontFamily: 'var(--font-note)', fontSize: 17, fontStyle: 'italic',
+                        color: '#B91C1C', lineHeight: 1.4,
+                        background: 'rgba(185,28,28,0.04)', border: '1px solid rgba(185,28,28,0.22)',
+                        borderRadius: 6, padding: '6px 10px', outline: 'none', marginBottom: 6,
+                      }}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); onEditComment?.(c.id, openCard.lineIndex, editingCard).then(() => setEditingCommentId(null)) }
+                        if (e.key === 'Escape') setEditingCommentId(null)
+                      }}
+                    />
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <button onClick={() => onEditComment?.(c.id, openCard.lineIndex, editingCard).then(() => setEditingCommentId(null))} style={{ flex: 1, fontSize: 11, fontWeight: 600, height: 26, background: 'var(--accent)', border: 'none', borderRadius: 5, cursor: 'pointer', color: '#fff' }}>Save</button>
+                      <button onClick={() => setEditingCommentId(null)} style={{ flex: 1, fontSize: 11, fontWeight: 600, height: 26, background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: 5, cursor: 'pointer', color: 'var(--text-dim)' }}>Cancel</button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <p style={{ fontFamily: 'var(--font-note)', fontSize: 17, fontStyle: 'italic', color: '#B91C1C', lineHeight: 1.35, margin: '0 0 4px' }}>
+                      — {c.body}
+                    </p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 11, color: 'var(--text-muted)', flex: 1 }}>{c.author} · {timeAgoDoc(c.created_at)}</span>
+                      <button onClick={() => { setEditingCommentId(c.id); setEditingCard(c.body) }} style={{ fontSize: 11, color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px' }}>Edit</button>
+                      <button onClick={() => onDeleteComment?.(c.id, openCard.lineIndex)} style={{ fontSize: 11, color: '#DC2626', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px' }}>Delete</button>
+                    </div>
+                  </>
+                )}
+                {cardComments.indexOf(c) < cardComments.length - 1 && (
+                  <div style={{ height: 1, background: 'var(--divider)', margin: '10px 0 0' }} />
+                )}
+              </div>
+            ))}
 
-            {cardMode === 'view' ? (
-              <>
-                <p style={{
-                  fontFamily: 'var(--font-note)', fontSize: 17, fontStyle: 'italic',
-                  color: '#B91C1C', lineHeight: 1.4, margin: '0 0 12px',
-                }}>
-                  {comment.body}
-                </p>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button
-                    onClick={() => setCardMode('edit')}
-                    style={{
-                      flex: 1, fontSize: 12, fontWeight: 600, height: 30,
-                      background: 'var(--surface-1)', border: '1px solid var(--border)',
-                      borderRadius: 6, cursor: 'pointer', color: 'var(--text-dim)',
-                    }}
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={async () => {
-                      await onDeleteComment?.(comment.id, openCard.lineIndex)
-                      setOpenCard(null)
-                    }}
-                    style={{
-                      flex: 1, fontSize: 12, fontWeight: 600, height: 30,
-                      background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.22)',
-                      borderRadius: 6, cursor: 'pointer', color: '#DC2626',
-                    }}
-                  >
-                    Delete
-                  </button>
-                </div>
-              </>
-            ) : (
-              <>
-                <textarea
-                  autoFocus
-                  value={editingCard}
-                  onChange={e => setEditingCard(e.target.value)}
-                  rows={3}
-                  style={{
-                    width: '100%', resize: 'none', boxSizing: 'border-box',
-                    fontFamily: 'var(--font-note)', fontSize: 17, fontStyle: 'italic',
-                    color: '#B91C1C', lineHeight: 1.4,
-                    background: 'rgba(185,28,28,0.04)', border: '1px solid rgba(185,28,28,0.22)',
-                    borderRadius: 6, padding: '6px 10px', outline: 'none',
-                    marginBottom: 10,
-                  }}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-                      e.preventDefault()
-                      onEditComment?.(comment.id, openCard.lineIndex, editingCard).then(() => setOpenCard(null))
-                    }
-                    if (e.key === 'Escape') setCardMode('view')
-                  }}
-                />
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button
-                    onClick={async () => {
-                      await onEditComment?.(comment.id, openCard.lineIndex, editingCard)
-                      setOpenCard(null)
-                    }}
-                    style={{
-                      flex: 1, fontSize: 12, fontWeight: 600, height: 30,
-                      background: 'var(--accent)', border: 'none',
-                      borderRadius: 6, cursor: 'pointer', color: '#fff',
-                    }}
-                  >
-                    Save
-                  </button>
-                  <button
-                    onClick={() => setCardMode('view')}
-                    style={{
-                      flex: 1, fontSize: 12, fontWeight: 600, height: 30,
-                      background: 'var(--surface-1)', border: '1px solid var(--border)',
-                      borderRadius: 6, cursor: 'pointer', color: 'var(--text-dim)',
-                    }}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </>
-            )}
+            {/* Add new annotation */}
+            {cardComments.length > 0 && <div style={{ height: 1, background: 'var(--divider)', margin: '4px 0 10px' }} />}
+            <div style={{ display: 'flex', gap: 6 }}>
+              <textarea
+                value={addDraft}
+                onChange={e => setAddDraft(e.target.value)}
+                placeholder="Aggiungi nota…"
+                rows={2}
+                autoFocus={cardComments.length === 0}
+                style={{
+                  flex: 1, resize: 'none', boxSizing: 'border-box',
+                  fontFamily: 'var(--font-note)', fontSize: 16, fontStyle: 'italic',
+                  color: '#B91C1C', lineHeight: 1.4,
+                  background: 'rgba(185,28,28,0.04)', border: '1px solid rgba(185,28,28,0.18)',
+                  borderRadius: 6, padding: '6px 10px', outline: 'none',
+                }}
+                onKeyDown={async e => {
+                  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && addDraft.trim()) {
+                    e.preventDefault()
+                    setCardSubmitting(true)
+                    await onAddComment?.(openCard.lineIndex, addDraft.trim())
+                    setAddDraft('')
+                    setCardSubmitting(false)
+                  }
+                  if (e.key === 'Escape') setOpenCard(null)
+                }}
+              />
+              <button
+                disabled={cardSubmitting || !addDraft.trim()}
+                onClick={async () => {
+                  if (!addDraft.trim()) return
+                  setCardSubmitting(true)
+                  await onAddComment?.(openCard.lineIndex, addDraft.trim())
+                  setAddDraft('')
+                  setCardSubmitting(false)
+                }}
+                style={{
+                  alignSelf: 'flex-end', height: 34, padding: '0 12px',
+                  background: 'var(--accent)', color: '#fff', border: 'none',
+                  borderRadius: 6, fontSize: 16, fontWeight: 700,
+                  cursor: cardSubmitting || !addDraft.trim() ? 'not-allowed' : 'pointer',
+                  opacity: cardSubmitting || !addDraft.trim() ? 0.35 : 1,
+                  transition: 'opacity 0.15s', flexShrink: 0,
+                }}
+              >↵</button>
+            </div>
           </div>
         )
       })()}
