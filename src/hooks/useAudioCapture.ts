@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback } from 'react'
+import { useRef, useState, useCallback, useEffect } from 'react'
 
 export type AudioCaptureState = 'idle' | 'requesting' | 'active' | 'error'
 export type AudioSource = 'display' | 'microphone'
