@@ -7,6 +7,7 @@ interface Props {
   currentSentence: string
   targetLang?: string
   onClose: () => void
+  savedNote?: string | null
   isSaved?: boolean
   onSave?: (word: string, note?: string) => void
   savedCount?: number
@@ -26,13 +27,19 @@ const REGISTER_COLOR: Record<string, string> = {
   neutral: 'var(--text-muted)',
 }
 
-export default function GlossaryPanel({ word, sentences, currentSentence, targetLang = 'en', onClose, isSaved, onSave, savedCount, onShowAll }: Props) {
+export default function GlossaryPanel({ word, sentences, currentSentence, targetLang = 'en', onClose, savedNote, isSaved, onSave, savedCount, onShowAll }: Props) {
   // pass AI definition as note when saving so the list can show it without re-fetching
   const [aiDef, setAiDef] = useState<AiDef | null>(null)
-  const [aiLoading, setAiLoading] = useState(true)
+  const [aiLoading, setAiLoading] = useState(!!currentSentence)
   const [aiError, setAiError] = useState(false)
 
   const retryAiDef = useCallback(() => {
+    if (!currentSentence) {
+      setAiDef(null)
+      setAiLoading(false)
+      setAiError(false)
+      return () => {}
+    }
     let cancelled = false
     setAiDef(null)
     setAiLoading(true)
@@ -74,6 +81,7 @@ export default function GlossaryPanel({ word, sentences, currentSentence, target
   }
 
   const otherSentences = sentences.filter(s => s !== currentSentence).slice(-3)
+  const displayedDefinition = aiDef?.definition ?? savedNote ?? null
 
   return (
     <div style={{
@@ -96,14 +104,14 @@ export default function GlossaryPanel({ word, sentences, currentSentence, target
             textTransform: 'uppercase', color: 'var(--text-muted)',
           }}>Context</span>
           <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>{word}</span>
-          {aiDef && (
+          {(aiDef || savedNote) && (
             <span style={{
               fontSize: 10, fontWeight: 700, letterSpacing: '0.05em',
               textTransform: 'uppercase',
-              color: REGISTER_COLOR[aiDef.register] ?? REGISTER_COLOR.neutral,
+              color: REGISTER_COLOR[aiDef?.register ?? 'neutral'] ?? REGISTER_COLOR.neutral,
               background: 'rgba(0,0,0,0.04)',
               borderRadius: 5, padding: '2px 6px',
-            }}>{aiDef.register}</span>
+            }}>{aiDef?.register ?? 'saved'}</span>
           )}
           {/* Save to workspace glossary */}
           {onSave && !aiLoading && (
@@ -157,7 +165,7 @@ export default function GlossaryPanel({ word, sentences, currentSentence, target
             }} />
             <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Looking up definition…</span>
           </div>
-        ) : aiError && !aiDef ? (
+        ) : aiError && !displayedDefinition ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0' }}>
             <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>AI lookup unavailable.</span>
             <button
@@ -170,7 +178,7 @@ export default function GlossaryPanel({ word, sentences, currentSentence, target
               }}
             >Retry</button>
           </div>
-        ) : aiDef ? (
+        ) : displayedDefinition ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div style={{
               background: 'var(--surface-2)',
@@ -182,13 +190,13 @@ export default function GlossaryPanel({ word, sentences, currentSentence, target
                 fontSize: 10, fontWeight: 700, letterSpacing: '0.09em',
                 textTransform: 'uppercase', color: 'var(--text-muted)',
                 marginBottom: 8,
-              }}>Definition</p>
+              }}>{aiDef ? 'Definition' : 'Saved definition'}</p>
               <p style={{ fontSize: 14, color: 'var(--text)', lineHeight: 1.65 }}>
-                {aiDef.definition}
+                {displayedDefinition}
               </p>
             </div>
 
-            {aiDef.context && (
+            {aiDef?.context && (
               <div style={{
                 background: 'rgba(6,182,212,0.05)',
                 borderRadius: 10,

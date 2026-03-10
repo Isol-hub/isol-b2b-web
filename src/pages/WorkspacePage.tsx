@@ -150,6 +150,7 @@ export default function WorkspacePage() {
   // Workspace glossary
   const [glossaryItems, setGlossaryItems] = useState<GlossaryItem[]>([])
   const glossaryTermsSet = useMemo(() => new Set(glossaryItems.map(i => i.term)), [glossaryItems])
+  const glossaryNotesMap = useMemo(() => new Map(glossaryItems.map(i => [i.term, i.note])), [glossaryItems])
 
   // Onboarding
   const [showOnboarding, setShowOnboarding] = useState(() =>
@@ -1508,6 +1509,7 @@ export default function WorkspacePage() {
               currentSentence={glossaryWord.sentence}
               targetLang={targetLang}
               onClose={() => setGlossaryWord(null)}
+              savedNote={glossaryNotesMap.get(glossaryWord.word) ?? null}
               isSaved={glossaryTermsSet.has(glossaryWord.word)}
               onSave={handleSaveGlossaryWord}
               savedCount={glossaryItems.length}
