@@ -448,12 +448,13 @@ export default function DocumentView({
                     }}
                   >
                     <p
-                      style={{ margin: 0, fontSize: 18, color: 'var(--text)', lineHeight: 1.85, fontWeight: lineWeight, padding: '2px 0', cursor: isEditable ? 'text' : isHost ? 'text' : undefined }}
+                      style={{ margin: 0, fontSize: 18, color: 'var(--text)', lineHeight: 1.85, fontWeight: lineWeight, padding: '2px 0', cursor: isEditable && !isHost ? 'text' : isHost ? 'text' : undefined }}
                       onClick={(e) => {
-                        if (isEditable) { e.stopPropagation(); setEditingIndex(i); setEditingText(line.text) }
+                        // isHost takes priority — clicks bubble up to outer div for host card
+                        if (isEditable && !isHost) { e.stopPropagation(); setEditingIndex(i); setEditingText(line.text) }
                       }}
-                      onMouseEnter={e => { if (isEditable) (e.currentTarget as HTMLElement).style.background = 'rgba(99,102,241,0.04)' }}
-                      onMouseLeave={e => { if (isEditable) (e.currentTarget as HTMLElement).style.background = 'transparent' }}
+                      onMouseEnter={e => { if (isEditable && !isHost) (e.currentTarget as HTMLElement).style.background = 'rgba(99,102,241,0.04)' }}
+                      onMouseLeave={e => { if (isEditable && !isHost) (e.currentTarget as HTMLElement).style.background = 'transparent' }}
                     >
                       {isHost && (
                         <span
@@ -474,27 +475,21 @@ export default function DocumentView({
                       {renderInline(line.text, line.text, onWordClick)}
                     </p>
 
-                    {/* Zero-height handwriting annotation overlay — doesn't affect line spacing */}
+                    {/* Handwriting annotations — flow in document, spacing grows proportionally */}
                     {lineC.length > 0 && (
-                      <div style={{ position: 'relative', height: 0, overflow: 'visible' }}>
+                      <div style={{ paddingLeft: 6, paddingTop: 3, paddingBottom: 2 }}>
                         {lineC.map((comment, ci) => (
                           <div
                             key={comment.id}
                             style={{
-                              position: 'absolute',
-                              top: ci * 21,
-                              left: 6,
                               color: '#B91C1C',
                               fontFamily: 'var(--font-note)',
-                              fontSize: 17,
+                              fontSize: 16,
                               fontStyle: 'italic',
-                              lineHeight: 1.2,
-                              transform: `rotate(${-0.7 - ci * 0.5}deg)`,
-                              whiteSpace: 'nowrap',
-                              maxWidth: '80%',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              zIndex: 2,
+                              lineHeight: 1.35,
+                              transform: `rotate(${-0.7 - ci * 0.4}deg)`,
+                              marginTop: ci === 0 ? 0 : 5,
+                              wordBreak: 'break-word',
                               userSelect: 'none',
                               opacity: comment.pending ? 0.5 : 1,
                               pointerEvents: 'none',
