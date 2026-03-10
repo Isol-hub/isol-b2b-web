@@ -348,7 +348,7 @@ export default function DocumentView({
           </div>
         ) : (
           <span style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.06em', textTransform: 'uppercase', fontWeight: 600 }}>
-            {isActive ? 'AI enhances on 5+ lines' : 'Transcript'}
+            {isActive ? 'AI enhances after ~60 words' : 'Transcript'}
           </span>
         )}
         <div style={{ flex: 1, height: 1, background: 'var(--divider)' }} />

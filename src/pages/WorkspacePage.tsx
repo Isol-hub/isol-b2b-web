@@ -178,7 +178,8 @@ export default function WorkspacePage() {
   }, [aiFormatted])
 
   useEffect(() => {
-    if (transcript.length < 5) return
+    const totalWords = transcript.reduce((n, l) => n + l.text.split(/\s+/).filter(Boolean).length, 0)
+    if (totalWords < 60) return
     if (Date.now() < aiRetryAfterRef.current) return
     if (aiDebounceRef.current) clearTimeout(aiDebounceRef.current)
     aiDebounceRef.current = setTimeout(() => {
@@ -216,7 +217,8 @@ export default function WorkspacePage() {
 
   // AI notes — runs in parallel, slightly delayed
   useEffect(() => {
-    if (transcript.length < 5) return
+    const totalWords = transcript.reduce((n, l) => n + l.text.split(/\s+/).filter(Boolean).length, 0)
+    if (totalWords < 60) return
     if (Date.now() < notesRetryAfterRef.current) return
     if (notesDebounceRef.current) clearTimeout(notesDebounceRef.current)
     notesDebounceRef.current = setTimeout(() => {
