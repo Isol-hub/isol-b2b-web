@@ -126,53 +126,16 @@ export default function ViewerPage() {
   const handleMessage = useCallback((msg: SubtitleMessage) => {
     if (msg.line_final) {
       const time = new Date()
-      const lang = targetLangRef.current
-      const textToTranslate = msg.original_text || msg.line_final
-      const context = transcriptRef.current.slice(-3).map(l => l.text)
-      fetch('/api/ai/translate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ current: textToTranslate, context, targetLang: lang }),
+      setTranscript(prev => [...prev, { text: msg.line_final, time }])
+      msg.line_final.split(/\s+/).forEach(raw => {
+        const w = raw.toLowerCase().replace(/[^\w]/g, '')
+        if (w.length < 3) return
+        const existing = wordIndex.current.get(w) ?? []
+        if (existing.length < 5) wordIndex.current.set(w, [...existing, msg.line_final])
       })
-        .then(r => r.ok ? r.json() : null)
-        .then((data: { translated?: string } | null) => {
-          const finalText = data?.translated?.trim() || msg.line_final
-          setTranscript(prev => [...prev, { text: finalText, time }])
-          finalText.split(/\s+/).forEach(raw => {
-            const w = raw.toLowerCase().replace(/[^\w]/g, '')
-            if (w.length < 3) return
-            const existing = wordIndex.current.get(w) ?? []
-            if (existing.length < 5) wordIndex.current.set(w, [...existing, finalText])
-          })
-        })
-        .catch(() => {
-          setTranscript(prev => [...prev, { text: msg.line_final, time }])
-        })
     }
-    // line_next: translate with debounce to avoid excessive API calls
-    const nextText = msg.line_next || ''
     if (lineNextDebounceRef.current) clearTimeout(lineNextDebounceRef.current)
-    if (!nextText) {
-      setCurrentLine('')
-    } else {
-      lineNextDebounceRef.current = setTimeout(() => {
-        const lang = targetLangRef.current
-        if (lang === 'en') {
-          setCurrentLine(nextText)
-          return
-        }
-        fetch('/api/ai/translate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ current: nextText, context: [], targetLang: lang }),
-        })
-          .then(r => r.ok ? r.json() : null)
-          .then((data: { translated?: string } | null) => {
-            setCurrentLine(data?.translated?.trim() || nextText)
-          })
-          .catch(() => setCurrentLine(nextText))
-      }, 600)
-    }
+    setCurrentLine(msg.line_next || '')
   }, [])
 
   const ws = useWebSocket({ url: wssUrl, targetLang, onMessage: handleMessage, viewerSessionId: sessionId, onSessionEnd: () => setSessionEnded(true) })
