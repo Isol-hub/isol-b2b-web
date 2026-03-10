@@ -640,11 +640,11 @@ export default function WorkspacePage() {
       }
       setSaveStatus('saved')
       if (saveStatusTimerRef.current) clearTimeout(saveStatusTimerRef.current)
-      saveStatusTimerRef.current = setTimeout(() => setSaveStatus('idle'), 2500)
+      saveStatusTimerRef.current = setTimeout(() => setSaveStatus('idle'), 1800)
     } catch {
       setSaveStatus('error')
       if (saveStatusTimerRef.current) clearTimeout(saveStatusTimerRef.current)
-      saveStatusTimerRef.current = setTimeout(() => setSaveStatus('idle'), 4000)
+      saveStatusTimerRef.current = setTimeout(() => setSaveStatus('idle'), 3000)
     }
   }, [workspaceSlug, targetLang, fetchSessions])
 
@@ -1197,7 +1197,7 @@ export default function WorkspacePage() {
               background: saveStatus === 'error' ? 'rgba(239,68,68,0.07)' : 'rgba(99,102,241,0.06)',
               borderBottom: `1px solid ${saveStatus === 'error' ? 'rgba(239,68,68,0.15)' : 'rgba(99,102,241,0.12)'}`,
               flexShrink: 0,
-              animation: saveStatus === 'saved' ? 'docFade 0.4s ease-out' : undefined,
+              animation: saveStatus === 'saved' ? 'quoteFlipOut 0.35s ease-out 1.4s forwards' : undefined,
             }}>
               {saveStatus === 'saving' && (
                 <span style={{

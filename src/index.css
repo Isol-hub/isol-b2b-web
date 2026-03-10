@@ -477,6 +477,15 @@ input, select { font-family: inherit; outline: none; }
 /* ─── Animations ─────────────────────────────────── */
 @keyframes spin { to { transform: rotate(360deg); } }
 
+@keyframes quoteFlipIn {
+  from { transform: perspective(500px) rotateX(90deg); opacity: 0; }
+  to   { transform: perspective(500px) rotateX(0deg);  opacity: 1; }
+}
+@keyframes quoteFlipOut {
+  from { transform: perspective(500px) rotateX(0deg);   opacity: 1; }
+  to   { transform: perspective(500px) rotateX(-90deg); opacity: 0; }
+}
+
 @keyframes waveBar {
   from { transform: scaleY(0.35); }
   to   { transform: scaleY(1); }
