@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import HeroQuotes from './HeroQuotes'
 
 interface Props {
   current: string
@@ -19,11 +20,9 @@ export default function SubtitleView({ current, previous, compact }: Props) {
     <div style={{
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       height: compact ? 80 : 160,
-      color: 'var(--text-muted)', fontSize: 13, gap: 10,
-      flexDirection: 'column',
+      flexDirection: 'column', gap: 10,
     }}>
-      <span style={{ fontSize: compact ? 18 : 24, opacity: 0.4 }}>✦</span>
-      <span>Subtitles will appear here…</span>
+      <HeroQuotes fontSize={compact ? 13 : 16} />
     </div>
   )
 
