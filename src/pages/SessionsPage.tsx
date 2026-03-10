@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { getSession, getToken } from '../lib/auth'
 import { LANGUAGES } from '../lib/languages'
@@ -221,29 +221,35 @@ export default function SessionsPage() {
 
   const shareModalSession = shareModalId !== null ? sessions.find(s => s.id === shareModalId) ?? null : null
 
-  const snippetMap = ftsResults ? new Map(ftsResults.map(r => [r.session_id, r.snippet])) : new Map<number, string>()
+  const snippetMap = useMemo(
+    () => ftsResults ? new Map(ftsResults.map(r => [r.session_id, r.snippet])) : new Map<number, string>(),
+    [ftsResults]
+  )
 
-  const filtered = ftsResults !== null
-    // FTS mode: order by FTS result order, merge with sessions for full metadata
-    ? ftsResults
+  const filtered = useMemo(() => {
+    if (ftsResults !== null) {
+      // FTS mode: order by FTS result order, merge with sessions for full metadata
+      return ftsResults
         .map(r => sessions.find(s => s.id === r.session_id))
         .filter((s): s is SessionMeta => s !== undefined)
+    }
     // Client-side filter + sort
-    : sessions
-        .filter(s => {
-          if (!search.trim()) return true
-          const q = search.toLowerCase()
-          return (s.title ?? '').toLowerCase().includes(q) || fmtDate(s.started_at).toLowerCase().includes(q)
-        })
-        .sort((a, b) => {
-          switch (sort) {
-            case 'date_desc': return b.started_at - a.started_at
-            case 'date_asc': return a.started_at - b.started_at
-            case 'title_asc': return (a.title ?? fmtDate(a.started_at)).localeCompare(b.title ?? fmtDate(b.started_at))
-            case 'title_desc': return (b.title ?? fmtDate(b.started_at)).localeCompare(a.title ?? fmtDate(a.started_at))
-            default: return 0
-          }
-        })
+    const q = search.trim().toLowerCase()
+    const base = q.length === 0
+      ? sessions.slice()
+      : sessions.filter(s =>
+          (s.title ?? '').toLowerCase().includes(q) || fmtDate(s.started_at).toLowerCase().includes(q)
+        )
+    return base.sort((a, b) => {
+      switch (sort) {
+        case 'date_desc': return b.started_at - a.started_at
+        case 'date_asc': return a.started_at - b.started_at
+        case 'title_asc': return (a.title ?? fmtDate(a.started_at)).localeCompare(b.title ?? fmtDate(b.started_at))
+        case 'title_desc': return (b.title ?? fmtDate(b.started_at)).localeCompare(a.title ?? fmtDate(a.started_at))
+        default: return 0
+      }
+    })
+  }, [sessions, ftsResults, search, sort])
 
   if (!auth) return null
 
