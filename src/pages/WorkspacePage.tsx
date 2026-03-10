@@ -37,6 +37,7 @@ interface SpeakerProfile {
 
 const SPEAKER_COLORS = ['#6366F1', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4']
 const TURN_GAP_MS = 2500
+const MIN_RELIABLE_SPEAKER_CONFIDENCE = 0.55
 // ────────────────────────────────────────────────────────────────────────────
 
 interface TranscriptLine {
@@ -44,6 +45,8 @@ interface TranscriptLine {
   time: Date
   /** speaker_id from pipeline diarization — null when unavailable (Phase 1 heuristic only) */
   pipelineSpeakerId?: string | null
+  /** low-confidence backend speaker IDs should not suppress the heuristic fallback */
+  pipelineSpeakerConfidence?: number | null
 }
 
 function buildCommentMap(arr: (CommentItem & { line_index: number | null })[]): Map<number, CommentItem[]> {
@@ -228,8 +231,12 @@ export default function WorkspacePage() {
 
     for (let i = start; i < transcript.length; i++) {
       const pipelineId = transcript[i].pipelineSpeakerId ?? null
+      const pipelineConfidence = transcript[i].pipelineSpeakerConfidence ?? null
+      const hasReliablePipelineSpeaker = !!pipelineId && (
+        pipelineConfidence === null || pipelineConfidence >= MIN_RELIABLE_SPEAKER_CONFIDENCE
+      )
 
-      if (pipelineId) {
+      if (hasReliablePipelineSpeaker && pipelineId) {
         // ── Pipeline mode: backend diarization result available ───────────────
         // Ensure a profile exists for this speaker ID (sp-1, sp-2, …).
         if (!profiles.has(pipelineId)) {
@@ -299,6 +306,7 @@ export default function WorkspacePage() {
         // Capture pipeline speaker if backend diarization is active (Phase 3).
         // null/undefined → heuristic will run instead.
         pipelineSpeakerId: msg.speaker_id ?? null,
+        pipelineSpeakerConfidence: msg.speaker_confidence ?? null,
       }
       setTranscript(prev => [...prev, entry])
       msg.line_final.split(/\s+/).forEach(raw => {
