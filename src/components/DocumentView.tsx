@@ -4,7 +4,6 @@ import CommentThread, { type CommentItem } from './CommentThread'
 import LiveBanner from './LiveBanner'
 import SessionTimeline, { type TimelineSegment } from './SessionTimeline'
 import HighlightPopup, { type HighlightCategory, type HighlightItem } from './HighlightPopup'
-import HighlightsSection from './HighlightsSection'
 
 interface TranscriptLine {
   text: string
@@ -528,21 +527,6 @@ export default function DocumentView({
               )}
               {isActive && !currentLine && <span className="doc-cursor" />}
 
-            </div>
-          )}
-
-          {/* Highlights — shown below transcript, only when present */}
-          {(highlights ?? []).length > 0 && (
-            <div style={{
-              marginTop: 40,
-              paddingTop: 28,
-              borderTop: '1px solid var(--divider)',
-            }}>
-              <HighlightsSection
-                highlights={highlights ?? []}
-                onRemove={onRemoveHighlight}
-                onJumpTo={scrollToLine}
-              />
             </div>
           )}
 

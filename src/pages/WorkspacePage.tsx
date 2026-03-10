@@ -81,6 +81,7 @@ export default function WorkspacePage() {
 
   const [glossaryWord, setGlossaryWord] = useState<{ word: string; sentence: string } | null>(null)
   const [showGlossaryList, setShowGlossaryList] = useState(false)
+  const [showHighlights, setShowHighlights] = useState(false)
   const [titleSaved, setTitleSaved] = useState(false)
 
   const [aiFormatted, setAiFormatted] = useState<string | undefined>()
@@ -1250,6 +1251,17 @@ export default function WorkspacePage() {
 
             <div className="toolbar-sep" />
 
+            {/* Highlights */}
+            <button
+              onClick={() => setShowHighlights(v => !v)}
+              className={`toolbar-btn${showHighlights ? ' active' : ''}`}
+            >
+              <span>◈</span>
+              Highlights{highlights.length > 0 && ` (${highlights.length})`}
+            </button>
+
+            <div className="toolbar-sep" />
+
             {/* Export */}
             <button
               onClick={() => transcript.length > 0 && setShowModal(true)}
@@ -1510,6 +1522,32 @@ export default function WorkspacePage() {
               }}
               onAdd={handleAddGlossaryTerm}
             />
+          </div>
+        </>
+      )}
+
+      {/* Highlights drawer */}
+      {showHighlights && (
+        <>
+          <div className="glossary-backdrop" onClick={() => setShowHighlights(false)} />
+          <div className="glossary-drawer">
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '16px 20px', borderBottom: '1px solid var(--divider)', flexShrink: 0,
+            }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>Highlights</span>
+              <button
+                onClick={() => setShowHighlights(false)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: 'var(--text-muted)', lineHeight: 1 }}
+              >×</button>
+            </div>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
+              <HighlightsSection
+                highlights={highlights}
+                onRemove={handleRemoveHighlight}
+                onJumpTo={() => setShowHighlights(false)}
+              />
+            </div>
           </div>
         </>
       )}
