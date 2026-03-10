@@ -92,23 +92,8 @@ function timeAgoDoc(ts: number): string {
 
 function CommentMarginalia({ items, onJumpTo }: { items: MarginNoteItem[]; onJumpTo?: (lineIndex: number) => void }) {
   return (
-    <div style={{
-      padding: '18px 18px 16px',
-      borderRadius: 16,
-      border: '1px solid rgba(220,38,38,0.14)',
-      background: 'linear-gradient(180deg, rgba(255,255,255,0.80), rgba(255,244,244,0.82))',
-      boxShadow: '0 12px 30px rgba(15,23,42,0.05)',
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-        <span style={{ fontSize: 11, color: '#B91C1C', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-          Margin Notes ({items.length})
-        </span>
-      </div>
-      {items.length === 0 ? (
-        <p style={{ margin: 0, fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.55 }}>
-          Comments stay visible here as handwritten notes while you read AI Enhanced and Notes.
-        </p>
-      ) : items.map(({ lineIndex, lineText, comment }) => (
+    <div style={{ paddingTop: 12 }}>
+      {items.map(({ lineIndex, comment }) => (
         <button
           key={comment.id}
           onClick={() => onJumpTo?.(lineIndex)}
@@ -117,29 +102,27 @@ function CommentMarginalia({ items, onJumpTo }: { items: MarginNoteItem[]; onJum
             width: '100%',
             textAlign: 'left',
             marginBottom: 14,
-            padding: '10px 12px',
-            borderRadius: 12,
-            border: '1px solid rgba(220,38,38,0.14)',
-            background: 'rgba(255,255,255,0.72)',
+            background: 'transparent',
+            border: 'none',
             cursor: onJumpTo ? 'pointer' : 'default',
-            transform: 'rotate(-0.6deg)',
+            padding: 0,
           }}
           title={onJumpTo ? 'Jump to annotated line' : undefined}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-            <span style={{ color: '#DC2626', fontSize: 15, lineHeight: 1 }}>↖</span>
-            <span style={{ fontSize: 11, color: '#B91C1C', fontWeight: 700, letterSpacing: '0.03em' }}>
-              {comment.author} · {timeAgoDoc(comment.created_at)}
-            </span>
+          <div style={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: 6,
+            color: '#B91C1C',
+            fontFamily: 'var(--font-note)',
+            fontSize: 16,
+            fontStyle: 'italic',
+            lineHeight: 1.35,
+            transform: 'rotate(-1.2deg)',
+          }}>
+            <span style={{ fontSize: 15, lineHeight: 1, marginTop: 1 }}>↖</span>
+            <span>{comment.body}</span>
           </div>
-          <div style={{ fontFamily: 'var(--font-note)', fontSize: 16, color: '#991B1B', lineHeight: 1.45 }}>
-            {comment.body}
-          </div>
-          {lineText && (
-            <p style={{ margin: '8px 0 0', fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.45 }}>
-              {lineText.length > 88 ? lineText.slice(0, 88) + '…' : lineText}
-            </p>
-          )}
         </button>
       ))}
     </div>
@@ -157,7 +140,7 @@ function InlineMarginNotes({
 }) {
   if (comments.length === 0) return null
   return (
-    <div style={{ margin: '-4px 0 18px 18px', paddingLeft: 14, borderLeft: '2px dashed rgba(220,38,38,0.26)' }}>
+    <div style={{ margin: '-2px 0 14px 18px', paddingLeft: 10 }}>
       {comments.map(comment => (
         <button
           key={comment.id}
@@ -166,24 +149,27 @@ function InlineMarginNotes({
             display: 'block',
             width: '100%',
             textAlign: 'left',
-            background: 'rgba(254,242,242,0.9)',
-            border: '1px solid rgba(220,38,38,0.16)',
-            borderRadius: 10,
-            padding: '10px 12px',
-            marginBottom: 8,
+            background: 'transparent',
+            border: 'none',
+            padding: 0,
+            marginBottom: 6,
             cursor: onJumpTo ? 'pointer' : 'default',
-            transform: 'rotate(-0.4deg)',
           }}
           title={onJumpTo ? 'Jump to line' : undefined}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-            <span style={{ color: '#DC2626', fontSize: 15, lineHeight: 1 }}>↖</span>
-            <span style={{ fontSize: 11, color: '#B91C1C', fontWeight: 700 }}>
-              {comment.author} · {timeAgoDoc(comment.created_at)}
-            </span>
-          </div>
-          <div style={{ fontFamily: 'var(--font-note)', fontSize: 17, color: '#991B1B', lineHeight: 1.45 }}>
-            {comment.body}
+          <div style={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: 6,
+            color: '#B91C1C',
+            fontFamily: 'var(--font-note)',
+            fontSize: 17,
+            fontStyle: 'italic',
+            lineHeight: 1.35,
+            transform: 'rotate(-1deg)',
+          }}>
+            <span style={{ fontSize: 15, lineHeight: 1, marginTop: 1 }}>↖</span>
+            <span>{comment.body}</span>
           </div>
         </button>
       ))}
@@ -375,19 +361,15 @@ export default function DocumentView({
 
       {/* ━━ DOCUMENT SURFACE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
       <div ref={scrollContainerRef} style={{ flex: 1, overflowY: 'auto', background: 'var(--surface-1)' }}>
-        <div
-          className="doc-surface"
-          style={{
-            maxWidth: 1220,
-            margin: '0 auto',
-            padding: '40px 32px calc(40px + 80px)',
-            display: 'grid',
-            gridTemplateColumns: 'minmax(0, 1fr) 300px',
-            gap: 28,
-            alignItems: 'start',
-          }}
-        >
-          <div style={{ minWidth: 0 }}>
+        <div className="doc-surface" style={{ maxWidth: 980, margin: '0 auto', padding: '40px 32px calc(40px + 80px)' }}>
+          <div style={{ minWidth: 0, position: 'relative' }}>
+            <div style={{ marginBottom: 22 }}>
+              <HighlightsSection
+                highlights={highlights ?? []}
+                onRemove={onRemoveHighlight}
+                onJumpTo={scrollToLine}
+              />
+            </div>
 
           {isEmpty ? (
             <div style={{ paddingTop: 80, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14, color: 'var(--text-muted)', textAlign: 'center' }}>
@@ -556,15 +538,18 @@ export default function DocumentView({
 
             </div>
           )}
+            {(viewMode === 'ai' || viewMode === 'notes') && annotationsForPanel.length > 0 && (
+              <div style={{
+                position: 'absolute',
+                right: -170,
+                top: viewMode === 'ai' ? 120 : 100,
+                width: 150,
+                pointerEvents: 'auto',
+              }}>
+                <CommentMarginalia items={annotationsForPanel} onJumpTo={scrollToLine} />
+              </div>
+            )}
           </div>
-          <aside style={{ position: 'sticky', top: 18, display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <HighlightsSection
-              highlights={highlights ?? []}
-              onRemove={onRemoveHighlight}
-              onJumpTo={scrollToLine}
-            />
-            <CommentMarginalia items={annotationsForPanel} onJumpTo={scrollToLine} />
-          </aside>
         </div>
         <div ref={bottomRef} />
       </div>
