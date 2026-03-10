@@ -96,6 +96,10 @@ export default function WorkspacePage() {
   const notesRunningRef = useRef(false)
   const aiDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const notesDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const aiRetryAfterRef = useRef<number>(0)
+  const notesRetryAfterRef = useRef<number>(0)
+  const [aiRetryTick, setAiRetryTick] = useState(0)
+  const [notesRetryTick, setNotesRetryTick] = useState(0)
   const targetLangRef = useRef(targetLang)
   useEffect(() => { targetLangRef.current = targetLang }, [targetLang])
 
@@ -175,9 +179,11 @@ export default function WorkspacePage() {
 
   useEffect(() => {
     if (transcript.length < 5) return
+    if (Date.now() < aiRetryAfterRef.current) return
     if (aiDebounceRef.current) clearTimeout(aiDebounceRef.current)
     aiDebounceRef.current = setTimeout(() => {
       if (aiRunningRef.current) return
+      if (Date.now() < aiRetryAfterRef.current) return
       if (aiFormattedAt !== undefined && transcript.length <= aiFormattedAt) return
       aiRunningRef.current = true
       setAiLoading(true)
@@ -188,23 +194,34 @@ export default function WorkspacePage() {
         body: JSON.stringify({ lines: transcript.map(l => l.text), targetLang: targetLangRef.current }),
       })
         .then(r => {
+          if (r.status === 429) {
+            r.json().then((body: { resetAt?: number }) => {
+              const retryAt = body.resetAt ? body.resetAt * 1000 : Date.now() + 60_000
+              aiRetryAfterRef.current = retryAt
+              const delay = Math.max(5_000, retryAt - Date.now())
+              setTimeout(() => { aiRunningRef.current = false; setAiRetryTick(t => t + 1) }, delay)
+            }).catch(() => { aiRunningRef.current = false })
+            return null
+          }
           if (!r.ok) { r.text().then(t => setError(`AI format error ${r.status}: ${t}`)); return null }
           return r.json()
         })
         .then((data: { formatted?: string } | null) => {
           if (data?.formatted) { setAiFormatted(data.formatted); setAiFormattedAt(snapLength) }
         })
-        .catch(e => setError(`AI format failed: ${e.message}`))
+        .catch(() => {})
         .finally(() => { setAiLoading(false); aiRunningRef.current = false })
-    }, 2000)
-  }, [transcript.length])
+    }, 4000)
+  }, [transcript.length, aiRetryTick])
 
   // AI notes — runs in parallel, slightly delayed
   useEffect(() => {
     if (transcript.length < 5) return
+    if (Date.now() < notesRetryAfterRef.current) return
     if (notesDebounceRef.current) clearTimeout(notesDebounceRef.current)
     notesDebounceRef.current = setTimeout(() => {
       if (notesRunningRef.current) return
+      if (Date.now() < notesRetryAfterRef.current) return
       notesRunningRef.current = true
       setAiNotesLoading(true)
       fetch('/api/ai/notes', {
@@ -212,14 +229,25 @@ export default function WorkspacePage() {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
         body: JSON.stringify({ lines: transcript.map(l => l.text), targetLang: targetLangRef.current }),
       })
-        .then(r => r.ok ? r.json() : null)
+        .then(r => {
+          if (r.status === 429) {
+            r.json().then((body: { resetAt?: number }) => {
+              const retryAt = body.resetAt ? body.resetAt * 1000 : Date.now() + 60_000
+              notesRetryAfterRef.current = retryAt
+              const delay = Math.max(5_000, retryAt - Date.now())
+              setTimeout(() => { notesRunningRef.current = false; setNotesRetryTick(t => t + 1) }, delay)
+            }).catch(() => { notesRunningRef.current = false })
+            return null
+          }
+          return r.ok ? r.json() : null
+        })
         .then((data: { notes?: string } | null) => {
           if (data?.notes) setAiNotes(data.notes)
         })
-        .catch(e => setError(`AI notes failed: ${e.message}`))
+        .catch(() => {})
         .finally(() => { setAiNotesLoading(false); notesRunningRef.current = false })
-    }, 3000)
-  }, [transcript.length])
+    }, 6000)
+  }, [transcript.length, notesRetryTick])
 
   // Speaker heuristic — incremental, runs only during live sessions
   useEffect(() => {

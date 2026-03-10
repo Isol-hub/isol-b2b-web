@@ -51,6 +51,10 @@ export default function ViewerPage() {
   const notesDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const lineNextDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const hasAutoSwitchedRef = useRef(false)
+  const aiRetryAfterRef = useRef<number>(0)
+  const notesRetryAfterRef = useRef<number>(0)
+  const [aiRetryTick, setAiRetryTick] = useState(0)
+  const [notesRetryTick, setNotesRetryTick] = useState(0)
 
   // Comments (per line)
   const [lineComments, setLineComments] = useState<Map<number, CommentItem[]>>(new Map())
@@ -79,9 +83,11 @@ export default function ViewerPage() {
   // AI format
   useEffect(() => {
     if (transcript.length < 5) return
+    if (Date.now() < aiRetryAfterRef.current) return
     if (aiDebounceRef.current) clearTimeout(aiDebounceRef.current)
     aiDebounceRef.current = setTimeout(() => {
       if (aiRunningRef.current) return
+      if (Date.now() < aiRetryAfterRef.current) return
       if (aiFormattedAt !== undefined && transcript.length <= aiFormattedAt) return
       aiRunningRef.current = true
       setAiLoading(true)
@@ -91,21 +97,34 @@ export default function ViewerPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ lines: transcript.map(l => l.text), targetLang: targetLangRef.current }),
       })
-        .then(r => r.ok ? r.json() : null)
+        .then(r => {
+          if (r.status === 429) {
+            r.json().then((body: { resetAt?: number }) => {
+              const retryAt = body.resetAt ? body.resetAt * 1000 : Date.now() + 60_000
+              aiRetryAfterRef.current = retryAt
+              const delay = Math.max(5_000, retryAt - Date.now())
+              setTimeout(() => { aiRunningRef.current = false; setAiRetryTick(t => t + 1) }, delay)
+            }).catch(() => { aiRunningRef.current = false })
+            return null
+          }
+          return r.ok ? r.json() : null
+        })
         .then((data: { formatted?: string } | null) => {
           if (data?.formatted) { setAiFormatted(data.formatted); setAiFormattedAt(snapLength) }
         })
         .catch(() => {})
         .finally(() => { setAiLoading(false); aiRunningRef.current = false })
-    }, 2000)
-  }, [transcript.length])
+    }, 4000)
+  }, [transcript.length, aiRetryTick])
 
   // AI notes
   useEffect(() => {
     if (transcript.length < 5) return
+    if (Date.now() < notesRetryAfterRef.current) return
     if (notesDebounceRef.current) clearTimeout(notesDebounceRef.current)
     notesDebounceRef.current = setTimeout(() => {
       if (notesRunningRef.current) return
+      if (Date.now() < notesRetryAfterRef.current) return
       notesRunningRef.current = true
       setAiNotesLoading(true)
       fetch('/api/ai/notes', {
@@ -113,14 +132,25 @@ export default function ViewerPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ lines: transcript.map(l => l.text), targetLang: targetLangRef.current }),
       })
-        .then(r => r.ok ? r.json() : null)
+        .then(r => {
+          if (r.status === 429) {
+            r.json().then((body: { resetAt?: number }) => {
+              const retryAt = body.resetAt ? body.resetAt * 1000 : Date.now() + 60_000
+              notesRetryAfterRef.current = retryAt
+              const delay = Math.max(5_000, retryAt - Date.now())
+              setTimeout(() => { notesRunningRef.current = false; setNotesRetryTick(t => t + 1) }, delay)
+            }).catch(() => { notesRunningRef.current = false })
+            return null
+          }
+          return r.ok ? r.json() : null
+        })
         .then((data: { notes?: string } | null) => {
           if (data?.notes) setAiNotes(data.notes)
         })
         .catch(() => {})
         .finally(() => { setAiNotesLoading(false); notesRunningRef.current = false })
-    }, 3500)
-  }, [transcript.length])
+    }, 6000)
+  }, [transcript.length, notesRetryTick])
 
   // Flush queued line indices → POST /api/translate → update translatedLines
   const flushTranslateQueue = useCallback(() => {
