@@ -348,7 +348,7 @@ export default function DocumentView({
           </div>
         ) : (
           <span style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.06em', textTransform: 'uppercase', fontWeight: 600 }}>
-            {isActive ? 'AI enhances after ~60 words' : 'Transcript'}
+            {isActive ? 'AI enhances after ~5 lines' : 'Transcript'}
           </span>
         )}
         <div style={{ flex: 1, height: 1, background: 'var(--divider)' }} />
@@ -434,6 +434,8 @@ export default function DocumentView({
                     ref={el => { lineRefs.current[i] = el }}
                     data-line-index={i}
                     onClick={isHost ? (e) => openHostCard(i, e) : undefined}
+                    onMouseEnter={() => setHoveredLine(i)}
+                    onMouseLeave={() => setHoveredLine(null)}
                     style={{
                       marginBottom: 20,
                       borderLeft: `2px solid ${hasComments ? 'rgba(99,102,241,0.25)' : 'transparent'}`,
@@ -453,6 +455,22 @@ export default function DocumentView({
                       onMouseEnter={e => { if (isEditable) (e.currentTarget as HTMLElement).style.background = 'rgba(99,102,241,0.04)' }}
                       onMouseLeave={e => { if (isEditable) (e.currentTarget as HTMLElement).style.background = 'transparent' }}
                     >
+                      {isHost && (
+                        <span
+                          aria-hidden="true"
+                          style={{
+                            display: 'inline-block',
+                            width: 14,
+                            marginRight: 6,
+                            fontSize: 9,
+                            verticalAlign: 'middle',
+                            color: hoveredLine === i ? '#B91C1C' : 'rgba(0,0,0,0.18)',
+                            transition: 'color 0.18s',
+                            userSelect: 'none',
+                            lineHeight: 1,
+                          }}
+                        >✦</span>
+                      )}
                       {renderInline(line.text, line.text, onWordClick)}
                     </p>
 
