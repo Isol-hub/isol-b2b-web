@@ -2,50 +2,72 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getSession } from '../lib/auth'
 
-const WORDS = ['meeting', 'lecture', 'podcast', 'interview', 'conversation']
-
-const HOW_IT_WORKS = [
-  { n: '01', title: 'Speak or play audio', desc: 'Use your microphone or capture audio from any screen.' },
-  { n: '02', title: 'ISOL understands and translates', desc: 'Speech is recognized and translated across languages in real time.' },
-  { n: '03', title: 'Ideas are captured instantly', desc: 'A structured document builds itself as you speak.' },
+// Demo script — English source → Italian translation, simulates a live meeting
+const SCRIPT = [
+  { src: 'The Q4 results exceeded all projections.',        tr: 'I risultati del Q4 hanno superato ogni proiezione.' },
+  { src: 'Revenue grew by 34% year over year.',             tr: 'Il fatturato è cresciuto del 34% anno su anno.' },
+  { src: 'Customer retention reached an all-time high.',    tr: 'La retention ha raggiunto un massimo storico.' },
+  { src: 'We need to expand into three new markets.',       tr: 'Dobbiamo espanderci in tre nuovi mercati.' },
+  { src: 'Product launches are scheduled for Q1.',          tr: 'I lanci di prodotto sono previsti per il Q1.' },
 ]
 
 const USE_CASES = [
-  { title: 'Meetings', desc: 'Understand every meeting instantly.' },
-  { title: 'Lectures', desc: 'Capture knowledge from any lecture.' },
-  { title: 'Podcasts', desc: 'Turn spoken ideas into accessible knowledge.' },
-  { title: 'Interviews', desc: 'Never miss an insight.' },
+  { title: 'Meetings',   desc: 'Every meeting understood and captured, in any language.' },
+  { title: 'Lectures',   desc: 'Every lecture, even across languages.' },
+  { title: 'Podcasts',   desc: 'Every spoken idea becomes accessible.' },
+  { title: 'Interviews', desc: 'Every insight captured the moment it's spoken.' },
 ]
 
-const TECH = [
-  'Real-time speech understanding',
-  'Live translation across 14 languages',
-  'Speaker recognition',
-]
-
-const DEMO_LINES = [
-  { src: 'The Q4 results exceeded all projections.', tr: 'I risultati del Q4 hanno superato ogni proiezione.' },
-  { src: 'Revenue grew by 34% year over year.', tr: 'Il fatturato è cresciuto del 34% anno su anno.' },
-  { src: 'Customer retention reached 94%.', tr: 'La retention ha raggiunto il 94%.' },
-]
-
-const WAVE_HEIGHTS = [0.5, 0.85, 1, 0.6, 0.9, 0.55, 1, 0.7, 0.8, 0.5, 0.9, 0.65]
+const fmt = (s: number) =>
+  `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
 
 export default function LandingPage() {
   const navigate = useNavigate()
   const session = getSession()
-  const [wordIdx, setWordIdx] = useState(0)
-  const [fading, setFading] = useState(false)
+
+  // Session timer on the demo
+  const [tick, setTick] = useState(0)
+  useEffect(() => {
+    const t = setInterval(() => setTick(n => n + 1), 1000)
+    return () => clearInterval(t)
+  }, [])
+
+  // Live transcript demo
+  const [lines, setLines]     = useState<{ src: string; tr: string }[]>([])
+  const [partial, setPartial] = useState('')
 
   useEffect(() => {
-    const t = setInterval(() => {
-      setFading(true)
-      setTimeout(() => {
-        setWordIdx(i => (i + 1) % WORDS.length)
-        setFading(false)
-      }, 240)
-    }, 2600)
-    return () => clearInterval(t)
+    const alive = { v: true }
+    const wait = (ms: number) => new Promise<void>(res => setTimeout(res, ms))
+
+    async function run() {
+      while (alive.v) {
+        setLines([])
+        setPartial('')
+        await wait(1000)
+
+        for (const line of SCRIPT) {
+          if (!alive.v) return
+          // type the source text word by word
+          const words = line.src.split(' ')
+          for (let i = 1; i <= words.length; i++) {
+            if (!alive.v) return
+            setPartial(words.slice(0, i).join(' '))
+            await wait(80 + Math.random() * 70)
+          }
+          if (!alive.v) return
+          await wait(360)
+          // finalize → show translation
+          setLines(prev => [...prev, line].slice(-4))
+          setPartial('')
+          await wait(600)
+        }
+        await wait(2600)
+      }
+    }
+
+    run()
+    return () => { alive.v = false }
   }, [])
 
   const goCTA = () => {
@@ -56,7 +78,7 @@ export default function LandingPage() {
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', color: 'var(--text)', fontFamily: 'var(--font-ui)' }}>
 
-      {/* ── NAV ───────────────────────────────────────────────── */}
+      {/* ── NAV ──────────────────────────────────────────────────── */}
       <nav style={{
         position: 'sticky', top: 0, zIndex: 100,
         background: 'rgba(250,250,248,0.88)',
@@ -64,30 +86,21 @@ export default function LandingPage() {
         WebkitBackdropFilter: 'blur(14px)',
         borderBottom: '1px solid var(--divider)',
         display: 'flex', alignItems: 'center',
-        padding: '0 40px', height: 56, gap: 0,
+        padding: '0 40px', height: 56,
       }}>
-        {/* Logo */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginRight: 36 }}>
           <div className="logo-mark" style={{ width: 26, height: 26 }}>
             <span style={{ color: '#fff', fontWeight: 800, fontSize: 12 }}>i</span>
           </div>
           <span style={{ fontSize: 14, fontWeight: 700, letterSpacing: '-0.01em' }}>ISOL</span>
         </div>
-
-        {/* Links */}
-        <div style={{ display: 'flex', gap: 28, alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 28 }}>
           <a href="#" style={{ fontSize: 13, color: 'var(--text-dim)', textDecoration: 'none', fontWeight: 500 }}>Product</a>
           <a href="#" style={{ fontSize: 13, color: 'var(--text-dim)', textDecoration: 'none', fontWeight: 500 }}>Docs</a>
         </div>
-
         <div style={{ flex: 1 }} />
-
         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-          <button
-            onClick={() => navigate('/login')}
-            className="btn-icon"
-            style={{ fontSize: 13 }}
-          >
+          <button onClick={() => navigate('/login')} className="btn-icon" style={{ fontSize: 13 }}>
             Sign in
           </button>
           <button
@@ -100,241 +113,157 @@ export default function LandingPage() {
         </div>
       </nav>
 
-      {/* ── HERO ──────────────────────────────────────────────── */}
+      {/* ── HERO ─────────────────────────────────────────────────── */}
       <section style={{
-        maxWidth: 780, margin: '0 auto',
-        padding: 'clamp(80px, 12vw, 140px) 32px 80px',
-        textAlign: 'center',
+        maxWidth: 1100, margin: '0 auto',
+        padding: 'clamp(60px, 8vw, 110px) 40px clamp(60px, 8vw, 100px)',
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(290px, 1fr))',
+        gap: 'clamp(48px, 6vw, 80px)',
+        alignItems: 'center',
       }}>
-        <h1 style={{
-          fontSize: 'clamp(40px, 7vw, 74px)',
-          fontWeight: 800,
-          lineHeight: 1.08,
-          letterSpacing: '-0.04em',
-          marginBottom: 26,
-        }}>
-          {'Understand every '}
-          <span style={{
-            display: 'inline-block',
-            color: 'var(--accent)',
-            opacity: fading ? 0 : 1,
-            transform: fading ? 'translateY(-8px)' : 'translateY(0)',
-            transition: 'opacity 0.22s ease, transform 0.22s ease',
-            minWidth: '5ch',
-          }}>
-            {WORDS[wordIdx]}
-          </span>
-          {'.'}<br />
-          {'In any language.'}
-        </h1>
 
-        <p style={{
-          fontSize: 'clamp(16px, 2.2vw, 20px)',
-          color: 'var(--text-dim)',
-          lineHeight: 1.6,
-          maxWidth: 460, margin: '0 auto 48px',
-          fontWeight: 400,
-        }}>
-          ISOL listens, translates and captures speech instantly.
-        </p>
-
-        <button
-          onClick={goCTA}
-          className="btn-primary"
-          style={{ width: 'auto', fontSize: 15, padding: '0 38px', height: 52, borderRadius: 999 }}
-        >
-          Start a session
-        </button>
-      </section>
-
-      {/* ── WHY IT MATTERS ────────────────────────────────────── */}
-      <section style={{
-        background: '#111110',
-        padding: 'clamp(80px, 12vw, 130px) 32px',
-        textAlign: 'center',
-      }}>
-        <div style={{ maxWidth: 580, margin: '0 auto' }}>
-          <p style={{
-            fontSize: 'clamp(17px, 2.8vw, 24px)',
-            color: 'rgba(255,255,255,0.65)',
-            lineHeight: 1.7,
-            fontWeight: 400,
-            marginBottom: 20,
+        {/* ── Left: copy ── */}
+        <div>
+          <h1 style={{
+            fontSize: 'clamp(36px, 5vw, 58px)',
+            fontWeight: 800, lineHeight: 1.1,
+            letterSpacing: '-0.04em', marginBottom: 20,
           }}>
-            Important ideas are spoken every day — in meetings,<br />
-            lectures, interviews and conversations.
-          </p>
+            Every word,<br />
+            transcribed and<br />
+            <span className="gradient-text">translated.</span>
+          </h1>
           <p style={{
-            fontSize: 'clamp(17px, 2.8vw, 24px)',
-            color: 'rgba(255,255,255,0.65)',
-            lineHeight: 1.7,
-            marginBottom: 44,
+            fontSize: 'clamp(15px, 1.8vw, 18px)',
+            color: 'var(--text-dim)', lineHeight: 1.75,
+            maxWidth: 400, marginBottom: 36,
           }}>
-            Most of them disappear.
-          </p>
-          <p style={{
-            fontSize: 'clamp(24px, 4vw, 40px)',
-            color: '#fff',
-            fontWeight: 700,
-            letterSpacing: '-0.025em',
-            lineHeight: 1.15,
-            marginBottom: 52,
-          }}>
-            ISOL makes sure they don't.
+            Open ISOL and play any audio — a meeting, a lecture, a YouTube video.
+            Watch it transcribe and translate speech in real time.
           </p>
           <button
             onClick={goCTA}
-            style={{
-              background: '#fff', color: '#111110',
-              border: 'none', borderRadius: 999,
-              fontSize: 15, fontWeight: 700,
-              padding: '0 38px', height: 52,
-              cursor: 'pointer', letterSpacing: '-0.01em',
-            }}
+            className="btn-primary"
+            style={{ width: 'auto', fontSize: 15, padding: '0 32px', height: 50, borderRadius: 999, marginBottom: 14 }}
           >
-            Start a session
+            Start a session →
           </button>
+          <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>
+            Works with meetings · lectures · podcasts · interviews
+          </p>
         </div>
-      </section>
 
-      {/* ── VIDEO DEMO PLACEHOLDER ────────────────────────────── */}
-      <section style={{
-        padding: 'clamp(72px, 10vw, 100px) 32px',
-        maxWidth: 960, margin: '0 auto',
-      }}>
-        <p style={{
-          textAlign: 'center', fontSize: 11, fontWeight: 700,
-          letterSpacing: '0.10em', textTransform: 'uppercase',
-          color: 'var(--text-muted)', marginBottom: 40,
-        }}>See it in action</p>
-
-        {/* Split screen */}
+        {/* ── Right: live demo ── */}
         <div style={{
+          background: 'var(--canvas)',
+          border: '1px solid var(--border)',
           borderRadius: 'var(--radius-xl)',
           overflow: 'hidden',
-          border: '1px solid var(--border)',
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          minHeight: 260,
-          boxShadow: '0 4px 32px rgba(0,0,0,0.07)',
+          boxShadow: '0 8px 48px rgba(0,0,0,0.09)',
         }}>
-          {/* Left: audio source */}
+          {/* Fake browser chrome */}
           <div style={{
-            background: '#0D0D0C',
-            display: 'flex', flexDirection: 'column',
-            alignItems: 'center', justifyContent: 'center',
-            gap: 22, padding: '36px 28px',
-            borderRight: '1px solid rgba(255,255,255,0.06)',
+            padding: '10px 14px',
+            background: 'var(--surface-1)',
+            borderBottom: '1px solid var(--divider)',
+            display: 'flex', alignItems: 'center', gap: 6,
           }}>
-            <div style={{
-              width: 52, height: 52,
-              background: 'rgba(255,255,255,0.07)',
-              borderRadius: '50%',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>
-              <span style={{ fontSize: 20, marginLeft: 4, color: 'rgba(255,255,255,0.7)' }}>▶</span>
-            </div>
-            {/* Waveform */}
-            <div style={{ display: 'flex', gap: 3, alignItems: 'flex-end', height: 32 }}>
-              {WAVE_HEIGHTS.map((h, i) => (
-                <div key={i} style={{
-                  width: 3,
-                  height: `${h * 28}px`,
-                  background: 'rgba(255,255,255,0.28)',
-                  borderRadius: 2,
-                  animation: 'waveBar 0.9s ease-in-out infinite alternate',
-                  animationDelay: `${i * 0.08}s`,
-                  transformOrigin: 'bottom',
-                }} />
-              ))}
-            </div>
-            <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', letterSpacing: '0.07em', textTransform: 'uppercase', margin: 0 }}>
-              Audio source
-            </p>
+            {['#EF4444', '#F59E0B', '#22C55E'].map(c => (
+              <span key={c} style={{ width: 9, height: 9, borderRadius: '50%', background: c, opacity: 0.55, flexShrink: 0 }} />
+            ))}
+            <span style={{
+              flex: 1, marginLeft: 8,
+              background: 'var(--surface-2)', borderRadius: 5,
+              padding: '3px 10px', fontSize: 10, color: 'var(--text-muted)',
+            }}>isolstudio.live/workspace</span>
           </div>
 
-          {/* Right: ISOL transcript */}
-          <div style={{ background: 'var(--canvas)', padding: '24px 28px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 22 }}>
-              <span style={{
-                width: 6, height: 6, borderRadius: '50%',
-                background: 'var(--live)',
-                animation: 'livePulse 2s ease-in-out infinite',
-              }} />
-              <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--live)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Live</span>
-              <span style={{ flex: 1 }} />
-              <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600 }}>EN → IT</span>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-              {DEMO_LINES.map((line, i) => (
-                <div key={i} style={{
-                  opacity: 0,
-                  animation: 'lineAppear 0.5s ease forwards',
-                  animationDelay: `${0.6 + i * 1.1}s`,
-                  paddingBottom: 14,
-                  marginBottom: 14,
-                  borderBottom: i < DEMO_LINES.length - 1 ? '1px solid var(--divider)' : 'none',
-                }}>
-                  <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '0 0 3px', fontStyle: 'italic' }}>{line.src}</p>
-                  <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', margin: 0 }}>{line.tr}</p>
-                </div>
-              ))}
-            </div>
+          {/* Session status bar */}
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 8,
+            padding: '9px 16px',
+            background: 'var(--surface-1)',
+            borderBottom: '1px solid var(--divider)',
+          }}>
+            <span style={{
+              width: 7, height: 7, borderRadius: '50%',
+              background: 'var(--live)', flexShrink: 0,
+              animation: 'livePulse 2s ease-in-out infinite',
+            }} />
+            <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--live)', letterSpacing: '0.08em' }}>LIVE</span>
+            <span style={{ flex: 1 }} />
+            <span style={{ fontSize: 10, color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>{fmt(tick)}</span>
+            <span style={{
+              fontSize: 10, fontWeight: 700,
+              color: 'var(--accent)', marginLeft: 10,
+              background: 'rgba(99,102,241,0.07)',
+              border: '1px solid rgba(99,102,241,0.18)',
+              borderRadius: 5, padding: '2px 7px',
+            }}>EN → IT</span>
+          </div>
+
+          {/* Transcript area */}
+          <div style={{ padding: '18px 18px', minHeight: 280 }}>
+            {lines.length === 0 && !partial && (
+              <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: 0, fontStyle: 'italic' }}>
+                Listening…
+              </p>
+            )}
+
+            {/* Finalized lines: translation bold on top, source small below */}
+            {lines.map((line, i) => (
+              <div
+                key={`${i}-${line.src}`}
+                style={{
+                  marginBottom: 14, paddingBottom: 14,
+                  borderBottom: '1px solid var(--divider)',
+                  animation: 'lineAppear 0.35s ease forwards',
+                }}
+              >
+                <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', margin: '0 0 3px', lineHeight: 1.45 }}>
+                  {line.tr}
+                </p>
+                <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: 0, fontStyle: 'italic' }}>
+                  {line.src}
+                </p>
+              </div>
+            ))}
+
+            {/* Current partial — source text typing in */}
+            {partial && (
+              <div>
+                <p style={{ fontSize: 10, color: 'var(--text-muted)', margin: '0 0 4px', letterSpacing: '0.04em' }}>
+                  recognizing…
+                </p>
+                <p style={{ fontSize: 13, color: 'var(--text-dim)', margin: 0, lineHeight: 1.5 }}>
+                  {partial}
+                  <span style={{
+                    display: 'inline-block',
+                    width: 2, height: '1em',
+                    background: 'var(--accent)',
+                    marginLeft: 2, verticalAlign: 'text-bottom',
+                    animation: 'cursorBlink 1s ease-in-out infinite',
+                  }} />
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
-        <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--text-muted)', marginTop: 14 }}>
-          Video demo coming soon — replace this placeholder with your screen recording
-        </p>
       </section>
 
-      {/* ── HOW IT WORKS ──────────────────────────────────────── */}
+      {/* ── USE CASES ────────────────────────────────────────────── */}
       <section style={{
         background: 'var(--surface-1)',
         borderTop: '1px solid var(--divider)',
         borderBottom: '1px solid var(--divider)',
-        padding: 'clamp(72px, 10vw, 100px) 32px',
+        padding: 'clamp(56px, 7vw, 88px) 40px',
       }}>
-        <div style={{ maxWidth: 820, margin: '0 auto' }}>
-          <p style={{
-            textAlign: 'center', fontSize: 11, fontWeight: 700,
-            letterSpacing: '0.10em', textTransform: 'uppercase',
-            color: 'var(--text-muted)', marginBottom: 56,
-          }}>How it works</p>
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-            gap: 48,
-          }}>
-            {HOW_IT_WORKS.map(step => (
-              <div key={step.n}>
-                <span style={{
-                  display: 'block',
-                  fontSize: 11, fontWeight: 700,
-                  color: 'var(--accent)', letterSpacing: '0.06em',
-                  marginBottom: 14,
-                }}>{step.n}</span>
-                <p style={{ fontSize: 16, fontWeight: 700, marginBottom: 10, letterSpacing: '-0.01em' }}>{step.title}</p>
-                <p style={{ fontSize: 14, color: 'var(--text-dim)', lineHeight: 1.65, margin: 0 }}>{step.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── USE CASES ─────────────────────────────────────────── */}
-      <section style={{
-        padding: 'clamp(72px, 10vw, 100px) 32px',
-        maxWidth: 880, margin: '0 auto',
-      }}>
-        <p style={{
-          textAlign: 'center', fontSize: 11, fontWeight: 700,
-          letterSpacing: '0.10em', textTransform: 'uppercase',
-          color: 'var(--text-muted)', marginBottom: 48,
-        }}>Built for</p>
         <div style={{
+          maxWidth: 900, margin: '0 auto',
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))',
           gap: 16,
         }}>
           {USE_CASES.map(uc => (
@@ -342,48 +271,24 @@ export default function LandingPage() {
               background: 'var(--canvas)',
               border: '1px solid var(--border)',
               borderRadius: 'var(--radius-lg)',
-              padding: '24px 22px',
+              padding: '22px 20px',
             }}>
-              <p style={{ fontSize: 15, fontWeight: 700, marginBottom: 8, letterSpacing: '-0.01em', margin: '0 0 8px' }}>{uc.title}</p>
+              <p style={{ fontSize: 15, fontWeight: 700, margin: '0 0 7px', letterSpacing: '-0.01em' }}>{uc.title}</p>
               <p style={{ fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.6, margin: 0 }}>{uc.desc}</p>
             </div>
           ))}
         </div>
       </section>
 
-      {/* ── TECH ──────────────────────────────────────────────── */}
+      {/* ── CLOSING ──────────────────────────────────────────────── */}
       <section style={{
-        background: 'var(--surface-1)',
-        borderTop: '1px solid var(--divider)',
-        borderBottom: '1px solid var(--divider)',
-        padding: '44px 32px',
-      }}>
-        <div style={{
-          maxWidth: 680, margin: '0 auto',
-          display: 'flex', flexWrap: 'wrap',
-          justifyContent: 'center', gap: '12px 48px',
-        }}>
-          {TECH.map(t => (
-            <div key={t} style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-              <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--accent)', flexShrink: 0 }} />
-              <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-dim)' }}>{t}</span>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ── CLOSING ───────────────────────────────────────────── */}
-      <section style={{
-        padding: 'clamp(90px, 14vw, 150px) 32px',
-        textAlign: 'center',
-        maxWidth: 640, margin: '0 auto',
+        padding: 'clamp(88px, 12vw, 150px) 40px',
+        textAlign: 'center', maxWidth: 620, margin: '0 auto',
       }}>
         <h2 style={{
-          fontSize: 'clamp(36px, 6vw, 64px)',
-          fontWeight: 800,
-          letterSpacing: '-0.04em',
-          lineHeight: 1.08,
-          marginBottom: 36,
+          fontSize: 'clamp(34px, 5.5vw, 60px)',
+          fontWeight: 800, letterSpacing: '-0.04em',
+          lineHeight: 1.08, marginBottom: 32,
         }}>
           Speech becomes<br />
           <span className="gradient-text">knowledge.</span>
@@ -397,13 +302,12 @@ export default function LandingPage() {
         </button>
       </section>
 
-      {/* ── FOOTER ────────────────────────────────────────────── */}
+      {/* ── FOOTER ───────────────────────────────────────────────── */}
       <footer style={{
         borderTop: '1px solid var(--divider)',
         padding: '24px 40px',
         display: 'flex', alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap', gap: 12,
+        justifyContent: 'space-between', flexWrap: 'wrap', gap: 12,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <div className="logo-mark" style={{ width: 20, height: 20 }}>
