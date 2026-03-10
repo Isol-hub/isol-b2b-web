@@ -90,6 +90,7 @@ export function useAudioCapture({ chunkMs = 200, onChunk, onError }: AudioCaptur
       })
 
       setState('active')
+      return true
     } catch (err: any) {
       setState('error')
       if (err.name === 'NotAllowedError') {
@@ -101,6 +102,7 @@ export function useAudioCapture({ chunkMs = 200, onChunk, onError }: AudioCaptur
       } else {
         onError(err.message ?? 'Failed to start audio capture.')
       }
+      return false
     }
   }, [chunkMs, onChunk, onError])
 

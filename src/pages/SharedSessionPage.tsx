@@ -488,6 +488,7 @@ function TranscriptLines({
         const lineComments = comments.filter(c => c.line_index === l.line_index)
         const isOpen = openLine === l.line_index
         const isHovered = hoveredLine === l.line_index
+        const hasComments = lineComments.length > 0
 
         return (
           <div
@@ -495,11 +496,11 @@ function TranscriptLines({
             onMouseEnter={() => setHoveredLine(l.line_index)}
             onMouseLeave={() => setHoveredLine(null)}
             style={{
-              marginBottom: isOpen ? 12 : 4,
-              borderLeft: isOpen ? '2px solid var(--accent)' : '2px solid transparent',
-              paddingLeft: isOpen ? 14 : 2,
+              marginBottom: isOpen ? 18 : 16,
+              borderLeft: isOpen ? '2px solid var(--accent)' : hasComments ? '2px solid rgba(99,102,241,0.25)' : '2px solid transparent',
+              paddingLeft: isOpen || hasComments ? 14 : 2,
               borderRadius: 6,
-              background: isOpen ? 'rgba(99,102,241,0.04)' : 'transparent',
+              background: isOpen ? 'rgba(99,102,241,0.03)' : 'transparent',
               transition: 'all 0.15s',
             }}
           >
@@ -515,25 +516,68 @@ function TranscriptLines({
               <button
                 onClick={() => setOpenLine(isOpen ? null : l.line_index)}
                 style={{
-                  background: 'none', border: 'none',
-                  color: lineComments.length > 0 ? 'var(--accent)' : 'var(--text-muted)',
-                  fontSize: 11, cursor: 'pointer',
-                  padding: '8px 4px', flexShrink: 0,
-                  opacity: isOpen || lineComments.length > 0 ? 1 : 0.28,
-                  transition: 'opacity 0.15s',
-                  display: 'flex', alignItems: 'center', gap: 3,
+                  flexShrink: 0,
+                  display: 'flex', alignItems: 'center', gap: 4,
+                  marginTop: 4, padding: '3px 7px', borderRadius: 6,
+                  border: hasComments
+                    ? '1px solid rgba(217,119,6,0.30)'
+                    : isOpen
+                    ? '1px solid rgba(99,102,241,0.30)'
+                    : '1px solid transparent',
+                  background: hasComments
+                    ? 'rgba(217,119,6,0.08)'
+                    : isOpen
+                    ? 'rgba(99,102,241,0.07)'
+                    : isHovered ? 'var(--surface-1)' : 'transparent',
+                  color: hasComments ? '#D97706' : isOpen ? 'var(--accent)' : 'var(--text-muted)',
+                  cursor: 'pointer',
+                  opacity: isOpen || hasComments || isHovered ? 1 : 0,
+                  transition: 'opacity 0.15s, background 0.15s',
                 }}
               >
-                <span>💬</span>
-                {lineComments.length > 0 && (
-                  <span style={{ fontWeight: 600 }}>{lineComments.length}</span>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                </svg>
+                {hasComments && (
+                  <span style={{ fontSize: 11, fontWeight: 700, lineHeight: 1 }}>{lineComments.length}</span>
                 )}
               </button>
             </div>
 
+            {/* Zero-height handwriting annotation overlay */}
+            {hasComments && !isOpen && (
+              <div style={{ position: 'relative', height: 0, overflow: 'visible' }}>
+                {lineComments.map((comment, ci) => (
+                  <div
+                    key={comment.id}
+                    style={{
+                      position: 'absolute',
+                      top: ci * 21,
+                      left: 6,
+                      color: '#B91C1C',
+                      fontFamily: "'Caveat', cursive",
+                      fontSize: 17,
+                      fontStyle: 'italic',
+                      lineHeight: 1.2,
+                      transform: `rotate(${-0.7 - ci * 0.5}deg)`,
+                      whiteSpace: 'nowrap',
+                      maxWidth: '80%',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      zIndex: 2,
+                      userSelect: 'none',
+                      opacity: comment.pending ? 0.5 : 1,
+                    }}
+                  >
+                    — {comment.body}
+                  </div>
+                ))}
+              </div>
+            )}
+
             {/* Inline comment thread */}
             {isOpen && (
-              <div style={{ paddingBottom: 8 }}>
+              <div style={{ paddingTop: 4, paddingBottom: 8 }}>
                 <CommentThread
                   comments={lineComments}
                   authorName={authorName}

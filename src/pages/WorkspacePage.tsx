@@ -716,6 +716,39 @@ export default function WorkspacePage() {
     })
   }, [])
 
+  const handleDeleteComment = useCallback(async (commentId: number, lineIndex: number) => {
+    if (!ws.sessionId) return
+    // Optimistic remove
+    setLineComments(prev => {
+      const next = new Map(prev)
+      const arr = (next.get(lineIndex) ?? []).filter(c => c.id !== commentId)
+      if (arr.length === 0) next.delete(lineIndex)
+      else next.set(lineIndex, arr)
+      return next
+    })
+    try {
+      await fetch(`/api/viewer/${ws.sessionId}/comments/${commentId}`, { method: 'DELETE' })
+    } catch { /* silent — already removed from UI */ }
+  }, [ws.sessionId])
+
+  const handleEditComment = useCallback(async (commentId: number, lineIndex: number, newBody: string) => {
+    if (!ws.sessionId || !newBody.trim()) return
+    // Optimistic update
+    setLineComments(prev => {
+      const next = new Map(prev)
+      const arr = (next.get(lineIndex) ?? []).map(c => c.id === commentId ? { ...c, body: newBody.trim() } : c)
+      next.set(lineIndex, arr)
+      return next
+    })
+    try {
+      await fetch(`/api/viewer/${ws.sessionId}/comments/${commentId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ body: newBody.trim() }),
+      })
+    } catch { /* silent — already updated in UI */ }
+  }, [ws.sessionId])
+
   const handleAddComment = useCallback(async (lineIndex: number, body: string) => {
     if (!body.trim() || !ws.sessionId) return
     setCommentSubmitting(true)
@@ -756,7 +789,8 @@ export default function WorkspacePage() {
     currentTurnSpeakerRef.current = null
     lastLineFinalRef.current = ''
     ws.open()
-    await audio.start(audioSource)
+    const started = await audio.start(audioSource)
+    if (!started) { ws.close(); return }
     setSessionActive(true)
   }, [ws, audio, audioSource])
 
@@ -1265,6 +1299,9 @@ export default function WorkspacePage() {
                 onCommentAuthorChange={(n) => { setCommentAuthor(n); localStorage.setItem('isol_commenter_name', n) }}
                 onAddComment={handleAddComment}
                 commentSubmitting={commentSubmitting}
+                isHost={true}
+                onDeleteComment={handleDeleteComment}
+                onEditComment={handleEditComment}
                 sessionStartMs={sessionStartRef.current > 0 ? sessionStartRef.current : undefined}
                 highlights={highlights}
                 onAddHighlight={handleAddHighlight}

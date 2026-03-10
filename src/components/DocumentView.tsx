@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import MatrixText from './MatrixText'
 import CommentThread, { type CommentItem } from './CommentThread'
 import LiveBanner from './LiveBanner'
@@ -42,6 +42,10 @@ interface Props {
   highlights?: HighlightItem[]
   onAddHighlight?: (text: string, lineIndex: number | null, category: HighlightCategory | null) => void
   onRemoveHighlight?: (id: number) => void
+  // Host-only powers
+  isHost?: boolean
+  onDeleteComment?: (commentId: number, lineIndex: number) => Promise<void>
+  onEditComment?: (commentId: number, lineIndex: number, newBody: string) => Promise<void>
 }
 
 interface MarginNoteItem {
@@ -89,92 +93,54 @@ function timeAgoDoc(ts: number): string {
   return new Date(ts).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })
 }
 
-function CommentMarginalia({ items, onJumpTo }: { items: MarginNoteItem[]; onJumpTo?: (lineIndex: number) => void }) {
+function CommentMarginalia({
+  items, onJumpTo, totalLines,
+}: {
+  items: MarginNoteItem[]
+  onJumpTo?: (lineIndex: number) => void
+  totalLines: number
+}) {
   return (
-    <div style={{ paddingTop: 12 }}>
-      {items.map(({ lineIndex, comment }) => (
-        <button
-          key={comment.id}
-          onClick={() => onJumpTo?.(lineIndex)}
-          style={{
-            display: 'block',
-            width: '100%',
-            textAlign: 'left',
-            marginBottom: 14,
-            background: 'transparent',
-            border: 'none',
-            cursor: onJumpTo ? 'pointer' : 'default',
-            padding: 0,
-          }}
-          title={onJumpTo ? 'Jump to annotated line' : undefined}
-        >
-          <div style={{
-            display: 'flex',
-            alignItems: 'flex-start',
-            gap: 6,
-            color: '#B91C1C',
-            fontFamily: 'var(--font-note)',
-            fontSize: 16,
-            fontStyle: 'italic',
-            lineHeight: 1.35,
-            transform: 'rotate(-1.2deg)',
-          }}>
-            <span style={{ fontSize: 15, lineHeight: 1, marginTop: 1 }}>↖</span>
-            <span>{comment.body}</span>
+    <div style={{ position: 'relative', minHeight: Math.max(200, totalLines * 8) }}>
+      {items.map(({ lineIndex, comment }, i) => {
+        const topPct = totalLines > 1 ? (lineIndex / (totalLines - 1)) * 100 : i * 12
+        return (
+          <div
+            key={comment.id}
+            style={{ position: 'absolute', top: `${topPct}%`, left: 0, right: 0 }}
+          >
+            <button
+              onClick={() => onJumpTo?.(lineIndex)}
+              style={{
+                display: 'flex', alignItems: 'flex-start', gap: 5,
+                background: 'transparent', border: 'none', padding: 0,
+                cursor: onJumpTo ? 'pointer' : 'default', textAlign: 'left',
+              }}
+            >
+              {/* SVG curved arrow pointing left */}
+              <svg width="26" height="16" viewBox="0 0 26 16" fill="none" style={{ flexShrink: 0, marginTop: 3, opacity: 0.85 }}>
+                <path d="M24 8 C17 8 10 3 2 8" stroke="#B91C1C" strokeWidth="1.3" strokeLinecap="round"/>
+                <path d="M2 8 L6 4 M2 8 L6 12" stroke="#B91C1C" strokeWidth="1.3" strokeLinecap="round"/>
+              </svg>
+              <span style={{
+                fontFamily: 'var(--font-note)',
+                fontSize: 15,
+                color: '#B91C1C',
+                fontStyle: 'italic',
+                lineHeight: 1.35,
+                display: 'inline-block',
+                transform: `rotate(${-0.6 - (i % 3) * 0.4}deg)`,
+              }}>
+                {comment.body}
+              </span>
+            </button>
           </div>
-        </button>
-      ))}
+        )
+      })}
     </div>
   )
 }
 
-function InlineMarginNotes({
-  comments,
-  lineIndex,
-  onJumpTo,
-}: {
-  comments: CommentItem[]
-  lineIndex: number
-  onJumpTo?: (lineIndex: number) => void
-}) {
-  if (comments.length === 0) return null
-  return (
-    <div style={{ margin: '-2px 0 14px 18px', paddingLeft: 10 }}>
-      {comments.map(comment => (
-        <button
-          key={comment.id}
-          onClick={() => onJumpTo?.(lineIndex)}
-          style={{
-            display: 'block',
-            width: '100%',
-            textAlign: 'left',
-            background: 'transparent',
-            border: 'none',
-            padding: 0,
-            marginBottom: 6,
-            cursor: onJumpTo ? 'pointer' : 'default',
-          }}
-          title={onJumpTo ? 'Jump to line' : undefined}
-        >
-          <div style={{
-            display: 'flex',
-            alignItems: 'flex-start',
-            gap: 6,
-            color: '#B91C1C',
-            fontFamily: 'var(--font-note)',
-            fontSize: 17,
-            fontStyle: 'italic',
-            lineHeight: 1.35,
-            transform: 'rotate(-1deg)',
-          }}>
-            <span style={{ fontSize: 15, lineHeight: 1, marginTop: 1 }}>↖</span>
-            <span>{comment.body}</span>
-          </div>
-        </button>
-      ))}
-    </div>
-  )
-}
 
 function AiContent({ text, onWordClick }: { text: string; onWordClick?: (w: string, s: string) => void }) {
   const lines = text.split('\n')
@@ -214,6 +180,7 @@ export default function DocumentView({
   commentAuthor, onCommentAuthorChange, onAddComment, commentSubmitting,
   sessionStartMs, sessionEndMs,
   highlights, onAddHighlight, onRemoveHighlight,
+  isHost, onDeleteComment, onEditComment,
 }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
@@ -221,6 +188,28 @@ export default function DocumentView({
   const [editingIndex, setEditingIndex] = useState<number | null>(null)
   const [hoveredLine, setHoveredLine] = useState<number | null>(null)
   const [editingText, setEditingText] = useState('')
+
+  // Host comment card
+  const [openCard, setOpenCard] = useState<{ commentId: number; lineIndex: number; x: number; y: number } | null>(null)
+  const [cardMode, setCardMode] = useState<'view' | 'edit'>('view')
+  const [editingCard, setEditingCard] = useState('')
+  const cardRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!openCard) return
+    const handler = (e: MouseEvent) => {
+      if (!cardRef.current?.contains(e.target as Node)) setOpenCard(null)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [openCard])
+
+  const openHostCard = useCallback((commentId: number, lineIndex: number, body: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setOpenCard({ commentId, lineIndex, x: e.clientX, y: e.clientY })
+    setEditingCard(body)
+    setCardMode('view')
+  }, [])
 
   // Track newest line for enter animation (only during live sessions)
   const prevLengthRef = useRef(transcript.length)
@@ -370,20 +359,34 @@ export default function DocumentView({
             </div>
 
           ) : viewMode === 'ai' && aiFormatted ? (
-            <div className="doc-ai-update">
-              <AiContent text={aiFormatted} onWordClick={onWordClick} />
-              {(aiFormattedAt !== undefined ? transcript.slice(aiFormattedAt) : []).map((line, i) => (
-                <p key={i} className="transcript-line" style={{ margin: '0 0 18px', fontSize: 17, color: 'var(--text)', lineHeight: 1.78 }}>
-                  {renderInline(line.text, line.text, onWordClick)}
-                </p>
-              ))}
-              {isActive && !currentLine && <span className="doc-cursor" />}
+            <div style={{ display: 'flex', gap: 28, alignItems: 'flex-start' }}>
+              <div className="doc-ai-update" style={{ flex: 1, minWidth: 0 }}>
+                <AiContent text={aiFormatted} onWordClick={onWordClick} />
+                {(aiFormattedAt !== undefined ? transcript.slice(aiFormattedAt) : []).map((line, i) => (
+                  <p key={i} className="transcript-line" style={{ margin: '0 0 18px', fontSize: 17, color: 'var(--text)', lineHeight: 1.78 }}>
+                    {renderInline(line.text, line.text, onWordClick)}
+                  </p>
+                ))}
+                {isActive && !currentLine && <span className="doc-cursor" />}
+              </div>
+              {annotationsForPanel.length > 0 && (
+                <div style={{ width: 180, flexShrink: 0, paddingTop: 8 }}>
+                  <CommentMarginalia items={annotationsForPanel} onJumpTo={scrollToLine} totalLines={transcript.length} />
+                </div>
+              )}
             </div>
 
           ) : viewMode === 'notes' && aiNotes ? (
-            <div className="doc-ai-update">
-              <AiContent text={aiNotes} onWordClick={onWordClick} />
-              {isActive && <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 16, fontStyle: 'italic' }}>Notes update as session progresses…</p>}
+            <div style={{ display: 'flex', gap: 28, alignItems: 'flex-start' }}>
+              <div className="doc-ai-update" style={{ flex: 1, minWidth: 0 }}>
+                <AiContent text={aiNotes} onWordClick={onWordClick} />
+                {isActive && <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 16, fontStyle: 'italic' }}>Notes update as session progresses…</p>}
+              </div>
+              {annotationsForPanel.length > 0 && (
+                <div style={{ width: 180, flexShrink: 0, paddingTop: 8 }}>
+                  <CommentMarginalia items={annotationsForPanel} onJumpTo={scrollToLine} totalLines={transcript.length} />
+                </div>
+              )}
             </div>
 
           ) : (
@@ -491,7 +494,38 @@ export default function DocumentView({
                       )}
                     </div>
 
-                    <InlineMarginNotes comments={lineC} lineIndex={i} onJumpTo={scrollToLine} />
+                    {/* Zero-height handwriting annotation overlay — doesn't affect line spacing */}
+                    {lineC.length > 0 && !isOpenC && (
+                      <div style={{ position: 'relative', height: 0, overflow: 'visible' }}>
+                        {lineC.map((comment, ci) => (
+                          <div
+                            key={comment.id}
+                            onClick={isHost ? (e) => openHostCard(comment.id, i, comment.body, e) : undefined}
+                            style={{
+                              position: 'absolute',
+                              top: ci * 21,
+                              left: 6,
+                              color: '#B91C1C',
+                              fontFamily: 'var(--font-note)',
+                              fontSize: 17,
+                              fontStyle: 'italic',
+                              lineHeight: 1.2,
+                              transform: `rotate(${-0.7 - ci * 0.5}deg)`,
+                              cursor: isHost ? 'pointer' : 'default',
+                              whiteSpace: 'nowrap',
+                              maxWidth: '80%',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              zIndex: 2,
+                              userSelect: 'none',
+                              opacity: comment.pending ? 0.5 : 1,
+                            }}
+                          >
+                            — {comment.body}
+                          </div>
+                        ))}
+                      </div>
+                    )}
 
                     {/* Inline comment thread */}
                     {isOpenC && onAddComment && (
@@ -530,17 +564,6 @@ export default function DocumentView({
             </div>
           )}
 
-            {(viewMode === 'ai' || viewMode === 'notes') && annotationsForPanel.length > 0 && (
-              <div style={{
-                position: 'absolute',
-                right: -170,
-                top: viewMode === 'ai' ? 120 : 100,
-                width: 150,
-                pointerEvents: 'auto',
-              }}>
-                <CommentMarginalia items={annotationsForPanel} onJumpTo={scrollToLine} />
-              </div>
-            )}
           </div>
         </div>
         <div ref={bottomRef} />
@@ -553,6 +576,122 @@ export default function DocumentView({
           onHighlight={onAddHighlight}
         />
       )}
+
+      {/* Host comment card — fixed, click-outside closes */}
+      {openCard && isHost && (() => {
+        const allComments = lineComments?.get(openCard.lineIndex) ?? []
+        const comment = allComments.find(c => c.id === openCard.commentId)
+        if (!comment) return null
+        const cardX = Math.min(openCard.x + 14, window.innerWidth - 292)
+        const cardY = Math.min(openCard.y - 20, window.innerHeight - 220)
+        return (
+          <div
+            ref={cardRef}
+            style={{
+              position: 'fixed',
+              left: cardX, top: cardY,
+              width: 272,
+              background: 'var(--canvas)',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--radius-lg)',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.13)',
+              padding: '14px 16px',
+              zIndex: 1000,
+            }}
+          >
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-dim)' }}>{comment.author}</span>
+              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{timeAgoDoc(comment.created_at)}</span>
+            </div>
+
+            {cardMode === 'view' ? (
+              <>
+                <p style={{
+                  fontFamily: 'var(--font-note)', fontSize: 17, fontStyle: 'italic',
+                  color: '#B91C1C', lineHeight: 1.4, margin: '0 0 12px',
+                }}>
+                  {comment.body}
+                </p>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    onClick={() => setCardMode('edit')}
+                    style={{
+                      flex: 1, fontSize: 12, fontWeight: 600, height: 30,
+                      background: 'var(--surface-1)', border: '1px solid var(--border)',
+                      borderRadius: 6, cursor: 'pointer', color: 'var(--text-dim)',
+                    }}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={async () => {
+                      await onDeleteComment?.(comment.id, openCard.lineIndex)
+                      setOpenCard(null)
+                    }}
+                    style={{
+                      flex: 1, fontSize: 12, fontWeight: 600, height: 30,
+                      background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.22)',
+                      borderRadius: 6, cursor: 'pointer', color: '#DC2626',
+                    }}
+                  >
+                    Delete
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <textarea
+                  autoFocus
+                  value={editingCard}
+                  onChange={e => setEditingCard(e.target.value)}
+                  rows={3}
+                  style={{
+                    width: '100%', resize: 'none', boxSizing: 'border-box',
+                    fontFamily: 'var(--font-note)', fontSize: 17, fontStyle: 'italic',
+                    color: '#B91C1C', lineHeight: 1.4,
+                    background: 'rgba(185,28,28,0.04)', border: '1px solid rgba(185,28,28,0.22)',
+                    borderRadius: 6, padding: '6px 10px', outline: 'none',
+                    marginBottom: 10,
+                  }}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                      e.preventDefault()
+                      onEditComment?.(comment.id, openCard.lineIndex, editingCard).then(() => setOpenCard(null))
+                    }
+                    if (e.key === 'Escape') setCardMode('view')
+                  }}
+                />
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    onClick={async () => {
+                      await onEditComment?.(comment.id, openCard.lineIndex, editingCard)
+                      setOpenCard(null)
+                    }}
+                    style={{
+                      flex: 1, fontSize: 12, fontWeight: 600, height: 30,
+                      background: 'var(--accent)', border: 'none',
+                      borderRadius: 6, cursor: 'pointer', color: '#fff',
+                    }}
+                  >
+                    Save
+                  </button>
+                  <button
+                    onClick={() => setCardMode('view')}
+                    style={{
+                      flex: 1, fontSize: 12, fontWeight: 600, height: 30,
+                      background: 'var(--surface-1)', border: '1px solid var(--border)',
+                      borderRadius: 6, cursor: 'pointer', color: 'var(--text-dim)',
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        )
+      })()}
     </div>
   )
 }
