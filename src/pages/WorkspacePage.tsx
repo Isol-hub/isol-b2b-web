@@ -1527,6 +1527,8 @@ export default function WorkspacePage() {
                 <DocumentView
                   transcript={viewingSession.lines.map(l => ({ text: l.text, time: new Date(viewingSession.session.started_at as number) }))}
                   currentLine=""
+                  isActive={false}
+                  targetLang={targetLang}
                   aiFormatted={viewingSession.session.ai_formatted_text as string | undefined}
                   aiFormattedAt={undefined}
                   aiLoading={false}
