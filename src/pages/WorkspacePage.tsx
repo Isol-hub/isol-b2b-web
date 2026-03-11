@@ -1,5 +1,6 @@
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
+import { createPortal } from 'react-dom'
 import { getSession, clearSession, getToken } from '../lib/auth'
 import { useAudioCapture, type AudioSource } from '../hooks/useAudioCapture'
 import { useWebSocket } from '../hooks/useWebSocket'
@@ -9,7 +10,8 @@ import HeroQuotes from '../components/HeroQuotes'
 import type { CommentItem } from '../components/CommentThread'
 import HighlightsSection from '../components/HighlightsSection'
 import type { HighlightItem, HighlightCategory } from '../components/HighlightPopup'
-import CompactPanel from '../components/CompactPanel'
+import SubtitleView from '../components/SubtitleView'
+import { usePip } from '../hooks/usePip'
 import TranscriptModal from '../components/TranscriptModal'
 import GlossaryPanel from '../components/GlossaryPanel'
 import GlossaryListPanel, { type GlossaryItem } from '../components/GlossaryListPanel'
@@ -67,7 +69,7 @@ export default function WorkspacePage() {
   const [targetLang, setTargetLang] = useState('en')
   const [currentLine, setCurrentLine] = useState('')
   const [error, setError] = useState('')
-  const [compact, setCompact] = useState(false)
+  const pip = usePip()
   const [sessionActive, setSessionActive] = useState(false)
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const saveStatusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -893,7 +895,7 @@ export default function WorkspacePage() {
         return
       }
       if (e.code === 'Escape') {
-        if (compact) setCompact(false)
+        if (pip.isOpen) pip.close()
         if (glossaryWord) setGlossaryWord(null)
         if (showGlossaryList) setShowGlossaryList(false)
         return
@@ -914,7 +916,7 @@ export default function WorkspacePage() {
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [sessionActive, compact, transcript.length, handleStop, handleStart, glossaryWord, showGlossaryList])
+  }, [sessionActive, pip.isOpen, pip.close, transcript.length, handleStop, handleStart, glossaryWord, showGlossaryList])
 
   if (!session) { navigate('/login', { replace: true }); return null }
 
@@ -1210,11 +1212,12 @@ export default function WorkspacePage() {
           {/* Compact mode toggle */}
           {sessionActive && (
             <button
-              onClick={() => setCompact(c => !c)}
+              onClick={() => pip.isOpen ? pip.close() : pip.open()}
               className="btn-icon"
               style={{ width: '100%', justifyContent: 'center', fontSize: 11 }}
+              title={pip.isSupported ? undefined : 'Requires Chrome 116+'}
             >
-              {compact ? '⊞ Show document' : '⊟ Compact'}
+              {pip.isOpen ? '⊞ Show document' : '⧉ Picture-in-Picture'}
             </button>
           )}
 
@@ -1324,7 +1327,7 @@ export default function WorkspacePage() {
           )}
 
           {/* Canvas content */}
-          {!compact && (
+          {true && (
             <div style={{ flex: 1, overflow: 'hidden' }}>
               <DocumentView
                 transcript={transcript}
@@ -1445,14 +1448,15 @@ export default function WorkspacePage() {
 
       {/* ━━ OVERLAYS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
 
-      {compact && (
-        <CompactPanel
-          current={currentLine}
-          previous={transcript[transcript.length - 1]?.text ?? ''}
-          wsState={ws.state}
-          audioState={audio.state}
-          onClose={() => setCompact(false)}
-        />
+      {pip.pipWindow && createPortal(
+        <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--bg)' }}>
+          <SubtitleView
+            current={currentLine}
+            previous={transcript[transcript.length - 1]?.text ?? ''}
+            compact
+          />
+        </div>,
+        pip.pipWindow.document.body
       )}
 
       {showModal && (
