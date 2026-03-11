@@ -73,9 +73,16 @@ function renderInline(
             {j > 0 && ' '}
             <span
               onClick={() => onWordClick(word.replace(/[^\w]/g, ''), sentence)}
-              style={{ cursor: 'pointer', borderRadius: 3, transition: 'background 0.12s', padding: '0 1px' }}
-              onMouseEnter={e => (e.target as HTMLElement).style.background = 'rgba(99,102,241,0.10)'}
-              onMouseLeave={e => (e.target as HTMLElement).style.background = 'transparent'}
+              style={{ cursor: 'help', padding: '0 1px', textUnderlineOffset: 3 }}
+              onMouseEnter={e => {
+                const el = e.target as HTMLElement
+                el.style.textDecoration = 'underline dotted'
+                el.style.textDecorationColor = 'rgba(99,102,241,0.45)'
+              }}
+              onMouseLeave={e => {
+                const el = e.target as HTMLElement
+                el.style.textDecoration = 'none'
+              }}
             >{word}</span>
           </span>
         ))}
@@ -459,45 +466,62 @@ export default function DocumentView({
                     key={i}
                     ref={el => { lineRefs.current[i] = el }}
                     data-line-index={i}
-                    onClick={isHost ? (e) => openHostCard(i, e) : undefined}
                     onMouseEnter={() => setHoveredLine(i)}
                     onMouseLeave={() => setHoveredLine(null)}
                     style={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
                       marginBottom: 20,
-                      borderLeft: `2px solid ${hasComments ? 'rgba(99,102,241,0.25)' : 'transparent'}`,
-                      paddingLeft: hasComments ? 14 : 2,
-                      borderRadius: 6,
                       opacity: lineOpacity,
-                      cursor: isHost ? 'text' : undefined,
                       transition: 'opacity 0.3s ease',
                       animation: isNewest ? 'lineEnter 0.35s ease-out, lineFlash 1.1s ease-out' : undefined,
                     }}
                   >
+                    {/* Left margin — comment affordance (host only) */}
+                    {isHost && (
+                      <button
+                        onClick={e => { e.stopPropagation(); openHostCard(i, e) }}
+                        aria-label="Add note"
+                        style={{
+                          flexShrink: 0,
+                          width: 22,
+                          marginTop: 8,
+                          marginRight: 6,
+                          background: 'none',
+                          border: 'none',
+                          padding: 0,
+                          cursor: 'pointer',
+                          fontSize: 17,
+                          lineHeight: 1,
+                          fontWeight: 300,
+                          color: hasComments
+                            ? 'rgba(99,102,241,0.5)'
+                            : hoveredLine === i
+                            ? 'rgba(99,102,241,0.55)'
+                            : 'transparent',
+                          transition: 'color 0.15s',
+                          userSelect: 'none',
+                        }}
+                      >
+                        {hasComments ? '●' : '+'}
+                      </button>
+                    )}
+
+                    {/* Text + annotations */}
+                    <div style={{
+                      flex: 1,
+                      borderLeft: `2px solid ${hasComments ? 'rgba(99,102,241,0.22)' : 'transparent'}`,
+                      paddingLeft: hasComments ? 12 : 0,
+                      borderRadius: 4,
+                    }}>
                     <p
-                      style={{ margin: 0, fontSize: 18, color: 'var(--text)', lineHeight: 1.85, fontWeight: lineWeight, padding: '2px 0', cursor: isEditable && !isHost ? 'text' : isHost ? 'text' : undefined }}
+                      style={{ margin: 0, fontSize: 18, color: 'var(--text)', lineHeight: 1.85, fontWeight: lineWeight, padding: '2px 0', cursor: isEditable && !isHost ? 'text' : undefined }}
                       onClick={(e) => {
-                        // isHost takes priority — clicks bubble up to outer div for host card
                         if (isEditable && !isHost) { e.stopPropagation(); setEditingIndex(i); setEditingText(line.text) }
                       }}
                       onMouseEnter={e => { if (isEditable && !isHost) (e.currentTarget as HTMLElement).style.background = 'rgba(99,102,241,0.04)' }}
                       onMouseLeave={e => { if (isEditable && !isHost) (e.currentTarget as HTMLElement).style.background = 'transparent' }}
                     >
-                      {isHost && (
-                        <span
-                          aria-hidden="true"
-                          style={{
-                            display: 'inline-block',
-                            width: 14,
-                            marginRight: 6,
-                            fontSize: 9,
-                            verticalAlign: 'middle',
-                            color: hoveredLine === i ? '#B91C1C' : 'rgba(0,0,0,0.18)',
-                            transition: 'color 0.18s',
-                            userSelect: 'none',
-                            lineHeight: 1,
-                          }}
-                        >✦</span>
-                      )}
                       {renderInline(line.text, line.text, onWordClick)}
                     </p>
 
@@ -526,6 +550,7 @@ export default function DocumentView({
                         ))}
                       </div>
                     )}
+                    </div>{/* end text+annotations wrapper */}
                   </div>
                 )
               })}
