@@ -10,7 +10,7 @@ import HeroQuotes from '../components/HeroQuotes'
 import type { CommentItem } from '../components/CommentThread'
 import HighlightsSection from '../components/HighlightsSection'
 import type { HighlightItem, HighlightCategory } from '../components/HighlightPopup'
-import LiveBanner from '../components/LiveBanner'
+import PipCaption from '../components/PipCaption'
 import { usePip } from '../hooks/usePip'
 import TranscriptModal from '../components/TranscriptModal'
 import GlossaryPanel from '../components/GlossaryPanel'
@@ -1449,13 +1449,11 @@ export default function WorkspacePage() {
       {/* ━━ OVERLAYS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
 
       {pip.pipWindow && createPortal(
-        <div style={{ height: '100vh', display: 'flex', alignItems: 'stretch', padding: 12, boxSizing: 'border-box', background: '#05081A' }}>
-          <LiveBanner
-            currentLine={currentLine}
-            previousLine={transcript[transcript.length - 1]?.text ?? ''}
-            isActive={isActive}
-          />
-        </div>,
+        <PipCaption
+          current={currentLine}
+          previous={transcript[transcript.length - 1]?.text ?? ''}
+          isActive={isActive}
+        />,
         pip.pipWindow.document.body
       )}
 
