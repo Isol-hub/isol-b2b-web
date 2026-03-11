@@ -35,24 +35,28 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
 
     const rawText = lines.join(' ')
     const langName = targetLang ? (LANG_NAMES[targetLang] ?? targetLang) : null
-    const langInstruction = langName
-      ? `\nCRITICAL: Output the entire formatted document in ${langName}. Detect the source language automatically and translate if needed.\n`
-      : ''
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'x-api-key': env.ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 2048,
-        messages: [
-          {
-            role: 'user',
-            content: `You are an expert editorial assistant. Below is a raw live speech transcript — unpunctuated, unstructured, captured in real time.${langInstruction}
+    const prompt = langName ? `You are an expert editorial assistant and translator. Below is a raw live speech transcript — unpunctuated, unstructured, captured in real time.
+
+LANGUAGE REQUIREMENT (highest priority): The entire output MUST be written in ${langName}. The transcript may be in a different language — translate every word into ${langName} as you format it.
+
+Transform it into a professionally formatted document in ${langName}.
+
+Rules (all mandatory):
+1. Translate ALL content into ${langName} — this overrides faithfulness to the original language
+2. Preserve the speaker's meaning, intent, and every concept faithfully — do not add or remove ideas
+3. Add proper punctuation: periods, commas, question marks, em-dashes, ellipses where natural
+4. Capitalize sentence starts, proper nouns, and acronyms
+5. Add a document title at the top (## Title — infer from content, write in ${langName})
+6. Add section headings where the topic clearly shifts (### Section — in ${langName})
+7. Break into short, readable paragraphs (3–6 sentences each)
+8. **Bold** key terms, names, decisions, or phrases that deserve emphasis — use sparingly (max 1–2 per paragraph)
+9. When the speaker enumerates items naturally, format them as a bullet list (- item)
+10. Return ONLY the formatted document — no preamble, no commentary, no code blocks
+
+Raw transcript:
+${rawText}`
+    : `You are an expert editorial assistant. Below is a raw live speech transcript — unpunctuated, unstructured, captured in real time.
 Transform it into a professionally formatted document while remaining 100% faithful to the speaker's exact words. Your job is editorial structure, not rewriting.
 
 Rules (all mandatory):
@@ -68,9 +72,19 @@ Rules (all mandatory):
 10. Return ONLY the formatted document — no preamble, no commentary, no code blocks
 
 Raw transcript:
-${rawText}`,
-          },
-        ],
+${rawText}`
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 2048,
+        messages: [{ role: 'user', content: prompt }],
       }),
     })
 
