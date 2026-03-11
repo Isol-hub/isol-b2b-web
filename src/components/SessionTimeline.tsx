@@ -23,7 +23,7 @@ function fmtMs(ms: number): string {
 
 const BUCKETS = 60
 const SVG_W = 1000
-const SVG_H = 40
+const SVG_H = 24
 
 function buildPath(pts: { x: number; y: number }[], baseY: number): string {
   if (pts.length < 2) return ''
@@ -119,7 +119,7 @@ export default function SessionTimeline({ segments, sessionEndMs, onJumpTo }: Pr
   }))
 
   return (
-    <div style={{ padding: '8px 24px 10px', userSelect: 'none', position: 'relative' }}>
+    <div style={{ padding: '4px 24px 6px', userSelect: 'none', position: 'relative' }}>
 
       {/* Tooltip */}
       {hoveredSeg && hoverFrac !== null && (
@@ -163,7 +163,7 @@ export default function SessionTimeline({ segments, sessionEndMs, onJumpTo }: Pr
         <svg
           viewBox={`0 0 ${SVG_W} ${SVG_H}`}
           preserveAspectRatio="none"
-          style={{ width: '100%', height: 36, display: 'block', overflow: 'visible' }}
+          style={{ width: '100%', height: 20, display: 'block', overflow: 'visible' }}
         >
           <defs>
             {/* Filled gradient (left of scrubber) */}
@@ -267,7 +267,7 @@ export default function SessionTimeline({ segments, sessionEndMs, onJumpTo }: Pr
         </div>
 
         {/* ── Labels ── */}
-        <div style={{ position: 'relative', height: 14, marginTop: 5 }}>
+        <div style={{ position: 'relative', height: 12, marginTop: 3 }}>
           <span style={{ position: 'absolute', left: 0, fontSize: 9, color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums', fontWeight: 500 }}>
             {fmtMs(startOffset)}
           </span>
