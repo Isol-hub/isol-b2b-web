@@ -33,25 +33,39 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env, params })
       return Response.json({ error: 'Forbidden' }, { status: 403, headers: CORS })
     }
 
-    const linesResult = await env.DB.prepare(
-      `SELECT line_index, text, offset_ms, end_ms,
-              speaker_id, speaker_confidence, speaker_state, speaker_source
-       FROM transcript_lines WHERE session_id = ? ORDER BY line_index ASC`
-    ).bind(sessionId).all()
+    const wssSessionId = session.wss_session_id as string | null
 
-    const highlightsResult = await env.DB.prepare(
-      'SELECT id, line_index, text, category, created_at FROM session_highlights WHERE session_id = ? ORDER BY created_at ASC'
-    ).bind(sessionId).all()
+    const [linesResult, highlightsResult, speakersResult, shareCommentsResult, viewerCommentsResult] = await Promise.all([
+      env.DB.prepare(
+        `SELECT line_index, text, offset_ms, end_ms,
+                speaker_id, speaker_confidence, speaker_state, speaker_source
+         FROM transcript_lines WHERE session_id = ? ORDER BY line_index ASC`
+      ).bind(sessionId).all(),
+      env.DB.prepare(
+        'SELECT id, line_index, text, category, created_at FROM session_highlights WHERE session_id = ? ORDER BY created_at ASC'
+      ).bind(sessionId).all(),
+      env.DB.prepare(
+        'SELECT speaker_id, label, color, source, is_user_edited FROM session_speakers WHERE session_id = ? ORDER BY id ASC'
+      ).bind(sessionId).all(),
+      env.DB.prepare(
+        'SELECT id, line_index, author, body, created_at FROM share_comments WHERE session_id = ? ORDER BY created_at ASC'
+      ).bind(sessionId).all(),
+      wssSessionId
+        ? env.DB.prepare(
+            'SELECT id, line_index, author, body, created_at FROM viewer_comments WHERE session_id = ? ORDER BY created_at ASC'
+          ).bind(wssSessionId).all()
+        : Promise.resolve({ results: [] }),
+    ])
 
-    const speakersResult = await env.DB.prepare(
-      'SELECT speaker_id, label, color, source, is_user_edited FROM session_speakers WHERE session_id = ? ORDER BY id ASC'
-    ).bind(sessionId).all()
+    const comments = [...shareCommentsResult.results, ...viewerCommentsResult.results]
+      .sort((a, b) => (a as any).created_at - (b as any).created_at)
 
     return Response.json({
       session,
       lines: linesResult.results,
       highlights: highlightsResult.results,
       speakers: speakersResult.results,
+      comments,
     }, { status: 200, headers: CORS })
   } catch (err) {
     console.error('session detail error', err)

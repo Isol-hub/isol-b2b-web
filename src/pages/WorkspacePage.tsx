@@ -117,6 +117,7 @@ export default function WorkspacePage() {
     lines: Array<{ line_index: number; text: string; speaker_id?: string | null; speaker_state?: string }>
     highlights: HighlightItem[]
     speakers: Array<{ speaker_id: string; label: string; color: string }>
+    comments: Array<CommentItem & { line_index: number | null }>
   }
   const [sessions, setSessions] = useState<SessionMeta[]>([])
   const [viewingSession, setViewingSession] = useState<SessionDetail | null>(null)
@@ -560,6 +561,7 @@ export default function WorkspacePage() {
       if (!res.ok) return
       const data = await res.json() as SessionDetail
       setViewingSession(data)
+      setLineComments(buildCommentMap(data.comments ?? []))
     } catch { /* silent */ }
     finally { setSessionDetailLoading(false) }
   }, [])
@@ -1457,7 +1459,7 @@ export default function WorkspacePage() {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             padding: 24,
           }}
-          onClick={e => { if (e.target === e.currentTarget) setViewingSession(null) }}
+          onClick={e => { if (e.target === e.currentTarget) { setViewingSession(null); setLineComments(new Map()) } }}
         >
           <div style={{
             width: '100%', maxWidth: 700,
@@ -1511,7 +1513,7 @@ export default function WorkspacePage() {
                 )}
               </div>
               <button
-                onClick={() => setViewingSession(null)}
+                onClick={() => { setViewingSession(null); setLineComments(new Map()) }}
                 style={{ background: 'none', color: 'var(--text-muted)', fontSize: 20, padding: '2px 8px', borderRadius: 4, flexShrink: 0 }}
               >×</button>
             </div>
@@ -1522,36 +1524,27 @@ export default function WorkspacePage() {
                   Loading…
                 </div>
               ) : viewingSession ? (
-                <>
-                  {viewingSession.session.ai_formatted_text ? (
-                    <div>
-                      <p style={{
-                        fontSize: 10, fontWeight: 700, letterSpacing: '0.09em',
-                        textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 14,
-                      }}>AI structured</p>
-                      <div style={{ fontSize: 15, color: 'var(--text)', lineHeight: 1.75, whiteSpace: 'pre-wrap' }}>
-                        {viewingSession.session.ai_formatted_text as string}
-                      </div>
-                    </div>
-                  ) : (
-                    <div>
-                      <p style={{
-                        fontSize: 10, fontWeight: 700, letterSpacing: '0.09em',
-                        textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 14,
-                      }}>Transcript</p>
-                      {viewingSession.lines.map((l) => (
-                        <div key={l.line_index}>
-                          <p style={{ fontSize: 15, color: 'var(--text)', lineHeight: 1.75, marginBottom: 12 }}>
-                            {l.text}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  {viewingSession.highlights?.length > 0 && (
-                    <HighlightsSection highlights={viewingSession.highlights} />
-                  )}
-                </>
+                <DocumentView
+                  transcript={viewingSession.lines.map(l => ({ text: l.text, time: new Date(viewingSession.session.started_at as number) }))}
+                  currentLine=""
+                  aiFormatted={viewingSession.session.ai_formatted_text as string | undefined}
+                  aiFormattedAt={undefined}
+                  aiLoading={false}
+                  aiNotes={undefined}
+                  aiNotesLoading={false}
+                  viewMode="raw"
+                  onViewModeChange={() => {}}
+                  isEditable={false}
+                  lineComments={lineComments}
+                  openCommentLine={null}
+                  onOpenCommentLine={() => {}}
+                  commentAuthor={commentAuthor}
+                  onCommentAuthorChange={() => {}}
+                  onAddComment={async () => {}}
+                  commentSubmitting={false}
+                  isHost={true}
+                  highlights={viewingSession.highlights ?? []}
+                />
               ) : null}
             </div>
 
