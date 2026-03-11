@@ -1,6 +1,16 @@
 import { useEffect, useRef, useState } from 'react'
 import MatrixText from './MatrixText'
 
+const IDLE_QUOTES = [
+  'Every word, every language.',
+  'Real-time understanding.',
+  'No word left behind.',
+  'From speech to knowledge.',
+  'Any language, any speaker.',
+  'Your voice, understood everywhere.',
+  'Clarity across every border.',
+]
+
 interface Props {
   currentLine: string   // live in-progress text
   previousLine: string  // last committed line
@@ -37,6 +47,20 @@ export default function LiveBanner({ currentLine, previousLine, isActive }: Prop
   const animRef = useRef<number>(0)
   const phaseRef = useRef(0)
   const lastTimeRef = useRef(0)
+
+  // Idle quote rotation
+  const [quoteIdx, setQuoteIdx] = useState(() => Math.floor(Math.random() * IDLE_QUOTES.length))
+  const [quotePhase, setQuotePhase] = useState<'in' | 'out'>('in')
+  useEffect(() => {
+    const t = setInterval(() => {
+      setQuotePhase('out')
+      setTimeout(() => {
+        setQuoteIdx(i => (i + 1) % IDLE_QUOTES.length)
+        setQuotePhase('in')
+      }, 350)
+    }, 4000)
+    return () => clearInterval(t)
+  }, [])
 
   // Delay canvas DOM mount so Chrome doesn't allocate the GPU backing store
   // while React is still mounting WorkspacePage (causes compositor crash on navigation).
@@ -130,18 +154,28 @@ export default function LiveBanner({ currentLine, previousLine, isActive }: Prop
         display: 'flex', flexDirection: 'column', gap: 6,
       }}>
         {isEmpty ? (
-          <span style={{
-            fontSize: 22,
-            fontWeight: 900,
-            letterSpacing: '0.45em',
-            color: '#fff',
-            textShadow: '0 0 4px rgba(26,210,255,0.5)',
-            textAlign: 'center',
-            animation: 'isolPulse 3s ease-in-out infinite',
-            userSelect: 'none',
-          }}>
-            ISOL
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', overflow: 'hidden', minHeight: 36 }}>
+            <span
+              key={quoteIdx}
+              style={{
+                fontFamily: "'Lora', Georgia, serif",
+                fontSize: 18,
+                fontStyle: 'italic',
+                fontWeight: 400,
+                letterSpacing: '0.01em',
+                color: 'rgba(226,254,255,0.88)',
+                textShadow: '0 0 18px rgba(26,210,255,0.55), 0 1px 2px rgba(0,0,0,0.4)',
+                userSelect: 'none',
+                display: 'inline-block',
+                textAlign: 'center',
+                animation: quotePhase === 'in'
+                  ? 'quoteFlipIn 0.38s cubic-bezier(0.22,1,0.36,1) forwards'
+                  : 'quoteFlipOut 0.32s cubic-bezier(0.64,0,0.78,0) forwards',
+              }}
+            >
+              {IDLE_QUOTES[quoteIdx]}
+            </span>
+          </div>
         ) : (
           <>
             {previousLine && (
