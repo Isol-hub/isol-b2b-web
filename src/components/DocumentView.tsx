@@ -322,25 +322,34 @@ export default function DocumentView({
     setEditingIndex(null)
   }
 
+  const MODE_COLORS: Record<ViewMode, { text: string; bg: string; border: string }> = {
+    raw:   { text: 'var(--text-dim)',  bg: 'rgba(120,120,140,0.10)', border: 'rgba(120,120,140,0.18)' },
+    ai:    { text: '#6366F1',          bg: 'rgba(99,102,241,0.10)',  border: 'rgba(99,102,241,0.22)'  },
+    notes: { text: '#D97706',          bg: 'rgba(217,119,6,0.10)',   border: 'rgba(217,119,6,0.22)'   },
+  }
+
   const modeBtn = (mode: ViewMode, label: string, available: boolean, loading: boolean) => {
     const active = viewMode === mode
+    const c = MODE_COLORS[mode]
     return (
       <button
         onClick={() => available && onViewModeChange(mode)}
         disabled={!available && !loading}
         style={{
-          fontSize: 11, fontWeight: 600, padding: '3px 12px', borderRadius: 20, height: 26,
-          border: `1px solid ${active ? 'rgba(99,102,241,0.35)' : 'var(--border)'}`,
-          background: active ? 'rgba(99,102,241,0.09)' : 'transparent',
-          color: active ? 'var(--accent)' : 'var(--text-muted)',
+          fontSize: 11, fontWeight: 600, padding: '4px 14px', borderRadius: 20, height: 28,
+          border: `1px solid ${active ? c.border : 'transparent'}`,
+          background: active ? c.bg : 'transparent',
+          color: active ? c.text : 'var(--text-muted)',
           cursor: available ? 'pointer' : 'default',
-          opacity: !available && !loading ? 0.4 : 1,
+          opacity: !available && !loading ? 0.35 : 1,
           display: 'flex', alignItems: 'center', gap: 5,
           transition: 'all 0.18s',
         }}
+        onMouseEnter={e => { if (available && !active) (e.currentTarget as HTMLElement).style.color = c.text }}
+        onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)' }}
       >
         {loading && (
-          <span style={{ width: 8, height: 8, border: '1.5px solid rgba(99,102,241,0.2)', borderTopColor: 'var(--accent)', borderRadius: '50%', animation: 'spin 0.9s linear infinite', display: 'inline-block' }} />
+          <span style={{ width: 7, height: 7, border: `1.5px solid ${c.border}`, borderTopColor: c.text, borderRadius: '50%', animation: 'spin 0.9s linear infinite', display: 'inline-block' }} />
         )}
         {label}
       </button>
@@ -373,26 +382,21 @@ export default function DocumentView({
         </div>
       )}
 
-      {/* ━━ MODE BAR ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-      <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 10, padding: '9px 32px', borderBottom: '1px solid var(--divider)' }}>
-        <div style={{ flex: 1, height: 1, background: 'var(--divider)' }} />
-        {showModeBar ? (
-          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-            {modeBtn('raw', 'Transcript', true, false)}
-            {modeBtn('ai', '✦ AI Enhanced', hasAi, !!aiLoading && !hasAi)}
-            {modeBtn('notes', '✦ Notes', hasNotes, !!aiNotesLoading && !hasNotes)}
-          </div>
-        ) : (
-          <span style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.06em', textTransform: 'uppercase', fontWeight: 600 }}>
-            {isActive ? 'AI enhances after ~5 lines' : 'Transcript'}
-          </span>
-        )}
-        <div style={{ flex: 1, height: 1, background: 'var(--divider)' }} />
-      </div>
-
       {/* ━━ DOCUMENT SURFACE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
       <div ref={scrollContainerRef} style={{ flex: 1, overflowY: 'auto', background: 'var(--surface-1)' }}>
-        <div className="doc-surface" style={{ maxWidth: 980, margin: '0 auto', padding: '40px 32px calc(40px + 80px)' }}>
+        <div className="doc-surface" style={{ maxWidth: 980, margin: '0 auto', padding: '28px 32px calc(40px + 80px)' }}>
+          {/* ── Mode pills — float inside doc, no external bar ── */}
+          {showModeBar ? (
+            <div style={{ display: 'flex', gap: 4, alignItems: 'center', marginBottom: 28 }}>
+              {modeBtn('raw', 'Transcript', true, false)}
+              {modeBtn('ai', '✦ AI Enhanced', hasAi, !!aiLoading && !hasAi)}
+              {modeBtn('notes', '✦ Notes', hasNotes, !!aiNotesLoading && !hasNotes)}
+            </div>
+          ) : isActive ? (
+            <p style={{ fontSize: 11, color: 'var(--text-muted)', letterSpacing: '0.05em', opacity: 0.5, marginBottom: 28, userSelect: 'none' }}>
+              AI enhancement available after ~5 lines
+            </p>
+          ) : null}
           <div style={{ minWidth: 0, position: 'relative' }}>
           {isEmpty ? (
             <div style={{ paddingTop: 80, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14, color: 'var(--text-muted)', textAlign: 'center' }}>
