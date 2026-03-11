@@ -140,14 +140,17 @@ export default function WorkspacePage() {
   const [editingTitle, setEditingTitle] = useState('')
   const [shareCopied, setShareCopied] = useState(false)
 
-  // Inline annotations
+  // Inline annotations (live session only)
   const [lineComments, setLineComments] = useState<Map<number, CommentItem[]>>(new Map())
+  // Archived session comments — separate so live lineComments are never overwritten
+  const [archivedComments, setArchivedComments] = useState<Map<number, CommentItem[]>>(new Map())
   const [openCommentLine, setOpenCommentLine] = useState<number | null>(null)
   const [commentAuthor, setCommentAuthor] = useState(
     () => localStorage.getItem('isol_commenter_name') || ''
   )
   const [commentSubmitting, setCommentSubmitting] = useState(false)
   const commentPollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const lastWssSessionIdRef = useRef<string>('')
 
   // Sync title input when session detail opens
   useEffect(() => {
@@ -372,6 +375,7 @@ export default function WorkspacePage() {
       if (shareHintTimerRef.current) clearTimeout(shareHintTimerRef.current)
       shareHintTimerRef.current = setTimeout(() => setShowShareHint(false), 10000)
     }
+    if (ws.sessionId) lastWssSessionIdRef.current = ws.sessionId
     prevSessionIdRef.current = ws.sessionId ?? null
   }, [ws.sessionId])
 
@@ -561,7 +565,7 @@ export default function WorkspacePage() {
       if (!res.ok) return
       const data = await res.json() as SessionDetail
       setViewingSession(data)
-      setLineComments(buildCommentMap(data.comments ?? []))
+      setArchivedComments(buildCommentMap(data.comments ?? []))
     } catch { /* silent */ }
     finally { setSessionDetailLoading(false) }
   }, [])
@@ -638,6 +642,7 @@ export default function WorkspacePage() {
             }
           }),
           ai_formatted_text: formatted ?? null,
+          wss_session_id: lastWssSessionIdRef.current || undefined,
           highlights: highlightItems.map(h => ({ line_index: h.line_index, text: h.text, category: h.category })),
           speakers: speakerData
             ? [...speakerData.profiles.entries()].map(([id, p]) => ({
@@ -1459,7 +1464,7 @@ export default function WorkspacePage() {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             padding: 24,
           }}
-          onClick={e => { if (e.target === e.currentTarget) { setViewingSession(null); setLineComments(new Map()) } }}
+          onClick={e => { if (e.target === e.currentTarget) { setViewingSession(null); setArchivedComments(new Map()) } }}
         >
           <div style={{
             width: '100%', maxWidth: 700,
@@ -1513,7 +1518,7 @@ export default function WorkspacePage() {
                 )}
               </div>
               <button
-                onClick={() => { setViewingSession(null); setLineComments(new Map()) }}
+                onClick={() => { setViewingSession(null); setArchivedComments(new Map()) }}
                 style={{ background: 'none', color: 'var(--text-muted)', fontSize: 20, padding: '2px 8px', borderRadius: 4, flexShrink: 0 }}
               >×</button>
             </div>
@@ -1529,6 +1534,7 @@ export default function WorkspacePage() {
                   currentLine=""
                   isActive={false}
                   targetLang={targetLang}
+                  hideBanner={true}
                   aiFormatted={viewingSession.session.ai_formatted_text as string | undefined}
                   aiFormattedAt={undefined}
                   aiLoading={false}
@@ -1537,14 +1543,14 @@ export default function WorkspacePage() {
                   viewMode="raw"
                   onViewModeChange={() => {}}
                   isEditable={false}
-                  lineComments={lineComments}
+                  lineComments={archivedComments}
                   openCommentLine={null}
                   onOpenCommentLine={() => {}}
                   commentAuthor={commentAuthor}
                   onCommentAuthorChange={() => {}}
                   onAddComment={async () => {}}
                   commentSubmitting={false}
-                  isHost={true}
+                  isHost={false}
                   highlights={viewingSession.highlights ?? []}
                 />
               ) : null}

@@ -17,6 +17,7 @@ interface Props {
   currentLine: string
   isActive: boolean
   targetLang: string
+  hideBanner?: boolean
   aiFormatted?: string
   aiFormattedAt?: number
   aiLoading?: boolean
@@ -196,7 +197,7 @@ function AiContent({ text, onWordClick }: { text: string; onWordClick?: (w: stri
 }
 
 export default function DocumentView({
-  transcript, currentLine, isActive, targetLang,
+  transcript, currentLine, isActive, targetLang, hideBanner,
   aiFormatted, aiFormattedAt, aiLoading,
   aiNotes, aiNotesLoading,
   viewMode, onViewModeChange,
@@ -343,13 +344,15 @@ export default function DocumentView({
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
 
       {/* ━━ LIVE BANNER — ocean theme ━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-      <div style={{ flexShrink: 0, padding: '16px 24px', borderBottom: timelineSegments.length > 0 ? 'none' : '1px solid var(--divider)', background: 'var(--surface-1)' }}>
-        <LiveBanner
-          currentLine={currentLine}
-          previousLine={transcript[transcript.length - 1]?.text ?? ''}
-          isActive={isActive}
-        />
-      </div>
+      {!hideBanner && (
+        <div style={{ flexShrink: 0, padding: '16px 24px', borderBottom: timelineSegments.length > 0 ? 'none' : '1px solid var(--divider)', background: 'var(--surface-1)' }}>
+          <LiveBanner
+            currentLine={currentLine}
+            previousLine={transcript[transcript.length - 1]?.text ?? ''}
+            isActive={isActive}
+          />
+        </div>
+      )}
 
       {/* ━━ TIMELINE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
       {sessionStartMs && timelineSegments.length > 0 && (
@@ -425,13 +428,14 @@ export default function DocumentView({
                 const lineC = lineComments?.get(i) ?? []
                 const hasComments = lineC.length > 0
 
-                // Progressive fade — distance from the most recent finalized line
+                // Progressive fade — only during live sessions
                 const dist = (transcript.length - 1) - i
-                const lineOpacity = dist === 0 ? 1
+                const lineOpacity = !isActive ? 1
+                  : dist === 0 ? 1
                   : dist === 1 ? 0.68
                   : dist === 2 ? 0.50
                   : Math.max(0.30, 0.50 - (dist - 2) * 0.04)
-                const lineWeight: number = dist === 0 ? 500 : 400
+                const lineWeight: number = !isActive ? 400 : dist === 0 ? 500 : 400
 
                 if (isEditable && editingIndex === i) {
                   return (

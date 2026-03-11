@@ -38,6 +38,7 @@ interface SavePayload {
   ai_formatted_text?: string
   highlights?: HighlightInput[]
   speakers?: SpeakerInput[]
+  wss_session_id?: string
 }
 
 const CORS = {
@@ -53,7 +54,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
 
   try {
     const body = await request.json<SavePayload>()
-    const { workspace_slug, target_lang, started_at, ended_at, transcript_lines, ai_formatted_text, highlights, speakers } = body
+    const { workspace_slug, target_lang, started_at, ended_at, transcript_lines, ai_formatted_text, highlights, speakers, wss_session_id } = body
 
     if (!workspace_slug || !target_lang || !started_at || !ended_at) {
       return Response.json({ error: 'Missing required fields' }, { status: 400, headers: CORS })
@@ -70,15 +71,16 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
 
     // Insert session
     const sessionResult = await env.DB.prepare(
-      `INSERT INTO sessions (workspace_slug, target_lang, started_at, ended_at, line_count, ai_formatted_text)
-       VALUES (?, ?, ?, ?, ?, ?)`
+      `INSERT INTO sessions (workspace_slug, target_lang, started_at, ended_at, line_count, ai_formatted_text, wss_session_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`
     ).bind(
       workspace_slug,
       target_lang,
       started_at,
       ended_at,
       transcript_lines.length,
-      ai_formatted_text ?? null
+      ai_formatted_text ?? null,
+      wss_session_id ?? null
     ).run()
 
     const sessionId = sessionResult.meta.last_row_id
