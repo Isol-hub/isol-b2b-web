@@ -23,7 +23,7 @@ function fmtMs(ms: number): string {
 
 const BUCKETS = 60
 const SVG_W = 1000
-const SVG_H = 24
+const SVG_H = 10
 
 function buildPath(pts: { x: number; y: number }[], baseY: number): string {
   if (pts.length < 2) return ''
@@ -119,7 +119,7 @@ export default function SessionTimeline({ segments, sessionEndMs, onJumpTo }: Pr
   }))
 
   return (
-    <div style={{ padding: '4px 24px 6px', userSelect: 'none', position: 'relative' }}>
+    <div style={{ padding: '6px 24px 4px', userSelect: 'none', position: 'relative' }}>
 
       {/* Tooltip */}
       {hoveredSeg && hoverFrac !== null && (
@@ -163,18 +163,18 @@ export default function SessionTimeline({ segments, sessionEndMs, onJumpTo }: Pr
         <svg
           viewBox={`0 0 ${SVG_W} ${SVG_H}`}
           preserveAspectRatio="none"
-          style={{ width: '100%', height: 20, display: 'block', overflow: 'visible' }}
+          style={{ width: '100%', height: 10, display: 'block', overflow: 'visible', borderRadius: 4 }}
         >
           <defs>
             {/* Filled gradient (left of scrubber) */}
             <linearGradient id="tl-grad-filled" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="rgba(99,102,241,0.65)" />
-              <stop offset="100%" stopColor="rgba(99,102,241,0.08)" />
+              <stop offset="0%" stopColor="rgba(99,102,241,0.85)" />
+              <stop offset="100%" stopColor="rgba(99,102,241,0.25)" />
             </linearGradient>
             {/* Dimmed gradient (right of scrubber) */}
             <linearGradient id="tl-grad-dim" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="rgba(150,150,160,0.18)" />
-              <stop offset="100%" stopColor="rgba(150,150,160,0.03)" />
+              <stop offset="0%" stopColor="rgba(150,150,160,0.28)" />
+              <stop offset="100%" stopColor="rgba(150,150,160,0.06)" />
             </linearGradient>
             {/* Clip: filled portion */}
             <clipPath id="tl-clip-filled">
@@ -193,81 +193,43 @@ export default function SessionTimeline({ segments, sessionEndMs, onJumpTo }: Pr
             <path d={pathD} fill="url(#tl-grad-filled)" clipPath="url(#tl-clip-filled)" />
           )}
 
-          {/* Hover vertical line */}
-          {hoverFrac !== null && (
+          {/* Playhead — vertical line through waveform */}
+          {scrubFrac !== null && (
+            <line
+              x1={activeFrac * SVG_W} y1={0}
+              x2={activeFrac * SVG_W} y2={SVG_H}
+              stroke="rgba(255,255,255,0.9)"
+              strokeWidth={2}
+            />
+          )}
+
+          {/* Hover guide */}
+          {hoverFrac !== null && scrubFrac === null && (
             <line
               x1={hoverFrac * SVG_W} y1={0}
               x2={hoverFrac * SVG_W} y2={SVG_H}
-              stroke="rgba(99,102,241,0.25)"
+              stroke="rgba(99,102,241,0.35)"
               strokeWidth={1.5}
-              strokeDasharray="3 3"
+              strokeDasharray="2 2"
             />
           )}
-        </svg>
 
-        {/* ── Track line + markers ── */}
-        <div style={{
-          position: 'relative',
-          height: 3,
-          background: 'var(--divider)',
-          borderRadius: 4,
-          marginTop: 1,
-        }}>
-          {/* Filled bar */}
-          {scrubFrac !== null && (
-            <div style={{
-              position: 'absolute',
-              left: 0, top: 0,
-              width: `${activeFrac * 100}%`,
-              height: '100%',
-              background: 'linear-gradient(90deg, var(--accent), rgba(99,102,241,0.4))',
-              borderRadius: 4,
-              pointerEvents: 'none',
-            }} />
-          )}
-
-          {/* Comment markers — small triangles above track */}
+          {/* Comment dots — inside SVG, above base */}
           {commentSegs.map(seg => (
-            <div
+            <circle
               key={seg.index}
+              cx={frac(seg) * SVG_W}
+              cy={SVG_H * 0.35}
+              r={4}
+              fill="#F59E0B"
+              style={{ cursor: 'pointer' }}
               onClick={e => { e.stopPropagation(); setScrubFrac(frac(seg)); onJumpTo(seg.index) }}
-              title={seg.text.slice(0, 60)}
-              style={{
-                position: 'absolute',
-                left: `${frac(seg) * 100}%`,
-                top: -7,
-                transform: 'translateX(-50%)',
-                width: 0, height: 0,
-                borderLeft: '4px solid transparent',
-                borderRight: '4px solid transparent',
-                borderTop: '6px solid #F59E0B',
-                cursor: 'pointer',
-                zIndex: 3,
-                filter: 'drop-shadow(0 1px 2px rgba(245,158,11,0.4))',
-              }}
             />
           ))}
-
-          {/* Scrubber thumb */}
-          {scrubFrac !== null && (
-            <div style={{
-              position: 'absolute',
-              left: `${activeFrac * 100}%`,
-              top: '50%',
-              transform: 'translate(-50%, -50%)',
-              width: 14, height: 14,
-              borderRadius: '50%',
-              background: 'var(--accent)',
-              border: '2.5px solid var(--canvas)',
-              boxShadow: '0 0 0 2px var(--accent), 0 2px 8px rgba(99,102,241,0.4)',
-              zIndex: 4,
-              pointerEvents: 'none',
-            }} />
-          )}
-        </div>
+        </svg>
 
         {/* ── Labels ── */}
-        <div style={{ position: 'relative', height: 12, marginTop: 3 }}>
+        <div style={{ position: 'relative', height: 12, marginTop: 2 }}>
           <span style={{ position: 'absolute', left: 0, fontSize: 9, color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums', fontWeight: 500 }}>
             {fmtMs(startOffset)}
           </span>
