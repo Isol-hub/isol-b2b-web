@@ -343,10 +343,14 @@ export default function WorkspacePage() {
   const wssUrl = import.meta.env.VITE_WSS_URL ?? 'wss://api.isol.live/audio'
 
   const handleMessage = useCallback((msg: SubtitleMessage) => {
-    if (msg.line_final && msg.line_final !== lastLineFinalRef.current) {
-      lastLineFinalRef.current = msg.line_final
+    // Use original_text (source language) when available — the server may broadcast
+    // a translated line_final to all room participants when a viewer with a different
+    // target_lang is connected. The host must always save the original transcript.
+    const sourceLine = msg.original_text || msg.line_final
+    if (sourceLine && sourceLine !== lastLineFinalRef.current) {
+      lastLineFinalRef.current = sourceLine
       const entry: TranscriptLine = {
-        text: msg.line_final,
+        text: sourceLine,
         time: new Date(),
         // Capture pipeline speaker if backend diarization is active (Phase 3).
         // null/undefined → heuristic will run instead.
@@ -354,11 +358,11 @@ export default function WorkspacePage() {
         pipelineSpeakerConfidence: msg.speaker_confidence ?? null,
       }
       setTranscript(prev => [...prev, entry])
-      msg.line_final.split(/\s+/).forEach(raw => {
+      sourceLine.split(/\s+/).forEach(raw => {
         const w = raw.toLowerCase().replace(/[^\w]/g, '')
         if (w.length < 3) return
         const existing = wordIndex.current.get(w) ?? []
-        if (existing.length < 5) wordIndex.current.set(w, [...existing, msg.line_final])
+        if (existing.length < 5) wordIndex.current.set(w, [...existing, sourceLine])
       })
     }
     setCurrentLine(msg.line_next || '')
