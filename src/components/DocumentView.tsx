@@ -101,13 +101,13 @@ function CommentMarginalia({
   totalLines: number
 }) {
   return (
-    <div style={{ position: 'relative', minHeight: Math.max(200, totalLines * 8) }}>
+    <div style={{ position: 'relative', height: '100%', minHeight: 60 }}>
       {items.map(({ lineIndex, comment }, i) => {
-        const topPct = totalLines > 1 ? (lineIndex / (totalLines - 1)) * 100 : i * 12
+        const topPct = totalLines > 1 ? (lineIndex / (totalLines - 1)) * 100 : 0
         return (
           <div
             key={comment.id}
-            style={{ position: 'absolute', top: `${topPct}%`, left: 0, right: 0 }}
+            style={{ position: 'absolute', top: `${topPct}%`, left: 0, right: 0, transform: 'translateY(-50%)' }}
           >
             <button
               onClick={() => onJumpTo?.(lineIndex)}
@@ -117,7 +117,6 @@ function CommentMarginalia({
                 cursor: onJumpTo ? 'pointer' : 'default', textAlign: 'left',
               }}
             >
-              {/* SVG curved arrow pointing left */}
               <svg width="26" height="16" viewBox="0 0 26 16" fill="none" style={{ flexShrink: 0, marginTop: 3, opacity: 0.85 }}>
                 <path d="M24 8 C17 8 10 3 2 8" stroke="#B91C1C" strokeWidth="1.3" strokeLinecap="round"/>
                 <path d="M2 8 L6 4 M2 8 L6 12" stroke="#B91C1C" strokeWidth="1.3" strokeLinecap="round"/>
@@ -393,7 +392,7 @@ export default function DocumentView({
             </div>
 
           ) : viewMode === 'ai' && aiFormatted ? (
-            <div style={{ display: 'grid', gridTemplateColumns: annotationsForPanel.length > 0 ? '1fr 110px' : '1fr', gap: 12, alignItems: 'start' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: annotationsForPanel.length > 0 ? '1fr 110px' : '1fr', gap: 12, alignItems: 'stretch' }}>
               <div className="doc-ai-update" style={{ minWidth: 0 }}>
                 <AiContent text={aiFormatted} onWordClick={onWordClick} />
                 {(aiFormattedAt !== undefined ? transcript.slice(aiFormattedAt) : []).map((line, i) => (
@@ -404,22 +403,18 @@ export default function DocumentView({
                 {isActive && !currentLine && <span className="doc-cursor" />}
               </div>
               {annotationsForPanel.length > 0 && (
-                <div style={{ paddingTop: 8 }}>
-                  <CommentMarginalia items={annotationsForPanel} onJumpTo={scrollToLine} totalLines={transcript.length} />
-                </div>
+                <CommentMarginalia items={annotationsForPanel} onJumpTo={scrollToLine} totalLines={transcript.length} />
               )}
             </div>
 
           ) : viewMode === 'notes' && aiNotes ? (
-            <div style={{ display: 'grid', gridTemplateColumns: annotationsForPanel.length > 0 ? '1fr 110px' : '1fr', gap: 12, alignItems: 'start' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: annotationsForPanel.length > 0 ? '1fr 110px' : '1fr', gap: 12, alignItems: 'stretch' }}>
               <div className="doc-ai-update" style={{ minWidth: 0 }}>
                 <AiContent text={aiNotes} onWordClick={onWordClick} />
                 {isActive && <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 16, fontStyle: 'italic' }}>Notes update as session progresses…</p>}
               </div>
               {annotationsForPanel.length > 0 && (
-                <div style={{ paddingTop: 8 }}>
-                  <CommentMarginalia items={annotationsForPanel} onJumpTo={scrollToLine} totalLines={transcript.length} />
-                </div>
+                <CommentMarginalia items={annotationsForPanel} onJumpTo={scrollToLine} totalLines={transcript.length} />
               )}
             </div>
 
