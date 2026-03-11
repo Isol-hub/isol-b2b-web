@@ -10,7 +10,7 @@ import HeroQuotes from '../components/HeroQuotes'
 import type { CommentItem } from '../components/CommentThread'
 import HighlightsSection from '../components/HighlightsSection'
 import type { HighlightItem, HighlightCategory } from '../components/HighlightPopup'
-import SubtitleView from '../components/SubtitleView'
+import LiveBanner from '../components/LiveBanner'
 import { usePip } from '../hooks/usePip'
 import TranscriptModal from '../components/TranscriptModal'
 import GlossaryPanel from '../components/GlossaryPanel'
@@ -1212,7 +1212,7 @@ export default function WorkspacePage() {
           {/* Compact mode toggle */}
           {sessionActive && (
             <button
-              onClick={() => pip.isOpen ? pip.close() : pip.open()}
+              onClick={() => pip.isOpen ? pip.close() : pip.open(520, 130)}
               className="btn-icon"
               style={{ width: '100%', justifyContent: 'center', fontSize: 11 }}
               title={pip.isSupported ? undefined : 'Requires Chrome 116+'}
@@ -1449,11 +1449,11 @@ export default function WorkspacePage() {
       {/* ━━ OVERLAYS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
 
       {pip.pipWindow && createPortal(
-        <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--bg)' }}>
-          <SubtitleView
-            current={currentLine}
-            previous={transcript[transcript.length - 1]?.text ?? ''}
-            compact
+        <div style={{ height: '100vh', display: 'flex', alignItems: 'stretch', padding: 12, boxSizing: 'border-box', background: '#05081A' }}>
+          <LiveBanner
+            currentLine={currentLine}
+            previousLine={transcript[transcript.length - 1]?.text ?? ''}
+            isActive={isActive}
           />
         </div>,
         pip.pipWindow.document.body
