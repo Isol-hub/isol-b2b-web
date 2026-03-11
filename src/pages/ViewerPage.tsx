@@ -225,6 +225,24 @@ export default function ViewerPage() {
 
   const ws = useWebSocket({ url: wssUrl, targetLang, onMessage: handleMessage, viewerSessionId: sessionId, onSessionEnd: () => setSessionEnded(true) })
 
+  // Fallback: if disconnected for >15s after having been live, treat as session ended
+  const sessionEndedRef = useRef(false)
+  useEffect(() => { sessionEndedRef.current = sessionEnded }, [sessionEnded])
+  const disconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => {
+    if (!joined || sessionEndedRef.current) return
+    if (ws.state === 'connected') {
+      if (disconnectTimerRef.current) { clearTimeout(disconnectTimerRef.current); disconnectTimerRef.current = null }
+    } else if (ws.state === 'reconnecting' || ws.state === 'disconnected' || ws.state === 'error') {
+      if (!disconnectTimerRef.current) {
+        disconnectTimerRef.current = setTimeout(() => {
+          if (!sessionEndedRef.current) setSessionEnded(true)
+        }, 15_000)
+      }
+    }
+    return () => {}
+  }, [ws.state, joined])
+
   // Start polling when joined
   useEffect(() => {
     if (!joined || !sessionId) return
