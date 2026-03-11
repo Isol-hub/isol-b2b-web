@@ -38,6 +38,11 @@ export function useWebSocket({ url, targetLang, onMessage, onStateChange, viewer
   const reconnectTimer = useRef<ReturnType<typeof setTimeout>>()
   const pingTimer = useRef<ReturnType<typeof setInterval>>()
   const shouldReconnect = useRef(false)
+  const onSessionEndRef = useRef(onSessionEnd)
+  const receivedHello = useRef(false)
+  const noHelloCloseCount = useRef(0)
+
+  useEffect(() => { onSessionEndRef.current = onSessionEnd }, [onSessionEnd])
 
   const setWsState = useCallback((s: WsState) => {
     setState(s)
@@ -62,6 +67,7 @@ export function useWebSocket({ url, targetLang, onMessage, onStateChange, viewer
       console.log('[WS] open')
       setWsState('connected')
       reconnectDelay.current = INITIAL_RECONNECT_DELAY
+      receivedHello.current = false
       pingTimer.current = setInterval(() => {
         if (ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify({ type: 'ping' }))
@@ -78,12 +84,14 @@ export function useWebSocket({ url, targetLang, onMessage, onStateChange, viewer
         // Capture session_id from hello message
         if (msg.type === 'hello' && msg.session_id) {
           setSessionId(msg.session_id)
+          receivedHello.current = true
+          noHelloCloseCount.current = 0
           return
         }
         // Host stopped: prevent reconnect loop, surface to caller
         if (msg.type === 'end_of_session') {
           shouldReconnect.current = false
-          onSessionEnd?.()
+          onSessionEndRef.current?.()
           return
         }
         if (msg.type === 'viewer_count') {
@@ -104,6 +112,17 @@ export function useWebSocket({ url, targetLang, onMessage, onStateChange, viewer
     ws.onclose = (e) => {
       console.log('[WS] close — code:', e.code, 'reason:', e.reason, 'wasClean:', e.wasClean, 'shouldReconnect:', shouldReconnect.current)
       clearInterval(pingTimer.current)
+      // Viewer-only: if the connection closes without ever receiving `hello`,
+      // the session room is gone. After 3 such attempts, treat it as session ended.
+      if (viewerSessionId && shouldReconnect.current && !receivedHello.current) {
+        noHelloCloseCount.current += 1
+        if (noHelloCloseCount.current >= 3) {
+          shouldReconnect.current = false
+          setWsState('disconnected')
+          onSessionEndRef.current?.()
+          return
+        }
+      }
       if (shouldReconnect.current) {
         setWsState('reconnecting')
         reconnectTimer.current = setTimeout(() => {
@@ -129,6 +148,7 @@ export function useWebSocket({ url, targetLang, onMessage, onStateChange, viewer
 
   const close = useCallback(() => {
     shouldReconnect.current = false
+    noHelloCloseCount.current = 0
     clearTimeout(reconnectTimer.current)
     clearInterval(pingTimer.current)
     wsRef.current?.close()
