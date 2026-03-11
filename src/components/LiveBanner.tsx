@@ -158,11 +158,11 @@ export default function LiveBanner({ currentLine, previousLine, isActive }: Prop
             <span
               key={quoteIdx}
               style={{
-                fontFamily: "'Lora', Georgia, serif",
-                fontSize: 18,
-                fontStyle: 'italic',
+                fontFamily: "'Bebas Neue', Impact, sans-serif",
+                fontSize: 26,
+                fontStyle: 'normal',
                 fontWeight: 400,
-                letterSpacing: '0.01em',
+                letterSpacing: '0.12em',
                 color: 'rgba(226,254,255,0.88)',
                 textShadow: '0 0 18px rgba(26,210,255,0.55), 0 1px 2px rgba(0,0,0,0.4)',
                 userSelect: 'none',
