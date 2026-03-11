@@ -321,30 +321,41 @@ export default function SharedSessionPage() {
                   {/* AI tab */}
                   {activeTab === 'ai' && (
                     <>
-                      <AiMarkdown text={session.ai_formatted_text} />
-                      {comments.filter(c => c.line_index !== null).length > 0 && (
-                        <div style={{ marginTop: 32, paddingTop: 20, borderTop: '1px solid var(--divider)' }}>
-                          {comments.filter(c => c.line_index !== null).map((c, i) => (
-                            <div
-                              key={c.id}
-                              style={{
-                                color: '#B91C1C',
-                                fontFamily: "'Caveat', cursive",
-                                fontSize: 16,
-                                fontStyle: 'italic',
-                                lineHeight: 1.35,
-                                transform: `rotate(${-0.7 - i * 0.4}deg)`,
-                                marginBottom: 6,
-                                wordBreak: 'break-word',
-                                userSelect: 'none',
-                                opacity: c.pending ? 0.5 : 1,
-                              }}
-                            >
-                              — {c.body}
-                            </div>
-                          ))}
+                      {/* Grid: AI content | comment marginalia */}
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 110px', alignItems: 'stretch', gap: 0 }}>
+                        <div><AiMarkdown text={session.ai_formatted_text} /></div>
+                        {/* Marginalia column */}
+                        <div style={{ position: 'relative', height: '100%' }}>
+                          {comments.filter(c => c.line_index !== null).map((c, i) => {
+                            const totalLines = lines.length
+                            const pct = totalLines > 1 ? (c.line_index! / (totalLines - 1)) * 100 : 0
+                            return (
+                              <div
+                                key={c.id}
+                                style={{
+                                  position: 'absolute',
+                                  top: `${pct}%`,
+                                  left: 8,
+                                  right: 0,
+                                  transform: 'translateY(-50%)',
+                                  color: '#B91C1C',
+                                  fontFamily: "'Caveat', cursive",
+                                  fontSize: 15,
+                                  fontStyle: 'italic',
+                                  lineHeight: 1.3,
+                                  rotate: `${-0.7 - i * 0.4}deg`,
+                                  wordBreak: 'break-word',
+                                  userSelect: 'none',
+                                  opacity: c.pending ? 0.5 : 1,
+                                  pointerEvents: 'none',
+                                }}
+                              >
+                                — {c.body}
+                              </div>
+                            )
+                          })}
                         </div>
-                      )}
+                      </div>
 
                       {/* Discussion section — form first, then list */}
                       <div style={{ borderTop: '1px solid var(--divider)', paddingTop: 28, marginTop: 40 }}>

@@ -139,6 +139,8 @@ export default function WorkspacePage() {
 
   const [editingTitle, setEditingTitle] = useState('')
   const [shareCopied, setShareCopied] = useState(false)
+  const [sharePending, setSharePending] = useState(false)
+  const [shareDurationHours, setShareDurationHours] = useState<number | null>(null)
 
   // Inline annotations (live session only)
   const [lineComments, setLineComments] = useState<Map<number, CommentItem[]>>(new Map())
@@ -591,18 +593,19 @@ export default function WorkspacePage() {
     } catch { /* silent */ }
   }, [])
 
-  const generateShareLink = useCallback(async (sessionId: number) => {
+  const generateShareLink = useCallback(async (sessionId: number, expiresInHours?: number | null) => {
     const token = getToken()
     if (!token) return
     const res = await fetch('/api/share', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ session_id: sessionId }),
+      body: JSON.stringify({ session_id: sessionId, ...(expiresInHours != null ? { expires_in_hours: expiresInHours } : {}) }),
     })
     if (!res.ok) return
     const data = await res.json() as { token: string }
     setViewingSession(prev => prev ? { ...prev, session: { ...prev.session, share_token: data.token } } : prev)
     setSessions(prev => prev.map(s => s.id === sessionId ? { ...s, share_token: data.token } : s))
+    setSharePending(false)
   }, [])
 
   const handleCopyShareUrl = useCallback((token: string) => {
@@ -1468,7 +1471,7 @@ export default function WorkspacePage() {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             padding: 24,
           }}
-          onClick={e => { if (e.target === e.currentTarget) { setViewingSession(null); setArchivedComments(new Map()) } }}
+          onClick={e => { if (e.target === e.currentTarget) { setViewingSession(null); setArchivedComments(new Map()); setSharePending(false) } }}
         >
           <div style={{
             width: '100%', maxWidth: 700,
@@ -1522,7 +1525,7 @@ export default function WorkspacePage() {
                 )}
               </div>
               <button
-                onClick={() => { setViewingSession(null); setArchivedComments(new Map()) }}
+                onClick={() => { setViewingSession(null); setArchivedComments(new Map()); setSharePending(false) }}
                 style={{ background: 'none', color: 'var(--text-muted)', fontSize: 20, padding: '2px 8px', borderRadius: 4, flexShrink: 0 }}
               >×</button>
             </div>
@@ -1591,9 +1594,37 @@ export default function WorkspacePage() {
                       {shareCopied ? '✓ Copied' : 'Copy'}
                     </button>
                   </div>
+                ) : sharePending ? (
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <select
+                      className="input-field"
+                      value={shareDurationHours ?? ''}
+                      onChange={e => setShareDurationHours(e.target.value === '' ? null : Number(e.target.value))}
+                      style={{ fontSize: 12, flex: 1, height: 32 }}
+                    >
+                      <option value="">No expiry</option>
+                      <option value="24">24 hours</option>
+                      <option value="168">7 days</option>
+                      <option value="720">30 days</option>
+                    </select>
+                    <button
+                      onClick={() => generateShareLink(viewingSession.session.id as number, shareDurationHours)}
+                      className="btn-icon"
+                      style={{ fontSize: 12, flexShrink: 0, background: 'var(--accent)', color: '#fff', borderColor: 'var(--accent)' }}
+                    >
+                      Generate
+                    </button>
+                    <button
+                      onClick={() => setSharePending(false)}
+                      className="btn-icon"
+                      style={{ fontSize: 12, flexShrink: 0 }}
+                    >
+                      ✕
+                    </button>
+                  </div>
                 ) : (
                   <button
-                    onClick={() => generateShareLink(viewingSession.session.id as number)}
+                    onClick={() => { setShareDurationHours(null); setSharePending(true) }}
                     className="btn-icon"
                     style={{ fontSize: 12 }}
                   >
