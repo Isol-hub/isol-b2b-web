@@ -406,7 +406,7 @@ export default function DocumentView({
                 {isActive && !currentLine && <span className="doc-cursor" />}
               </div>
               {annotationsForPanel.length > 0 && (
-                <CommentMarginalia items={annotationsForPanel} onJumpTo={scrollToLine} totalLines={transcript.length} />
+                <CommentMarginalia items={annotationsForPanel} onJumpTo={scrollToLine} totalLines={aiFormattedAt ?? transcript.length} />
               )}
             </div>
 
@@ -417,7 +417,7 @@ export default function DocumentView({
                 {isActive && <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 16, fontStyle: 'italic' }}>Notes update as session progresses…</p>}
               </div>
               {annotationsForPanel.length > 0 && (
-                <CommentMarginalia items={annotationsForPanel} onJumpTo={scrollToLine} totalLines={transcript.length} />
+                <CommentMarginalia items={annotationsForPanel} onJumpTo={scrollToLine} totalLines={aiFormattedAt ?? transcript.length} />
               )}
             </div>
 
