@@ -679,7 +679,7 @@ export default function WorkspacePage() {
           const titleRes = await fetch('/api/ai/title', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-            body: JSON.stringify({ lines: lines.slice(0, 10).map(l => l.text) }),
+            body: JSON.stringify({ lines: lines.slice(0, 10).map(l => l.text), lang: targetLang }),
           })
           if (titleRes.ok) {
             const { title } = await titleRes.json() as { title: string }

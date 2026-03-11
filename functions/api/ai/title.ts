@@ -15,12 +15,15 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   }
 
   try {
-    const { lines } = await request.json<{ lines: string[] }>()
+    const { lines, lang } = await request.json<{ lines: string[]; lang?: string }>()
     if (!lines?.length) {
       return Response.json({ error: 'No lines provided' }, { status: 400, headers: CORS })
     }
 
     const rawText = lines.slice(0, 10).join('\n')
+    const langInstruction = lang
+      ? ` Write the title in the same language as the transcript (language code: ${lang}).`
+      : ''
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -35,7 +38,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
         messages: [
           {
             role: 'user',
-            content: `Generate a concise 3-6 word title that describes the main topic of this speech transcript. Return ONLY the title — no quotes, no punctuation at the end, no commentary.\n\nTranscript:\n${rawText}`,
+            content: `Generate a concise 3-6 word title that describes the main topic of this speech transcript. Return ONLY the title — no quotes, no punctuation at the end, no commentary.${langInstruction}\n\nTranscript:\n${rawText}`,
           },
         ],
       }),
