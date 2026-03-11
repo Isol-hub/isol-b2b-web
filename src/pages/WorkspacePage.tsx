@@ -146,6 +146,7 @@ export default function WorkspacePage() {
   const [lineComments, setLineComments] = useState<Map<number, CommentItem[]>>(new Map())
   // Archived session comments — separate so live lineComments are never overwritten
   const [archivedComments, setArchivedComments] = useState<Map<number, CommentItem[]>>(new Map())
+  const [archivedViewMode, setArchivedViewMode] = useState<'raw' | 'ai' | 'notes'>('raw')
   const [openCommentLine, setOpenCommentLine] = useState<number | null>(null)
   const [commentAuthor, setCommentAuthor] = useState(
     () => localStorage.getItem('isol_commenter_name') || ''
@@ -572,6 +573,7 @@ export default function WorkspacePage() {
       const data = await res.json() as SessionDetail
       setViewingSession(data)
       setArchivedComments(buildCommentMap(data.comments ?? []))
+      setArchivedViewMode(data.session.ai_formatted_text ? 'ai' : 'raw')
     } catch { /* silent */ }
     finally { setSessionDetailLoading(false) }
   }, [])
@@ -1471,7 +1473,7 @@ export default function WorkspacePage() {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             padding: 24,
           }}
-          onClick={e => { if (e.target === e.currentTarget) { setViewingSession(null); setArchivedComments(new Map()); setSharePending(false) } }}
+          onClick={e => { if (e.target === e.currentTarget) { setViewingSession(null); setArchivedComments(new Map()); setSharePending(false); setArchivedViewMode('raw') } }}
         >
           <div style={{
             width: '100%', maxWidth: 700,
@@ -1525,7 +1527,7 @@ export default function WorkspacePage() {
                 )}
               </div>
               <button
-                onClick={() => { setViewingSession(null); setArchivedComments(new Map()); setSharePending(false) }}
+                onClick={() => { setViewingSession(null); setArchivedComments(new Map()); setSharePending(false); setArchivedViewMode('raw') }}
                 style={{ background: 'none', color: 'var(--text-muted)', fontSize: 20, padding: '2px 8px', borderRadius: 4, flexShrink: 0 }}
               >×</button>
             </div>
@@ -1540,15 +1542,15 @@ export default function WorkspacePage() {
                   transcript={viewingSession.lines.map(l => ({ text: l.text, time: new Date(viewingSession.session.started_at as number) }))}
                   currentLine=""
                   isActive={false}
-                  targetLang={targetLang}
+                  targetLang={viewingSession.session.target_lang as string}
                   hideBanner={true}
                   aiFormatted={viewingSession.session.ai_formatted_text as string | undefined}
                   aiFormattedAt={undefined}
                   aiLoading={false}
                   aiNotes={undefined}
                   aiNotesLoading={false}
-                  viewMode="raw"
-                  onViewModeChange={() => {}}
+                  viewMode={archivedViewMode}
+                  onViewModeChange={setArchivedViewMode}
                   isEditable={false}
                   lineComments={archivedComments}
                   openCommentLine={null}
