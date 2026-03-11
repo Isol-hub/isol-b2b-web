@@ -16,18 +16,28 @@ export const onRequestGet: PagesFunction<Env> = async ({ env, params }) => {
 
   try {
     const session = await env.DB.prepare(
-      'SELECT id FROM sessions WHERE share_token = ?'
-    ).bind(token).first<{ id: number }>()
+      'SELECT id, wss_session_id FROM sessions WHERE share_token = ?'
+    ).bind(token).first<{ id: number; wss_session_id: string | null }>()
 
     if (!session) {
       return Response.json({ error: 'Not found' }, { status: 404, headers: CORS })
     }
 
-    const result = await env.DB.prepare(
-      'SELECT id, line_index, author, body, created_at FROM share_comments WHERE session_id = ? ORDER BY created_at ASC'
-    ).bind(session.id).all()
+    const [shareResult, viewerResult] = await Promise.all([
+      env.DB.prepare(
+        'SELECT id, line_index, author, body, created_at FROM share_comments WHERE session_id = ? ORDER BY created_at ASC'
+      ).bind(session.id).all(),
+      session.wss_session_id
+        ? env.DB.prepare(
+            'SELECT id, line_index, author, body, created_at FROM viewer_comments WHERE session_id = ? ORDER BY created_at ASC'
+          ).bind(session.wss_session_id).all()
+        : Promise.resolve({ results: [] }),
+    ])
 
-    return Response.json({ comments: result.results }, { status: 200, headers: CORS })
+    const comments = [...shareResult.results, ...viewerResult.results]
+      .sort((a, b) => (a as any).created_at - (b as any).created_at)
+
+    return Response.json({ comments }, { status: 200, headers: CORS })
   } catch (err) {
     console.error('comments fetch error', err)
     return Response.json({ error: 'Server error' }, { status: 500, headers: CORS })

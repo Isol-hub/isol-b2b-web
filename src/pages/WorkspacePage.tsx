@@ -839,7 +839,6 @@ export default function WorkspacePage() {
     setShowShareHint(false)
     prevSessionIdRef.current = null
     if (commentPollRef.current) { clearInterval(commentPollRef.current); commentPollRef.current = null }
-    setLineComments(new Map())
     setOpenCommentLine(null)
     // Fire-and-forget session save
     setTranscript(prev => {
