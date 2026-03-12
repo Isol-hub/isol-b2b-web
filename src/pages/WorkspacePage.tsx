@@ -1094,23 +1094,6 @@ export default function WorkspacePage() {
 
         <div style={{ flex: 1 }} />
 
-        {workspacePlan === 'team' && (
-          <button
-            onClick={() => setShowTeam(true)}
-            style={{
-              fontSize: 12, fontWeight: 600, padding: '5px 12px', height: 28,
-              borderRadius: 7, border: '1px solid rgba(245,158,11,0.30)',
-              background: 'rgba(245,158,11,0.08)', color: '#d97706',
-              cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5,
-              transition: 'background 0.15s',
-            }}
-            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(245,158,11,0.15)' }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(245,158,11,0.08)' }}
-          >
-            <span>👥</span> Team
-          </button>
-        )}
-
         <Link
           to={`/${workspaceSlug}/settings`}
           title="Settings"
@@ -1457,6 +1440,19 @@ export default function WorkspacePage() {
               <span>◈</span>
               Highlights{highlights.length > 0 && ` (${highlights.length})`}
             </button>
+
+            {workspacePlan === 'team' && (
+              <>
+                <div className="toolbar-sep" />
+                <button
+                  onClick={() => setShowTeam(true)}
+                  className={`toolbar-btn${showTeam ? ' active' : ''}`}
+                >
+                  <span>👥</span>
+                  Team
+                </button>
+              </>
+            )}
 
             <div className="toolbar-sep" />
 
