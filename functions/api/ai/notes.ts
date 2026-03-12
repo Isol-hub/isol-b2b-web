@@ -1,5 +1,6 @@
 import { verifyJwt } from '../../lib/jwt'
 import { checkRateLimit, type RateLimitEnv } from '../../lib/ratelimit'
+import { callAnthropic } from '../../lib/anthropic'
 
 interface Env extends RateLimitEnv { ANTHROPIC_API_KEY: string }
 
@@ -34,20 +35,13 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       ? `\nCRITICAL: Write all notes, headings, and quotes in ${langName}. Detect the source language automatically and translate if needed.\n`
       : ''
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'x-api-key': env.ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 2048,
-        messages: [
-          {
-            role: 'user',
-            content: `You are an expert note-taker. Below is a live speech transcript (raw, unpunctuated).${langInstruction}
+    const data = await callAnthropic(env.ANTHROPIC_API_KEY, {
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 2048,
+      messages: [
+        {
+          role: 'user',
+          content: `You are an expert note-taker. Below is a live speech transcript (raw, unpunctuated).${langInstruction}
 
 Produce concise, intelligent structured notes that:
 - Capture every key idea, decision, and point — nothing significant should be missing
@@ -80,16 +74,7 @@ Transcript:
 ${rawText}`,
           },
         ],
-      }),
     })
-
-    if (!response.ok) {
-      const err = await response.text()
-      console.error('Anthropic notes error:', err)
-      return Response.json({ error: `Anthropic ${response.status}` }, { status: 500, headers: CORS })
-    }
-
-    const data = await response.json<{ content: { type: string; text: string }[] }>()
     const notes = data.content.find(c => c.type === 'text')?.text ?? ''
 
     return Response.json({ notes }, { status: 200, headers: CORS })
