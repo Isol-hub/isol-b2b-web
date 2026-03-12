@@ -42,11 +42,19 @@ interface SharedSession {
   target_lang: string
   line_count: number
   ai_formatted_text: string | null
+  ai_notes_text: string | null
 }
 
 interface SharedLine {
   line_index: number
   text: string
+}
+
+interface SharedHighlight {
+  id: number
+  line_index: number | null
+  text: string
+  category: string | null
 }
 
 interface Comment extends CommentItem {
@@ -70,7 +78,8 @@ export default function SharedSessionPage() {
   const [status, setStatus] = useState<Status>('loading')
   const [session, setSession] = useState<SharedSession | null>(null)
   const [lines, setLines] = useState<SharedLine[]>([])
-  const [activeTab, setActiveTab] = useState<'ai' | 'transcript'>('ai')
+  const [activeTab, setActiveTab] = useState<'ai' | 'transcript' | 'notes'>('ai')
+  const [highlights, setHighlights] = useState<SharedHighlight[]>([])
 
   // Comments state
   const [comments, setComments] = useState<Comment[]>([])
@@ -95,10 +104,11 @@ export default function SharedSessionPage() {
         if (!res.ok) { setStatus('error'); return null }
         return res.json()
       })
-      .then((data: { session: SharedSession; lines: SharedLine[] } | null) => {
+      .then((data: { session: SharedSession; lines: SharedLine[]; highlights: SharedHighlight[] } | null) => {
         if (!data) return
         setSession(data.session)
         setLines(data.lines)
+        setHighlights(data.highlights ?? [])
         setActiveTab(data.session.ai_formatted_text ? 'ai' : 'transcript')
         setStatus('loaded')
       })
@@ -190,9 +200,31 @@ export default function SharedSessionPage() {
   const formatDate = (ts: number) =>
     new Date(ts).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
 
-  const TAB_COLORS: Record<'ai' | 'transcript', string> = {
+  const TAB_COLORS: Record<'ai' | 'transcript' | 'notes', string> = {
     ai: '#6366F1',
     transcript: '#64748B',
+    notes: '#0EA5E9',
+  }
+
+  const HIGHLIGHT_COLORS: Record<string, string> = {
+    action: '#F59E0B',
+    question: '#8B5CF6',
+    decision: '#10B981',
+    important: '#EF4444',
+    default: '#6366F1',
+  }
+
+  const HIGHLIGHT_ICONS: Record<string, string> = {
+    action: '⚡',
+    question: '❓',
+    decision: '✅',
+    important: '⚠️',
+    default: '✦',
+  }
+
+  const highlightByLine = new Map<number, SharedHighlight>()
+  for (const h of highlights) {
+    if (h.line_index !== null) highlightByLine.set(h.line_index, h)
   }
 
   const totalLineComments = comments.filter(c => c.line_index !== null).length
@@ -298,9 +330,10 @@ export default function SharedSessionPage() {
                       background: 'var(--surface-2, rgba(0,0,0,0.06))',
                       borderRadius: 10, padding: 3, gap: 1,
                     }}>
-                      {(['ai', 'transcript'] as const).map(tab => {
+                      {(['ai', 'transcript', ...(session.ai_notes_text ? ['notes' as const] : [])] as const).map(tab => {
                         const active = activeTab === tab
                         const color = TAB_COLORS[tab]
+                        const labels: Record<string, string> = { ai: '✦ AI Structured', transcript: 'Transcript', notes: '✦ Notes' }
                         return (
                           <button
                             key={tab}
@@ -318,7 +351,7 @@ export default function SharedSessionPage() {
                               userSelect: 'none', whiteSpace: 'nowrap',
                             }}
                           >
-                            {tab === 'ai' ? '✦ AI Structured' : 'Transcript'}
+                            {labels[tab]}
                             {tab === 'transcript' && totalLineComments > 0 && (
                               <span style={{
                                 fontSize: 10, background: active ? 'rgba(100,116,139,0.15)' : 'rgba(99,102,241,0.10)',
@@ -464,6 +497,9 @@ export default function SharedSessionPage() {
                     <TranscriptLines
                       lines={lines}
                       comments={comments}
+                      highlightByLine={highlightByLine}
+                      hlColors={HIGHLIGHT_COLORS}
+                      hlIcons={HIGHLIGHT_ICONS}
                       openLine={openLine}
                       hoveredLine={hoveredLine}
                       setOpenLine={setOpenLine}
@@ -476,12 +512,22 @@ export default function SharedSessionPage() {
                       submitting={submitting}
                     />
                   )}
+
+                  {/* Notes tab */}
+                  {activeTab === 'notes' && session.ai_notes_text && (
+                    <div style={{ paddingTop: 4 }}>
+                      <AiMarkdown text={session.ai_notes_text} />
+                    </div>
+                  )}
                 </>
               ) : (
                 /* No AI text — only transcript */
                 <TranscriptLines
                   lines={lines}
                   comments={comments}
+                  highlightByLine={highlightByLine}
+                  hlColors={HIGHLIGHT_COLORS}
+                  hlIcons={HIGHLIGHT_ICONS}
                   openLine={openLine}
                   hoveredLine={hoveredLine}
                   setOpenLine={setOpenLine}
@@ -515,6 +561,9 @@ export default function SharedSessionPage() {
 interface TranscriptLinesProps {
   lines: SharedLine[]
   comments: Comment[]
+  highlightByLine: Map<number, SharedHighlight>
+  hlColors: Record<string, string>
+  hlIcons: Record<string, string>
   openLine: number | null
   hoveredLine: number | null
   setOpenLine: (n: number | null) => void
@@ -528,7 +577,8 @@ interface TranscriptLinesProps {
 }
 
 function TranscriptLines({
-  lines, comments, openLine, hoveredLine,
+  lines, comments, highlightByLine, hlColors, hlIcons,
+  openLine, hoveredLine,
   setOpenLine, setHoveredLine,
   authorName, onAuthorChange, authorLocked, onAdd, onRetry, submitting,
 }: TranscriptLinesProps) {
@@ -556,13 +606,23 @@ function TranscriptLines({
           >
             {/* Line row */}
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-              <p style={{
-                flex: 1,
-                fontSize: 15, color: 'var(--text)', lineHeight: 1.75,
-                margin: 0, padding: '4px 0',
-              }}>
-                {l.text}
-              </p>
+              {(() => {
+                const hl = highlightByLine.get(l.line_index)
+                const cat = hl?.category ?? 'default'
+                const color = hlColors[cat] ?? hlColors.default
+                const icon = hlIcons[cat] ?? hlIcons.default
+                return (
+                  <p style={{
+                    flex: 1,
+                    fontSize: 15, lineHeight: 1.75,
+                    margin: 0, padding: '4px 0',
+                    color: hl ? color : 'var(--text)',
+                  }}>
+                    {l.text}
+                    {hl && <span style={{ marginLeft: 6, fontSize: 12, opacity: 0.75 }}>{icon}</span>}
+                  </p>
+                )
+              })()}
               <button
                 onClick={() => setOpenLine(isOpen ? null : l.line_index)}
                 style={{

@@ -131,9 +131,11 @@ export default function WorkspacePage() {
   // Refs for fresh values inside debounce callbacks (avoid stale closures)
   const aiFormattedAtRef = useRef<number | undefined>(undefined)
   const aiFormattedRef = useRef<string | undefined>(undefined)
+  const aiNotesRef = useRef<string | undefined>(undefined)
   const notesRunCountRef = useRef(0)
   useEffect(() => { aiFormattedAtRef.current = aiFormattedAt }, [aiFormattedAt])
   useEffect(() => { aiFormattedRef.current = aiFormatted }, [aiFormatted])
+  useEffect(() => { aiNotesRef.current = aiNotes }, [aiNotes])
 
   const wordIndex = useRef<Map<string, string[]>>(new Map())
   const sessionStartRef = useRef<number>(0)
@@ -689,7 +691,8 @@ export default function WorkspacePage() {
     formatted: string | undefined,
     startedAt: number,
     highlightItems: HighlightItem[],
-    speakerData?: { assignments: LineAssignment[]; profiles: Map<string, SpeakerProfile> }
+    speakerData?: { assignments: LineAssignment[]; profiles: Map<string, SpeakerProfile> },
+    notes?: string
   ) => {
     if (!workspaceSlug || lines.length === 0) { setSaveStatus('idle'); return }
     const token = getToken()
@@ -720,6 +723,7 @@ export default function WorkspacePage() {
             }
           }),
           ai_formatted_text: formatted ?? null,
+          ai_notes_text: notes ?? null,
           wss_session_id: lastWssSessionIdRef.current || undefined,
           highlights: highlightItems.map(h => ({ line_index: h.line_index, text: h.text, category: h.category })),
           speakers: speakerData
@@ -938,7 +942,7 @@ export default function WorkspacePage() {
     saveSession(transcriptRef.current, aiFormattedRef.current, sessionStartRef.current, highlightsRef.current, {
       assignments: speakerAssignmentsRef.current,
       profiles: speakerProfilesRef.current,
-    })
+    }, aiNotesRef.current)
   }, [audio, ws, saveSession])
 
   const handleLogout = useCallback(() => {
@@ -1701,7 +1705,7 @@ export default function WorkspacePage() {
                   aiFormatted={viewingSession.session.ai_formatted_text as string | undefined}
                   aiFormattedAt={undefined}
                   aiLoading={false}
-                  aiNotes={undefined}
+                  aiNotes={viewingSession.session.ai_notes_text as string | undefined}
                   aiNotesLoading={false}
                   viewMode={archivedViewMode}
                   onViewModeChange={setArchivedViewMode}
