@@ -1493,7 +1493,7 @@ export default function WorkspacePage() {
                 gap: 6,
                 padding: '7px 16px',
                 borderRadius: 999,
-                fontSize: 12,
+                fontSize: workspacePlan === 'team' ? 10 : 12,
                 fontWeight: 700,
                 cursor: 'pointer',
                 border: workspacePlan === 'free' ? 'none'
@@ -1509,7 +1509,6 @@ export default function WorkspacePage() {
                   : 'var(--accent)',
                 letterSpacing: '0.04em',
                 textTransform: workspacePlan === 'team' ? 'uppercase' : 'none',
-                fontSize: workspacePlan === 'team' ? 10 : 12,
                 boxShadow: workspacePlan === 'free'
                   ? '0 2px 12px rgba(245,158,11,0.35)'
                   : workspacePlan === 'team'
