@@ -131,8 +131,8 @@ export default function LiveBanner({ currentLine, previousLine, isActive }: Prop
         flexDirection: 'column',
         gap: 6,
       }}>
-        {/* Previous line — context row, always 1 line, dimmed */}
-        {previousLine && (
+        {/* Previous line — context row, only visible when live text is incoming */}
+        {previousLine && currentLine && (
           <p style={{
             margin: 0,
             fontSize: 14,
@@ -148,10 +148,10 @@ export default function LiveBanner({ currentLine, previousLine, isActive }: Prop
           </p>
         )}
 
-        {/* Current line — live row, always bottom, bright */}
+        {/* Bottom row — always shows last known text, never disappears */}
         {(currentLine || previousLine) && (
           <p
-            key={currentLine}
+            key={currentLine || previousLine}
             style={{
               margin: 0,
               fontSize: 19,
@@ -170,7 +170,7 @@ export default function LiveBanner({ currentLine, previousLine, isActive }: Prop
               ? isActive
                 ? <><MatrixText text={currentLine} color="#fff" /><span className="doc-cursor" style={{ background: '#1AD2FF' }} /></>
                 : <>{currentLine}<span className="doc-cursor" style={{ background: '#1AD2FF' }} /></>
-              : <><span style={{ opacity: 0 }}>.</span><span className="doc-cursor" style={{ background: 'rgba(26,210,255,0.7)' }} /></>
+              : <>{previousLine}<span className="doc-cursor" style={{ background: 'rgba(26,210,255,0.7)' }} /></>
             }
           </p>
         )}
