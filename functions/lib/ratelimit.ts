@@ -11,9 +11,11 @@ export interface RateLimitResult {
 
 /** Daily limits per plan and endpoint. -1 = unlimited. */
 const LIMITS: Record<string, Record<string, number>> = {
-  free:  { translate: 5000, format: 500, notes: 200, define: 500, title: 300 },
-  b2b:   { translate: 5000, format: 500, notes: 200, define: 500, title: 300 },
-  pro:   { translate: -1,   format: -1,  notes: -1,  define: -1,  title: -1  },
+  free:   { translate: 5000, format: 500, notes: 200, define: 500, title: 300 },
+  b2b:    { translate: 5000, format: 500, notes: 200, define: 500, title: 300 },
+  pro:    { translate: -1,   format: -1,  notes: -1,  define: -1,  title: -1  },
+  studio: { translate: -1,   format: -1,  notes: -1,  define: -1,  title: -1  },
+  team:   { translate: -1,   format: -1,  notes: -1,  define: -1,  title: -1  },
 }
 
 function todayUTC(): string {
