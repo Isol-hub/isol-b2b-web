@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import MatrixText from './MatrixText'
 import { type CommentItem } from './CommentThread'
 import LiveBanner from './LiveBanner'
 import SessionTimeline, { type TimelineSegment } from './SessionTimeline'
-import HighlightPopup, { type HighlightCategory, type HighlightItem } from './HighlightPopup'
+import HighlightPopup, { type HighlightCategory, type HighlightItem, CATEGORY_META } from './HighlightPopup'
 
 interface TranscriptLine {
   text: string
@@ -357,6 +357,21 @@ export default function DocumentView({
 
   const isEmpty = transcript.length === 0 && !currentLine
 
+  // Highlights indexed by line_index for O(1) lookup during render
+  const highlightsByLine = useMemo(() => {
+    const map = new Map<number, HighlightItem[]>()
+    if (highlights) {
+      for (const h of highlights) {
+        if (h.line_index != null) {
+          const arr = map.get(h.line_index) ?? []
+          arr.push(h)
+          map.set(h.line_index, arr)
+        }
+      }
+    }
+    return map
+  }, [highlights])
+
   // Flat list of annotations for read-only panel in AI/Notes views
   const annotationsForPanel: MarginNoteItem[] = []
   if (lineComments) {
@@ -494,6 +509,9 @@ export default function DocumentView({
               {transcript.map((line, i) => {
                 const lineC = lineComments?.get(i) ?? []
                 const hasComments = lineC.length > 0
+                const lineHighlights = highlightsByLine.get(i) ?? []
+                const hasHighlights = lineHighlights.length > 0
+                const primaryHlMeta = hasHighlights ? CATEGORY_META[lineHighlights[0].category ?? '_'] : null
 
                 // Progressive fade — only during live sessions
                 const dist = (transcript.length - 1) - i
@@ -535,6 +553,16 @@ export default function DocumentView({
                       opacity: lineOpacity,
                       transition: 'opacity 0.3s ease',
                       animation: isNewest ? 'lineEnter 0.35s ease-out, lineFlash 1.1s ease-out' : undefined,
+                      ...(hasHighlights ? {
+                        background: primaryHlMeta!.bg,
+                        borderRadius: 8,
+                        marginLeft: -10,
+                        marginRight: -10,
+                        paddingLeft: 10,
+                        paddingRight: 10,
+                        paddingTop: 4,
+                        paddingBottom: 4,
+                      } : {}),
                     }}
                   >
                     {/* Left margin — comment affordance (host only) */}
@@ -570,8 +598,12 @@ export default function DocumentView({
                     {/* Text + annotations */}
                     <div style={{
                       flex: 1,
-                      borderLeft: `2px solid ${hasComments ? 'rgba(99,102,241,0.22)' : 'transparent'}`,
-                      paddingLeft: hasComments ? 12 : 0,
+                      borderLeft: hasHighlights
+                        ? `3px solid ${primaryHlMeta!.color}`
+                        : hasComments
+                        ? '2px solid rgba(99,102,241,0.22)'
+                        : '2px solid transparent',
+                      paddingLeft: (hasHighlights || hasComments) ? 12 : 0,
                       borderRadius: 4,
                     }}>
                     <p
@@ -608,6 +640,31 @@ export default function DocumentView({
                             — {comment.body}
                           </div>
                         ))}
+                      </div>
+                    )}
+
+                    {/* Highlight category badges */}
+                    {hasHighlights && (
+                      <div style={{ display: 'flex', gap: 5, marginTop: 6, flexWrap: 'wrap' }}>
+                        {lineHighlights.map(h => {
+                          const meta = CATEGORY_META[h.category ?? '_']
+                          return (
+                            <span key={h.id} style={{
+                              display: 'inline-flex', alignItems: 'center', gap: 4,
+                              fontSize: 10, fontWeight: 700,
+                              color: meta.color,
+                              background: meta.bg,
+                              border: `1px solid ${meta.color}40`,
+                              borderRadius: 999,
+                              padding: '2px 8px',
+                              letterSpacing: '0.04em',
+                              textTransform: 'uppercase',
+                              userSelect: 'none',
+                            }}>
+                              {meta.icon} {meta.label}
+                            </span>
+                          )
+                        })}
                       </div>
                     )}
                     </div>{/* end text+annotations wrapper */}
