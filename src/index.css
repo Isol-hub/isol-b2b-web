@@ -477,20 +477,6 @@ input, select { font-family: inherit; outline: none; }
 /* ─── Animations ─────────────────────────────────── */
 @keyframes spin { to { transform: rotate(360deg); } }
 
-@keyframes blob1 {
-  0%,100% { transform: translate(0px, 0px) scale(1); }
-  33%      { transform: translate(18px, -12px) scale(1.08); }
-  66%      { transform: translate(-10px, 8px) scale(0.94); }
-}
-@keyframes blob2 {
-  0%,100% { transform: translate(0px, 0px) scale(1); }
-  33%      { transform: translate(-14px, 10px) scale(1.05); }
-  66%      { transform: translate(20px, -8px) scale(0.97); }
-}
-@keyframes blob3 {
-  0%,100% { transform: translate(0px, 0px) scale(1); }
-  50%      { transform: translate(10px, 14px) scale(1.1); }
-}
 
 @keyframes waveBar {
   from { transform: scaleY(0.35); }

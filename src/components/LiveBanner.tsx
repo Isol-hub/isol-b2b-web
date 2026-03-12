@@ -128,46 +128,7 @@ export default function LiveBanner({ currentLine, previousLine, isActive }: Prop
         padding: '14px 20px 14px 24px',
         width: '100%',
       }}>
-        {isEmpty ? (
-          <div style={{ position: 'relative', width: '100%', minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-            {/* Blob 1 — cyan */}
-            <div style={{
-              position: 'absolute',
-              width: 72, height: 72,
-              borderRadius: '50%',
-              background: 'rgba(26,210,255,0.55)',
-              filter: 'blur(22px)',
-              left: 'calc(50% - 60px)',
-              top: '50%',
-              transform: 'translateY(-50%)',
-              animation: 'blob1 5.8s ease-in-out infinite',
-            }} />
-            {/* Blob 2 — violet */}
-            <div style={{
-              position: 'absolute',
-              width: 60, height: 60,
-              borderRadius: '50%',
-              background: 'rgba(99,102,241,0.60)',
-              filter: 'blur(20px)',
-              left: 'calc(50% + 10px)',
-              top: '50%',
-              transform: 'translateY(-50%)',
-              animation: 'blob2 7.2s ease-in-out infinite',
-            }} />
-            {/* Blob 3 — ice white center merge */}
-            <div style={{
-              position: 'absolute',
-              width: 36, height: 36,
-              borderRadius: '50%',
-              background: 'rgba(226,254,255,0.38)',
-              filter: 'blur(12px)',
-              left: '50%',
-              top: '50%',
-              transform: 'translate(-50%, -50%)',
-              animation: 'blob3 4.5s ease-in-out infinite',
-            }} />
-          </div>
-        ) : (
+        {!isEmpty && (
           <p style={{
             margin: 0,
             fontSize: 17,
