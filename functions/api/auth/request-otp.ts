@@ -9,8 +9,7 @@ function generateOtp(): string {
 }
 
 function slugFromEmail(email: string): string {
-  const domain = email.split('@')[1] ?? ''
-  return domain.replace(/\./g, '-').replace(/[^a-z0-9-]/g, '')
+  return email.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '')
 }
 
 function isEmailAllowed(email: string, allowed?: string): boolean {
