@@ -291,25 +291,85 @@ export default function LandingPage() {
             Play any screen audio — a meeting, a YouTube video, a lecture. Each viewer joins with a link and reads in their own language. All at the same time.
           </p>
 
-          {/* Source video — full width */}
-          <div style={{ borderRadius: 16, overflow: 'hidden', boxShadow: '0 16px 48px rgba(0,0,0,.1)', marginBottom: 12, position: 'relative', border: '1px solid rgba(0,0,0,.07)' }}>
-            <img
-              src="/screens/source-yt.png"
-              alt="Source: any screen audio"
-              style={{ width: '100%', display: 'block', height: 340, objectFit: 'cover', objectPosition: 'center 15%' }}
-            />
-            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top,rgba(0,0,0,.75) 0%,transparent 55%)', pointerEvents: 'none' }} />
-            <div style={{ position: 'absolute', bottom: 22, left: 24, right: 24, display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-              <div>
-                <p style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,.5)', letterSpacing: '.08em', margin: '0 0 4px' }}>ANY SCREEN AUDIO</p>
-                <p style={{ fontSize: 17, fontWeight: 700, color: '#fff', margin: 0, lineHeight: 1.3 }}>
-                  Timothée Chalamet & Matthew McConaughey
-                  <span style={{ fontWeight: 400, fontSize: 14, display: 'block', opacity: .65, marginTop: 2 }}>Variety & CNN Town Hall · captured live with ISOL</span>
+          {/* ── Scene: banner + annotations floating over the video ── */}
+          <div style={{ perspective: '1400px', paddingTop: 60, marginBottom: 12 }}>
+
+            {/* BANNER — tilted back above the video */}
+            <div style={{
+              transform: 'rotateX(18deg)',
+              transformOrigin: 'bottom center',
+              marginBottom: -8,
+              position: 'relative', zIndex: 2,
+            }}>
+              <div style={{
+                background: 'linear-gradient(100deg,#05091a 0%,#161050 28%,#3b2a8a 52%,#1e6fa0 76%,#0ea5e9 100%)',
+                borderRadius: '16px 16px 12px 12px',
+                padding: '18px 28px 22px',
+                boxShadow: '0 -8px 40px rgba(99,102,241,.25), 0 24px 48px rgba(0,0,0,.35)',
+              }}>
+                <p style={{ fontSize: 14, color: 'rgba(255,255,255,.38)', margin: '0 0 5px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  Il personaggio di Marty Supreme trascura le relazioni…
+                </p>
+                <p style={{ fontSize: 20, fontWeight: 700, color: '#fff', margin: 0, lineHeight: 1.4, textShadow: '0 0 20px rgba(120,160,255,.4)' }}>
+                  per cui Matthew ha vinto l'Oscar.
+                  <span style={{ display: 'inline-block', width: 2, height: '0.85em', background: '#fff', marginLeft: 3, verticalAlign: 'text-bottom', animation: 'cur 1s step-end infinite' }} />
                 </p>
               </div>
-              <div style={{ background: 'rgba(0,0,0,.5)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,.2)', borderRadius: 999, padding: '6px 14px', display: 'flex', alignItems: 'center', gap: 7 }}>
-                <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#22C55E', animation: 'pulse 2s infinite' }} />
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#fff', letterSpacing: '.06em' }}>LIVE</span>
+            </div>
+
+            {/* VIDEO — flat base of the scene */}
+            <div style={{ position: 'relative', borderRadius: '4px 4px 16px 16px', overflow: 'hidden', boxShadow: '0 32px 80px rgba(0,0,0,.22)', border: '1px solid rgba(0,0,0,.07)' }}>
+              <img
+                src="/screens/source-yt.png"
+                alt="Source: any screen audio"
+                style={{ width: '100%', display: 'block', height: 340, objectFit: 'cover', objectPosition: 'center 15%' }}
+              />
+              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top,rgba(0,0,0,.7) 0%,transparent 55%)', pointerEvents: 'none' }} />
+
+              {/* Bottom label */}
+              <div style={{ position: 'absolute', bottom: 20, left: 22, right: 22, display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                <div>
+                  <p style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,.45)', letterSpacing: '.08em', margin: '0 0 4px' }}>ANY SCREEN AUDIO</p>
+                  <p style={{ fontSize: 16, fontWeight: 700, color: '#fff', margin: 0, lineHeight: 1.3 }}>
+                    Timothée Chalamet & Matthew McConaughey
+                    <span style={{ fontWeight: 400, fontSize: 13, display: 'block', opacity: .55, marginTop: 2 }}>Variety & CNN Town Hall · captured live with ISOL</span>
+                  </p>
+                </div>
+                <div style={{ background: 'rgba(0,0,0,.55)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,.18)', borderRadius: 999, padding: '5px 13px', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22C55E', animation: 'pulse 2s infinite' }} />
+                  <span style={{ fontSize: 11, fontWeight: 700, color: '#fff', letterSpacing: '.06em' }}>LIVE</span>
+                </div>
+              </div>
+
+              {/* ANNOTATION 1 — "← Matthew" — 3D floating right */}
+              <div style={{
+                position: 'absolute', top: '28%', right: -14,
+                transform: 'perspective(700px) rotateY(-24deg) rotateX(-3deg)',
+                transformOrigin: 'right center',
+                background: 'rgba(255,255,255,0.97)',
+                borderRadius: 8, padding: '8px 14px 8px 10px',
+                boxShadow: '-8px 8px 28px rgba(0,0,0,.28), -2px 2px 6px rgba(0,0,0,.15)',
+                display: 'flex', alignItems: 'center', gap: 7,
+                pointerEvents: 'none',
+              }}>
+                <span style={{ color: '#B91C1C', fontSize: 13, opacity: .6 }}>←</span>
+                <span style={{ fontFamily: "'Caveat',cursive", fontSize: 19, color: '#B91C1C', fontStyle: 'italic', lineHeight: 1, whiteSpace: 'nowrap' }}>Matthew</span>
+              </div>
+
+              {/* ANNOTATION 2 — "← questions from the audience" — 3D floating right, lower */}
+              <div style={{
+                position: 'absolute', bottom: '22%', right: -14,
+                transform: 'perspective(700px) rotateY(-20deg) rotateX(4deg)',
+                transformOrigin: 'right center',
+                background: 'rgba(255,255,255,0.97)',
+                borderRadius: 8, padding: '8px 14px 8px 10px',
+                boxShadow: '-8px 8px 28px rgba(0,0,0,.28), -2px 2px 6px rgba(0,0,0,.15)',
+                pointerEvents: 'none',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 7 }}>
+                  <span style={{ color: '#B91C1C', fontSize: 13, opacity: .6, marginTop: 2 }}>←</span>
+                  <span style={{ fontFamily: "'Caveat',cursive", fontSize: 17, color: '#B91C1C', fontStyle: 'italic', lineHeight: 1.3, whiteSpace: 'nowrap' }}>questions from<br />the audience</span>
+                </div>
               </div>
             </div>
           </div>
