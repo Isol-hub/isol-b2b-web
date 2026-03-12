@@ -553,16 +553,6 @@ export default function DocumentView({
                       opacity: lineOpacity,
                       transition: 'opacity 0.3s ease',
                       animation: isNewest ? 'lineEnter 0.35s ease-out, lineFlash 1.1s ease-out' : undefined,
-                      ...(hasHighlights ? {
-                        background: primaryHlMeta!.bg,
-                        borderRadius: 8,
-                        marginLeft: -10,
-                        marginRight: -10,
-                        paddingLeft: 10,
-                        paddingRight: 10,
-                        paddingTop: 4,
-                        paddingBottom: 4,
-                      } : {}),
                     }}
                   >
                     {/* Left margin — comment affordance (host only) */}
@@ -598,16 +588,14 @@ export default function DocumentView({
                     {/* Text + annotations */}
                     <div style={{
                       flex: 1,
-                      borderLeft: hasHighlights
-                        ? `3px solid ${primaryHlMeta!.color}`
-                        : hasComments
+                      borderLeft: hasComments
                         ? '2px solid rgba(99,102,241,0.22)'
                         : '2px solid transparent',
-                      paddingLeft: (hasHighlights || hasComments) ? 12 : 0,
+                      paddingLeft: hasComments ? 12 : 0,
                       borderRadius: 4,
                     }}>
                     <p
-                      style={{ margin: 0, fontSize: 18, color: 'var(--text)', lineHeight: 1.85, fontWeight: lineWeight, padding: '2px 0', cursor: isEditable && !isHost ? 'text' : undefined }}
+                      style={{ margin: 0, fontSize: 18, color: hasHighlights ? primaryHlMeta!.color : 'var(--text)', lineHeight: 1.85, fontWeight: lineWeight, padding: '2px 0', cursor: isEditable && !isHost ? 'text' : undefined }}
                       onClick={(e) => {
                         if (isEditable && !isHost) { e.stopPropagation(); setEditingIndex(i); setEditingText(line.text) }
                       }}
@@ -615,6 +603,20 @@ export default function DocumentView({
                       onMouseLeave={e => { if (isEditable && !isHost) (e.currentTarget as HTMLElement).style.background = 'transparent' }}
                     >
                       {renderInline(line.text, line.text, onWordClick)}
+                      {hasHighlights && lineHighlights.map(h => {
+                        const meta = CATEGORY_META[h.category ?? '_']
+                        return (
+                          <span key={h.id} style={{
+                            marginLeft: 7,
+                            fontSize: 13,
+                            opacity: 0.7,
+                            color: meta.color,
+                            userSelect: 'none',
+                          }}>
+                            {meta.icon}
+                          </span>
+                        )
+                      })}
                     </p>
 
                     {/* Handwriting annotations — flow in document, spacing grows proportionally */}
@@ -643,30 +645,6 @@ export default function DocumentView({
                       </div>
                     )}
 
-                    {/* Highlight category badges */}
-                    {hasHighlights && (
-                      <div style={{ display: 'flex', gap: 5, marginTop: 6, flexWrap: 'wrap' }}>
-                        {lineHighlights.map(h => {
-                          const meta = CATEGORY_META[h.category ?? '_']
-                          return (
-                            <span key={h.id} style={{
-                              display: 'inline-flex', alignItems: 'center', gap: 4,
-                              fontSize: 10, fontWeight: 700,
-                              color: meta.color,
-                              background: meta.bg,
-                              border: `1px solid ${meta.color}40`,
-                              borderRadius: 999,
-                              padding: '2px 8px',
-                              letterSpacing: '0.04em',
-                              textTransform: 'uppercase',
-                              userSelect: 'none',
-                            }}>
-                              {meta.icon} {meta.label}
-                            </span>
-                          )
-                        })}
-                      </div>
-                    )}
                     </div>{/* end text+annotations wrapper */}
                   </div>
                 )
