@@ -523,7 +523,7 @@ export default function ViewerPage() {
             )}
             <DocumentView
               transcript={displayTranscript}
-              currentLine={currentLine}
+              currentLine=""
               isActive={isActive}
               targetLang={targetLang}
               aiFormatted={aiFormatted}
