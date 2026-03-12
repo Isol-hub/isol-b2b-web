@@ -518,6 +518,16 @@ input, select { font-family: inherit; outline: none; }
   to   { transform: translateX(0); opacity: 1; }
 }
 
+@keyframes glossarySlideIn {
+  from { transform: translateX(20px); opacity: 0; }
+  to   { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.97); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
 @keyframes sheetSlideUp {
   from { transform: translateY(40px); opacity: 0; }
   to   { transform: translateY(0); opacity: 1; }

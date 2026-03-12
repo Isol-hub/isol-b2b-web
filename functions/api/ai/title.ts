@@ -21,7 +21,11 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       return Response.json({ error: 'No lines provided' }, { status: 400, headers: CORS })
     }
 
-    const rawText = lines.slice(0, 10).join('\n')
+    // Sample lines distributed across the full transcript for better topic coverage
+    const sampleSize = Math.min(20, lines.length)
+    const step = lines.length > sampleSize ? Math.floor(lines.length / sampleSize) : 1
+    const sampled = Array.from({ length: sampleSize }, (_, i) => lines[Math.min(i * step, lines.length - 1)])
+    const rawText = sampled.join('\n')
     const langInstruction = lang
       ? ` Write the title in the same language as the transcript (language code: ${lang}).`
       : ''

@@ -115,7 +115,16 @@ function generateIcs(transcript: TranscriptLine[]): string {
   const stamp = new Date()
 
   const fmt = (d: Date) => d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
-  const desc = transcript.map(l => l.text).join('\\n').replace(/[,;]/g, (c) => `\\${c}`)
+  // RFC 5545 §3.3.11: escape \, ;, and , in TEXT values; use \n for newlines
+  const escapeIcsText = (s: string) => s.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n')
+  // RFC 5545 §3.1: fold lines longer than 75 octets (CRLF + single space)
+  const foldLine = (s: string) => {
+    const chunks: string[] = []
+    let pos = 0
+    while (pos < s.length) { chunks.push(s.slice(pos, pos + 75)); pos += 75 }
+    return chunks.join('\r\n ')
+  }
+  const desc = escapeIcsText(transcript.map(l => l.text).join('\n'))
 
   return [
     'BEGIN:VCALENDAR',
@@ -126,8 +135,8 @@ function generateIcs(transcript: TranscriptLine[]): string {
     `DTEND:${fmt(end)}`,
     `DTSTAMP:${fmt(stamp)}`,
     `UID:isol-${Date.now()}@isol.live`,
-    'SUMMARY:ISOL Session Transcript',
-    `DESCRIPTION:${desc}`,
+    foldLine('SUMMARY:ISOL Session Transcript'),
+    foldLine(`DESCRIPTION:${desc}`),
     'END:VEVENT',
     'END:VCALENDAR',
   ].join('\r\n')
@@ -182,7 +191,14 @@ async function downloadDocx(content: string, filename: string) {
     } else if (rawLine.trim() === '') {
       children.push(new Paragraph({ children: [new TextRun('')] }))
     } else {
-      children.push(new Paragraph({ children: [new TextRun({ text: rawLine, size: 24 })] }))
+      // Parse **bold** spans within normal lines
+      const runs: TextRun[] = []
+      const parts = rawLine.split(/(\*\*[^*]+\*\*)/g)
+      for (const part of parts) {
+        const bold = part.startsWith('**') && part.endsWith('**')
+        runs.push(new TextRun({ text: bold ? part.slice(2, -2) : part, bold, size: 24 }))
+      }
+      children.push(new Paragraph({ children: runs }))
     }
   }
 

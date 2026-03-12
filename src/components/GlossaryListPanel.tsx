@@ -31,7 +31,7 @@ export default function GlossaryListPanel({ items, onDelete, onPatchNote, onClos
     if (!search.trim()) return items
     const q = search.toLowerCase()
     return items.filter(i =>
-      i.term.includes(q) || (i.note?.toLowerCase().includes(q) ?? false)
+      i.term.toLowerCase().includes(q) || (i.note?.toLowerCase().includes(q) ?? false)
     )
   }, [items, search])
 

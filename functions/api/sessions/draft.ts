@@ -25,7 +25,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
 
   try {
     const draft = await env.DB.prepare(
-      `SELECT wss_session_id, target_lang, started_at, lines_json, updated_at
+      `SELECT wss_session_id, target_lang, started_at, lines_json, highlights_json, updated_at
        FROM session_drafts
        WHERE workspace_slug = ?
          AND updated_at > unixepoch() - ?`
@@ -34,6 +34,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
       target_lang: string
       started_at: number
       lines_json: string
+      highlights_json: string | null
       updated_at: number
     }>()
 
@@ -41,6 +42,8 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
 
     let lines: unknown[]
     try { lines = JSON.parse(draft.lines_json) } catch { lines = [] }
+    let highlights: unknown[]
+    try { highlights = draft.highlights_json ? JSON.parse(draft.highlights_json) : [] } catch { highlights = [] }
 
     return Response.json({
       draft: {
@@ -48,6 +51,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
         target_lang: draft.target_lang,
         started_at: draft.started_at,
         lines,
+        highlights,
         updated_at: draft.updated_at,
       },
     }, { headers: CORS })
@@ -67,6 +71,7 @@ export const onRequestPut: PagesFunction<Env> = async ({ request, env }) => {
     target_lang?: string
     started_at?: number
     lines?: unknown[]
+    highlights?: unknown[]
   }
   try { body = await request.json() } catch {
     return Response.json({ error: 'Invalid body' }, { status: 400, headers: CORS })
@@ -83,17 +88,19 @@ export const onRequestPut: PagesFunction<Env> = async ({ request, env }) => {
   }
 
   const linesJson = JSON.stringify(lines)
+  const highlightsJson = JSON.stringify(Array.isArray(body.highlights) ? body.highlights : [])
   const now = Math.floor(Date.now() / 1000)
 
   try {
     await env.DB.prepare(
-      `INSERT INTO session_drafts (workspace_slug, wss_session_id, target_lang, started_at, lines_json, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?)
+      `INSERT INTO session_drafts (workspace_slug, wss_session_id, target_lang, started_at, lines_json, highlights_json, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(workspace_slug) DO UPDATE SET
          wss_session_id = excluded.wss_session_id,
          target_lang = excluded.target_lang,
          started_at = excluded.started_at,
          lines_json = excluded.lines_json,
+         highlights_json = excluded.highlights_json,
          updated_at = excluded.updated_at`
     ).bind(
       auth.workspaceSlug,
@@ -101,6 +108,7 @@ export const onRequestPut: PagesFunction<Env> = async ({ request, env }) => {
       body.target_lang,
       body.started_at,
       linesJson,
+      highlightsJson,
       now,
     ).run()
 

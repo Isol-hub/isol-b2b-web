@@ -214,9 +214,9 @@ export default function SessionsPage() {
       if (res.ok) {
         setSessions(prev => prev.filter(x => x.id !== s.id))
         if (detail && (detail.session.id as number) === s.id) setDetail(null)
+        setConfirmDelete(null)
       }
     } catch { /* silent */ }
-    finally { setConfirmDelete(null) }
   }, [detail])
 
   const shareModalSession = shareModalId !== null ? sessions.find(s => s.id === shareModalId) ?? null : null
@@ -386,10 +386,14 @@ export default function SessionsPage() {
                       )}
                     </p>
                     {snippetMap.has(s.id) && (
-                      <p
-                        style={{ fontSize: 11, color: 'var(--text-muted)', margin: '3px 0 0', fontStyle: 'italic' }}
-                        dangerouslySetInnerHTML={{ __html: snippetMap.get(s.id)! }}
-                      />
+                      <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '3px 0 0', fontStyle: 'italic' }}>
+                        {snippetMap.get(s.id)!
+                          .split(/(<b>[^<]*<\/b>)/g)
+                          .map((part, idx) => {
+                            const m = part.match(/^<b>([^<]*)<\/b>$/)
+                            return m ? <b key={idx}>{m[1]}</b> : part
+                          })}
+                      </p>
                     )}
                   </div>
 

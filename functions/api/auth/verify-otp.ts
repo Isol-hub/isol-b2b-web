@@ -1,5 +1,6 @@
 interface Env {
   CF_KV_OTP: KVNamespace
+  CF_KV_RL: KVNamespace
   B2B_SERVICE_KEY: string
   DB: D1Database
 }
@@ -13,11 +14,30 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     if (!email || !otp) return Response.json({ error: 'Missing fields' }, { status: 400, headers })
 
     const emailLower = email.trim().toLowerCase()
+
+    // AUTH-04: Rate limit OTP verification — max 10 failed attempts per email
+    const attemptsKey = `otp_fail:${emailLower}`
+    const attemptsRaw = await env.CF_KV_RL.get(attemptsKey)
+    const attempts = attemptsRaw ? parseInt(attemptsRaw, 10) : 0
+    if (attempts >= 10) {
+      return Response.json({ error: 'Too many attempts. Request a new code.' }, { status: 429, headers })
+    }
+
     const stored = await env.CF_KV_OTP.get(`otp:${emailLower}`)
-    if (!stored) return Response.json({ error: 'Code expired or not found. Request a new one.' }, { status: 401, headers })
+    // AUTH-04: Normalize error messages to prevent email enumeration
+    if (!stored) {
+      await env.CF_KV_RL.put(attemptsKey, String(attempts + 1), { expirationTtl: 600 })
+      return Response.json({ error: 'Invalid code. Request a new one.' }, { status: 401, headers })
+    }
 
     const { otp: validOtp, workspace } = JSON.parse(stored)
-    if (otp.trim() !== validOtp) return Response.json({ error: 'Incorrect code. Please try again.' }, { status: 401, headers })
+    if (otp.trim() !== validOtp) {
+      await env.CF_KV_RL.put(attemptsKey, String(attempts + 1), { expirationTtl: 600 })
+      return Response.json({ error: 'Invalid code. Request a new one.' }, { status: 401, headers })
+    }
+
+    // Success — clear attempt counter
+    await env.CF_KV_RL.delete(attemptsKey)
 
     // Exchange verified identity for ISOL RS256 token via lsol-auth
     const authRes = await fetch(LSOL_AUTH_URL, {

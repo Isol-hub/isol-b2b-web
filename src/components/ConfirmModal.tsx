@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 
 interface Props {
@@ -12,13 +12,30 @@ interface Props {
 }
 
 export default function ConfirmModal({ isOpen, title, message, confirmLabel = 'Confirm', onConfirm, onCancel, dangerous = false }: Props) {
+  const panelRef = useRef<HTMLDivElement>(null)
+
   useEffect(() => {
     if (!isOpen) return
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onCancel()
-      if (e.key === 'Enter') onConfirm()
+      if (e.key === 'Escape') { onCancel(); return }
+      if (e.key === 'Enter') { onConfirm(); return }
+      // Focus trap: keep Tab within the modal
+      if (e.key === 'Tab' && panelRef.current) {
+        const focusable = Array.from(panelRef.current.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        )).filter(el => !el.hasAttribute('disabled'))
+        if (!focusable.length) { e.preventDefault(); return }
+        const first = focusable[0]
+        const last = focusable[focusable.length - 1]
+        if (e.shiftKey ? document.activeElement === first : document.activeElement === last) {
+          e.preventDefault()
+          ;(e.shiftKey ? last : first).focus()
+        }
+      }
     }
     window.addEventListener('keydown', handler)
+    // Move focus into modal on open
+    setTimeout(() => panelRef.current?.querySelector<HTMLElement>('button')?.focus(), 30)
     return () => window.removeEventListener('keydown', handler)
   }, [isOpen, onCancel, onConfirm])
 
@@ -33,7 +50,7 @@ export default function ConfirmModal({ isOpen, title, message, confirmLabel = 'C
         display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
       }}
     >
-      <div style={{
+      <div ref={panelRef} style={{
         width: '100%', maxWidth: 380,
         background: 'var(--canvas)',
         border: '1px solid var(--border)',

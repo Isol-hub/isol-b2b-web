@@ -1,5 +1,6 @@
 interface Env {
   CF_KV_OTP: KVNamespace
+  CF_KV_RL: KVNamespace
   RESEND_API_KEY: string
   ALLOWED_EMAIL_DOMAINS?: string  // comma-separated, or * for any
   DB: D1Database
@@ -33,6 +34,15 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     if (!isEmailAllowed(emailLower, env.ALLOWED_EMAIL_DOMAINS)) {
       return Response.json({ error: 'Email domain not authorized for this workspace' }, { status: 403, headers })
     }
+
+    // AUTH-01: Rate limit OTP requests — max 5 per email per 10 minutes
+    const rlKey = `otp_req:${emailLower}`
+    const rlRaw = await env.CF_KV_RL.get(rlKey)
+    const rlCount = rlRaw ? parseInt(rlRaw, 10) : 0
+    if (rlCount >= 5) {
+      return Response.json({ error: 'Too many requests. Please wait before requesting a new code.' }, { status: 429, headers })
+    }
+    await env.CF_KV_RL.put(rlKey, String(rlCount + 1), { expirationTtl: 600 })
 
     const otp = generateOtp()
 

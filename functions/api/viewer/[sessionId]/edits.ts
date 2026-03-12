@@ -22,13 +22,22 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, params }
   if (!auth) return Response.json({ error: 'Unauthorized' }, { status: 401, headers: CORS })
 
   const sessionId = params.sessionId as string
-  let body: { line_index?: number; text?: string }
+  let body: { line_index?: number; text?: string; workspace_slug?: string }
   try { body = await request.json() } catch {
     return Response.json({ error: 'Invalid body' }, { status: 400, headers: CORS })
   }
   if (typeof body.line_index !== 'number' || typeof body.text !== 'string') {
     return Response.json({ error: 'Missing line_index or text' }, { status: 400, headers: CORS })
   }
+
+  // AUTH-05: Verify the live session belongs to the authenticated user's workspace
+  const session = await env.DB.prepare(
+    'SELECT id FROM sessions WHERE wss_session_id = ? AND workspace_slug = ?'
+  ).bind(sessionId, auth.workspaceSlug).first()
+  if (!session) {
+    return Response.json({ error: 'Forbidden' }, { status: 403, headers: CORS })
+  }
+
   try {
     await env.DB.prepare(
       `INSERT INTO session_edits (session_id, line_index, text, updated_at)

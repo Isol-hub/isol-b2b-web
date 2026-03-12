@@ -112,6 +112,15 @@ export default function WorkspacePage() {
   const [notesRetryTick, setNotesRetryTick] = useState(0)
   const targetLangRef = useRef(targetLang)
   useEffect(() => { targetLangRef.current = targetLang }, [targetLang])
+  // WS-02: reconnect WebSocket when targetLang changes mid-session (new URL with updated target_lang)
+  const prevTargetLangRef = useRef(targetLang)
+  useEffect(() => {
+    if (prevTargetLangRef.current === targetLang) return
+    prevTargetLangRef.current = targetLang
+    if (!sessionActive) return
+    ws.close()
+    ws.open()
+  }, [targetLang, sessionActive]) // eslint-disable-line react-hooks/exhaustive-deps
   // Refs for fresh values inside debounce callbacks (avoid stale closures)
   const aiFormattedAtRef = useRef<number | undefined>(undefined)
   const notesRunCountRef = useRef(0)
@@ -119,6 +128,8 @@ export default function WorkspacePage() {
 
   const wordIndex = useRef<Map<string, string[]>>(new Map())
   const sessionStartRef = useRef<number>(0)
+  // WP-01: mirror transcript in a ref so handleStop can read latest value without a state-updater side-effect
+  const transcriptRef = useRef<TranscriptLine[]>([])
 
   // Session history
   interface SessionMeta { id: number; started_at: number; target_lang: string; line_count: number; title?: string; share_token?: string }
@@ -185,6 +196,7 @@ export default function WorkspacePage() {
   // Draft recovery
   const [recoveryDraft, setRecoveryDraft] = useState<{
     lines: Array<{ text: string }>
+    highlights: Array<{ line_index: number | null; text: string; category: string | null }>
     started_at: number
     target_lang: string
   } | null>(null)
@@ -277,6 +289,8 @@ export default function WorkspacePage() {
         .finally(() => { setAiNotesLoading(false); notesRunningRef.current = false })
     }, 2000)
   }, [transcript.length, transcriptLenMod8, notesRetryTick])  // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => { transcriptRef.current = transcript }, [transcript])
 
   // Speaker heuristic — incremental, runs only during live sessions
   useEffect(() => {
@@ -467,8 +481,8 @@ export default function WorkspacePage() {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(r => r.ok ? r.json() : null)
-      .then((d: { draft: { lines: Array<{ text: string }>; started_at: number; target_lang: string } | null } | null) => {
-        if (d?.draft && d.draft.lines.length > 0) setRecoveryDraft(d.draft)
+      .then((d: { draft: { lines: Array<{ text: string }>; highlights?: Array<{ line_index: number | null; text: string; category: string | null }>; started_at: number; target_lang: string } | null } | null) => {
+        if (d?.draft && d.draft.lines.length > 0) setRecoveryDraft({ ...d.draft, highlights: d.draft.highlights ?? [] })
       })
       .catch(() => {})
   }, [workspaceSlug])
@@ -487,11 +501,12 @@ export default function WorkspacePage() {
           target_lang: targetLang,
           started_at: Math.floor(sessionStartRef.current / 1000),
           lines: transcript.map(l => ({ text: l.text })),
+          highlights: highlights.map(h => ({ line_index: h.line_index, text: h.text, category: h.category })),
         }),
       }).catch(() => {})
     }, 30_000)
     return () => clearInterval(id)
-  }, [sessionActive, transcript, targetLang, ws.sessionId])
+  }, [sessionActive, transcript, targetLang, ws.sessionId, highlights])
 
   // Immediate autosave on page hide/close — keepalive survives tab close
   useEffect(() => {
@@ -508,6 +523,7 @@ export default function WorkspacePage() {
           target_lang: targetLang,
           started_at: Math.floor(sessionStartRef.current / 1000),
           lines: transcript.map(l => ({ text: l.text })),
+          highlights: highlights.map(h => ({ line_index: h.line_index, text: h.text, category: h.category })),
         }),
       }).catch(() => {})
     }
@@ -741,6 +757,7 @@ export default function WorkspacePage() {
   const handleRestoreDraft = useCallback(() => {
     if (!recoveryDraft) return
     setTranscript(recoveryDraft.lines.map(l => ({ text: l.text, time: new Date(recoveryDraft.started_at * 1000) })))
+    setHighlights(recoveryDraft.highlights.map((h, i) => ({ id: Date.now() + i, line_index: h.line_index, text: h.text, category: h.category as HighlightCategory | null })))
     setTargetLang(recoveryDraft.target_lang)
     setRecoveryDraft(null)
   }, [recoveryDraft])
@@ -756,7 +773,11 @@ export default function WorkspacePage() {
   }, [])
 
   const handleLineEdit = useCallback((index: number, text: string) => {
-    setTranscript(prev => prev.map((l, i) => i === index ? { ...l, text } : l))
+    setTranscript(prev => {
+      // WS-09: keep lastLineFinalRef in sync so dedup doesn't block future identical WSS segments
+      if (index === prev.length - 1) lastLineFinalRef.current = text
+      return prev.map((l, i) => i === index ? { ...l, text } : l)
+    })
     if (!ws.sessionId) return
     const token = getToken()
     if (!token) return
@@ -897,13 +918,9 @@ export default function WorkspacePage() {
     prevSessionIdRef.current = null
     if (commentPollRef.current) { clearInterval(commentPollRef.current); commentPollRef.current = null }
     setOpenCommentLine(null)
-    // Fire-and-forget session save
-    setTranscript(prev => {
-      saveSession(prev, aiFormatted, sessionStartRef.current, highlights, {
-        assignments: speakerAssignmentsRef.current,
-        profiles: speakerProfilesRef.current,
-      })
-      return prev
+    saveSession(transcriptRef.current, aiFormatted, sessionStartRef.current, highlights, {
+      assignments: speakerAssignmentsRef.current,
+      profiles: speakerProfilesRef.current,
     })
   }, [audio, ws, saveSession, aiFormatted, highlights])
 
@@ -1372,8 +1389,7 @@ export default function WorkspacePage() {
           )}
 
           {/* Canvas content */}
-          {true && (
-            <div style={{ flex: 1, overflow: 'hidden' }}>
+          <div style={{ flex: 1, overflow: 'hidden' }}>
               <DocumentView
                 transcript={transcript}
                 currentLine={currentLine}
@@ -1408,7 +1424,6 @@ export default function WorkspacePage() {
                 onRemoveHighlight={handleRemoveHighlight}
               />
             </div>
-          )}
 
           {/* ── FLOATING TOOLBAR ────────────────────────────── */}
           <div className="workspace-toolbar">

@@ -75,9 +75,11 @@ Rules (all mandatory):
 Raw transcript:
 ${rawText}`
 
+    // Estimate needed tokens: ~15 tokens per input line, capped at 4096
+    const estimatedTokens = Math.min(Math.max(lines.length * 15, 1024), 4096)
     const data = await callAnthropic(env.ANTHROPIC_API_KEY, {
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 2048,
+      max_tokens: estimatedTokens,
       messages: [{ role: 'user', content: prompt }],
     })
     const formatted = data.content.find(c => c.type === 'text')?.text ?? rawText

@@ -38,12 +38,14 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, params }
   const auth = await authedSession(request, env, sessionId)
   if (!auth) return Response.json({ error: 'Forbidden' }, { status: 403, headers: CORS })
 
+  const VALID_CATEGORIES = new Set(['quote', 'idea', 'action', 'event', 'link'])
   const body = await request.json<{ line_index?: number | null; text: string; category?: string | null }>()
   if (!body.text?.trim()) return Response.json({ error: 'Missing text' }, { status: 400, headers: CORS })
+  const category = body.category && VALID_CATEGORIES.has(body.category) ? body.category : null
 
   const result = await env.DB.prepare(
     'INSERT INTO session_highlights (session_id, line_index, text, category, created_at) VALUES (?, ?, ?, ?, ?)'
-  ).bind(sessionId, body.line_index ?? null, body.text.trim(), body.category ?? null, Date.now()).run()
+  ).bind(sessionId, body.line_index ?? null, body.text.trim(), category, Date.now()).run()
 
   return Response.json({ id: result.meta.last_row_id }, { status: 201, headers: CORS })
 }

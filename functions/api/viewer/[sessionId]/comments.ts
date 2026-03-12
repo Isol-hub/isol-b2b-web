@@ -1,9 +1,20 @@
-interface Env { DB: D1Database }
+interface Env { DB: D1Database; CF_KV_RL: KVNamespace }
 
 const CORS = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
 
-export const onRequestGet: PagesFunction<Env> = async ({ env, params }) => {
+export const onRequestGet: PagesFunction<Env> = async ({ request, env, params }) => {
   const sessionId = params.sessionId as string
+
+  // DB-03: Rate-limit unauthenticated GET by IP to prevent bulk enumeration
+  const ip = request.headers.get('CF-Connecting-IP') ?? 'unknown'
+  const rlKey = `viewer_comments_get:${ip}`
+  const rlRaw = await env.CF_KV_RL.get(rlKey).catch(() => null)
+  const rlCount = rlRaw ? parseInt(rlRaw, 10) : 0
+  if (rlCount > 120) {  // 120 requests per minute per IP
+    return Response.json({ error: 'Too many requests' }, { status: 429, headers: CORS })
+  }
+  env.CF_KV_RL.put(rlKey, String(rlCount + 1), { expirationTtl: 60 }).catch(() => {})
+
   try {
     const result = await env.DB.prepare(
       'SELECT id, line_index, author, body, created_at FROM viewer_comments WHERE session_id = ? ORDER BY created_at ASC'

@@ -24,7 +24,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
 
   try {
     const result = await env.DB.prepare(
-      `SELECT id, started_at, ended_at, target_lang, line_count, title, share_token
+      `SELECT id, started_at, ended_at, target_lang, line_count, title, share_token, share_expires_at
        FROM sessions
        WHERE workspace_slug = ?
        ORDER BY started_at DESC

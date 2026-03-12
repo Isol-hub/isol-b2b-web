@@ -231,9 +231,10 @@ export default function ViewerPage() {
   const disconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   useEffect(() => {
     if (!joined || sessionEndedRef.current) return
-    if (ws.state === 'connected') {
+    if (ws.state === 'connected' || ws.state === 'reconnecting') {
+      // connected: session is live; reconnecting: hook is managing retries — don't give up yet
       if (disconnectTimerRef.current) { clearTimeout(disconnectTimerRef.current); disconnectTimerRef.current = null }
-    } else if (ws.state === 'reconnecting' || ws.state === 'disconnected' || ws.state === 'error') {
+    } else if (ws.state === 'disconnected' || ws.state === 'error') {
       if (!disconnectTimerRef.current) {
         disconnectTimerRef.current = setTimeout(() => {
           if (!sessionEndedRef.current) setSessionEnded(true)
@@ -376,10 +377,10 @@ export default function ViewerPage() {
       translateQueueRef.current = transcriptRef.current.map((_, i) => i)
       if (translateTimerRef.current) clearTimeout(translateTimerRef.current)
       translateTimerRef.current = setTimeout(flushTranslateQueue, 200)
-      // Reconnect WS with new target_lang
+      // Reconnect WS with new target_lang — debounce to handle rapid language switches
       ws.close()
-      const t = setTimeout(() => ws.open(), 150)
-      return () => clearTimeout(t)
+      const t = setTimeout(() => ws.open(), 400)
+      return () => { clearTimeout(t); ws.close() }
     }
   }, [targetLang, flushTranslateQueue])   // eslint-disable-line react-hooks/exhaustive-deps
 
