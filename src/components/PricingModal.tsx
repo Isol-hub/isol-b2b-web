@@ -36,7 +36,7 @@ const PLANS: PlanDef[] = [
   {
     id: 'pro',
     name: 'Pro',
-    tagline: 'For interpreters who work daily',
+    tagline: 'For professionals who work daily',
     monthlyPrice: 19,
     annualPrice: 15,
     bullets: [
@@ -64,7 +64,7 @@ const PLANS: PlanDef[] = [
   {
     id: 'team',
     name: 'Team',
-    tagline: 'For agencies and interpretation teams',
+    tagline: 'For agencies and multilingual teams',
     monthlyPrice: 129,
     annualPrice: 99,
     bullets: [
@@ -158,7 +158,7 @@ export default function PricingModal({ currentPlan, workspaceSlug: _workspaceSlu
             Work without limits
           </h2>
           <p style={{ fontSize: 14, color: 'var(--text-muted)', margin: '0 0 24px', lineHeight: 1.5 }}>
-            Professional interpreters choose ISOL Studio to run sessions without ever thinking about caps.
+            Professionals choose ISOL Studio to run sessions without ever thinking about caps.
           </p>
 
           {/* Annual toggle */}

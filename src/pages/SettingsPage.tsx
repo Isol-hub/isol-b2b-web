@@ -439,7 +439,7 @@ export default function SettingsPage() {
                     Unlock the full ISOL experience
                   </h3>
                   <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: '0 0 20px', lineHeight: 1.55 }}>
-                    Professional interpreters run ISOL every day — remove every limit and work without interruption.
+                    Professionals run ISOL every day — remove every limit and work without interruption.
                   </p>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginBottom: 22 }}>
                     {PLAN_NEXT_FEATURES.free.map(f => (
