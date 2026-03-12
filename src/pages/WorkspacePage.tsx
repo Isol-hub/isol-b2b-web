@@ -348,10 +348,10 @@ export default function WorkspacePage() {
   const wssUrl = import.meta.env.VITE_WSS_URL ?? 'wss://api.isol.live/audio'
 
   const handleMessage = useCallback((msg: SubtitleMessage) => {
-    // Use original_text (source language) when available — the server may broadcast
-    // a translated line_final to all room participants when a viewer with a different
-    // target_lang is connected. The host must always save the original transcript.
-    const sourceLine = msg.original_text || msg.line_final
+    // Use line_final (translated to target_lang) for the transcript so the document
+    // is always in the language the user selected. Fall back to original_text only
+    // when translation is unavailable (passthrough / same-language mode).
+    const sourceLine = msg.line_final || msg.original_text
     if (sourceLine && sourceLine !== lastLineFinalRef.current) {
       lastLineFinalRef.current = sourceLine
       const entry: TranscriptLine = {
