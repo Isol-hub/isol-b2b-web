@@ -1441,6 +1441,19 @@ export default function WorkspacePage() {
               Highlights{highlights.length > 0 && ` (${highlights.length})`}
             </button>
 
+            {workspacePlan === 'team' && (
+              <>
+                <div className="toolbar-sep" />
+                <button
+                  onClick={() => setShowTeam(true)}
+                  className={`toolbar-btn${showTeam ? ' active' : ''}`}
+                >
+                  <span>👥</span>
+                  Team
+                </button>
+              </>
+            )}
+
             <div className="toolbar-sep" />
 
             {/* Export */}
@@ -1467,7 +1480,7 @@ export default function WorkspacePage() {
 
             <div className="toolbar-sep" />
             <button
-              onClick={() => workspacePlan === 'team' ? setShowTeam(true) : setShowPricing(true)}
+              onClick={() => setShowPricing(true)}
               style={{
                 display: 'flex',
                 alignItems: 'center',
