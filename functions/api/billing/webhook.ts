@@ -71,7 +71,10 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
         const workspaceSlug = sub.metadata?.workspace_slug
         if (!workspaceSlug) break
 
-        const plan = sub.status === 'active' || sub.status === 'trialing' ? 'pro' : 'free'
+        const VALID_PLANS = ['pro', 'studio', 'team']
+        const rawPlan = sub.metadata?.plan
+        const resolvedPlan = rawPlan && VALID_PLANS.includes(rawPlan) ? rawPlan : 'pro'
+        const plan = sub.status === 'active' || sub.status === 'trialing' ? resolvedPlan : 'free'
         await env.DB.prepare(
           `UPDATE workspaces SET
             plan = ?,
@@ -81,7 +84,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
         ).bind(
           plan,
           sub.id,
-          plan === 'pro' ? sub.current_period_end : null,
+          plan !== 'free' ? sub.current_period_end : null,
           workspaceSlug
         ).run()
         break

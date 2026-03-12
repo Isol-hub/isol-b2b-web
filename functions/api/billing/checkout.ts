@@ -4,12 +4,19 @@ interface Env {
   DB: D1Database
   STRIPE_SECRET_KEY: string
   STRIPE_PRICE_ID_PRO: string
+  STRIPE_PRICE_ID_PRO_ANNUAL: string
+  STRIPE_PRICE_ID_STUDIO: string
+  STRIPE_PRICE_ID_STUDIO_ANNUAL: string
+  STRIPE_PRICE_ID_TEAM: string
+  STRIPE_PRICE_ID_TEAM_ANNUAL: string
 }
 
 const CORS = {
   'Content-Type': 'application/json',
   'Access-Control-Allow-Origin': '*',
 }
+
+const PLAN_RANK: Record<string, number> = { free: 0, pro: 1, studio: 2, team: 3 }
 
 async function stripePost(path: string, params: Record<string, string>, secretKey: string) {
   const res = await fetch(`https://api.stripe.com/v1${path}`, {
@@ -30,11 +37,34 @@ async function stripeGet(path: string, secretKey: string) {
   return res.json() as Promise<Record<string, unknown>>
 }
 
+function getPriceId(plan: string, annual: boolean, env: Env): string | null {
+  if (plan === 'pro' && !annual) return env.STRIPE_PRICE_ID_PRO || null
+  if (plan === 'pro' && annual) return env.STRIPE_PRICE_ID_PRO_ANNUAL || null
+  if (plan === 'studio' && !annual) return env.STRIPE_PRICE_ID_STUDIO || null
+  if (plan === 'studio' && annual) return env.STRIPE_PRICE_ID_STUDIO_ANNUAL || null
+  if (plan === 'team' && !annual) return env.STRIPE_PRICE_ID_TEAM || null
+  if (plan === 'team' && annual) return env.STRIPE_PRICE_ID_TEAM_ANNUAL || null
+  return null
+}
+
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   const auth = await verifyJwt(request)
   if (!auth) return Response.json({ error: 'Unauthorized' }, { status: 401, headers: CORS })
 
   try {
+    const body = await request.json() as { plan?: string; annual?: boolean }
+    const plan = body.plan ?? 'pro'
+    const annual = body.annual ?? false
+
+    if (!['pro', 'studio', 'team'].includes(plan)) {
+      return Response.json({ error: 'Invalid plan' }, { status: 400, headers: CORS })
+    }
+
+    const priceId = getPriceId(plan, annual, env)
+    if (!priceId) {
+      return Response.json({ error: 'Plan not available' }, { status: 503, headers: CORS })
+    }
+
     const workspace = await env.DB.prepare(
       'SELECT slug, owner_email, stripe_customer_id, plan FROM workspaces WHERE slug = ?'
     ).bind(auth.workspaceSlug).first<{
@@ -42,7 +72,11 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     }>()
 
     if (!workspace) return Response.json({ error: 'Workspace not found' }, { status: 404, headers: CORS })
-    if (workspace.plan === 'pro') return Response.json({ error: 'Already on Pro' }, { status: 400, headers: CORS })
+
+    // Don't allow buying same or lower plan
+    if ((PLAN_RANK[workspace.plan] ?? 0) >= (PLAN_RANK[plan] ?? 0)) {
+      return Response.json({ error: `Already on ${workspace.plan} or higher` }, { status: 400, headers: CORS })
+    }
 
     // Find or create Stripe customer
     let customerId = workspace.stripe_customer_id
@@ -86,11 +120,12 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       customer: customerId,
       mode: 'subscription',
       'payment_method_types[0]': 'card',
-      'line_items[0][price]': env.STRIPE_PRICE_ID_PRO,
+      'line_items[0][price]': priceId,
       'line_items[0][quantity]': '1',
       success_url: `${origin}/${workspace.slug}/settings?billing=success`,
       cancel_url: `${origin}/${workspace.slug}/settings`,
       'subscription_data[metadata][workspace_slug]': workspace.slug,
+      'subscription_data[metadata][plan]': plan,
     }, env.STRIPE_SECRET_KEY)
 
     if (session.error || !session.url) {

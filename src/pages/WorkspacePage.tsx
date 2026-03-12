@@ -11,6 +11,7 @@ import type { CommentItem } from '../components/CommentThread'
 import HighlightsSection from '../components/HighlightsSection'
 import type { HighlightItem, HighlightCategory } from '../components/HighlightPopup'
 import PipCaption from '../components/PipCaption'
+import PricingModal from '../components/PricingModal'
 import { usePip } from '../hooks/usePip'
 import TranscriptModal from '../components/TranscriptModal'
 import GlossaryPanel from '../components/GlossaryPanel'
@@ -67,6 +68,9 @@ export default function WorkspacePage() {
   const session = getSession()
 
   const [targetLang, setTargetLang] = useState('en')
+  const [workspacePlan, setWorkspacePlan] = useState<'free'|'pro'|'studio'|'team'>('free')
+  const [workspaceDefaultLang, setWorkspaceDefaultLang] = useState('en')
+  const [showPricing, setShowPricing] = useState(false)
   const [currentLine, setCurrentLine] = useState('')
   const [error, setError] = useState('')
   const pip = usePip()
@@ -428,8 +432,14 @@ export default function WorkspacePage() {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(r => r.ok ? r.json() : null)
-      .then((d: { workspace: { default_lang: string } } | null) => {
-        if (d?.workspace?.default_lang) setTargetLang(d.workspace.default_lang)
+      .then((d: { workspace: { default_lang: string; plan: string } } | null) => {
+        if (d?.workspace?.default_lang) {
+          setTargetLang(d.workspace.default_lang)
+          setWorkspaceDefaultLang(d.workspace.default_lang)
+        }
+        if (d?.workspace?.plan) {
+          setWorkspacePlan((d.workspace.plan as 'free'|'pro'|'studio'|'team') || 'free')
+        }
       })
       .catch(() => {})
   }, [workspaceSlug]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -495,6 +505,15 @@ export default function WorkspacePage() {
       document.removeEventListener('visibilitychange', onVisibilityChange)
     }
   }, [sessionActive, transcript, targetLang, ws.sessionId])
+
+  // Free plan: 15-minute session duration limit
+  useEffect(() => {
+    if (!sessionActive || workspacePlan !== 'free') return
+    const t = setTimeout(() => {
+      handleStop()
+    }, 15 * 60 * 1000)
+    return () => clearTimeout(t)
+  }, [sessionActive, workspacePlan]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Poll comments so host sees viewer notes
   useEffect(() => {
@@ -829,6 +848,11 @@ export default function WorkspacePage() {
   }, [ws.sessionId, commentAuthor])
 
   const handleStart = useCallback(async () => {
+    // Free plan: max 3 sessions total
+    if (workspacePlan === 'free' && sessions.length >= 3) {
+      setShowPricing(true)
+      return
+    }
     setError(''); setCurrentLine(''); setTranscript([]); setHighlights([])
     setAiFormatted(undefined); setAiFormattedAt(undefined); setAiLoading(false)
     setAiNotes(undefined); setAiNotesLoading(false); setViewMode('raw')
@@ -1124,7 +1148,13 @@ export default function WorkspacePage() {
           {/* LANGUAGE */}
           <div>
             <p className="rail-label">Language</p>
-            <LanguageSelector value={targetLang} onChange={setTargetLang} disabled={sessionActive} />
+            <LanguageSelector value={targetLang} onChange={(lang) => {
+              if (workspacePlan === 'free' && lang !== workspaceDefaultLang) {
+                setShowPricing(true)
+                return
+              }
+              setTargetLang(lang)
+            }} disabled={sessionActive} />
           </div>
 
           <div className="rail-divider" />
@@ -1420,6 +1450,31 @@ export default function WorkspacePage() {
               {roomCopied ? <><span>✓</span> Copied</> : <><span>↗</span> Share</>}
             </button>
 
+            <div className="toolbar-sep" />
+            <button
+              onClick={() => setShowPricing(true)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '7px 16px',
+                borderRadius: 999,
+                fontSize: 12,
+                fontWeight: 700,
+                cursor: 'pointer',
+                border: 'none',
+                background: workspacePlan === 'free'
+                  ? 'linear-gradient(135deg, #F59E0B 0%, #F97316 100%)'
+                  : 'rgba(99,102,241,0.10)',
+                color: workspacePlan === 'free' ? '#fff' : 'var(--accent)',
+                letterSpacing: '0.01em',
+                boxShadow: workspacePlan === 'free' ? '0 2px 12px rgba(245,158,11,0.35)' : 'none',
+                transition: 'all 0.15s',
+              }}
+            >
+              {workspacePlan === 'free' ? <><span>✦</span> Upgrade</> : <><span style={{ fontSize: 10 }}>●</span> {workspacePlan.charAt(0).toUpperCase() + workspacePlan.slice(1)}</>}
+            </button>
+
           </div>
 
         </main>
@@ -1713,6 +1768,14 @@ export default function WorkspacePage() {
         <OnboardingModal
           workspaceSlug={workspaceSlug}
           onDone={() => setShowOnboarding(false)}
+        />
+      )}
+
+      {showPricing && (
+        <PricingModal
+          currentPlan={workspacePlan}
+          workspaceSlug={workspaceSlug ?? ''}
+          onClose={() => setShowPricing(false)}
         />
       )}
     </div>
