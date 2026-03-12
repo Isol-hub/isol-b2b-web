@@ -127,7 +127,6 @@ export default function LiveBanner({ currentLine, previousLine, isActive }: Prop
         position: 'relative', zIndex: 1,
         padding: '14px 20px 14px 24px',
         width: '100%',
-        display: 'flex', flexDirection: 'column', gap: 6,
       }}>
         {isEmpty ? (
           <div style={{ position: 'relative', width: '100%', minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
@@ -169,45 +168,41 @@ export default function LiveBanner({ currentLine, previousLine, isActive }: Prop
             }} />
           </div>
         ) : (
-          <>
+          <p style={{
+            margin: 0,
+            fontSize: 17,
+            lineHeight: 1.6,
+            fontWeight: 500,
+            letterSpacing: '-0.01em',
+          }}>
             {previousLine && (
-              <p style={{
-                margin: 0,
-                fontSize: 14,
-                lineHeight: 1.4,
-                color: 'rgba(255,255,255,0.55)',
+              <span style={{
+                color: 'rgba(255,255,255,0.52)',
                 fontWeight: 400,
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-                transition: 'opacity 0.18s',
               }}>
-                {previousLine}
-              </p>
+                {previousLine}{currentLine ? ' ' : ''}
+              </span>
             )}
-
-            <p key={currentLine || 'idle'} style={{
-              margin: 0,
-              fontSize: 17,
-              lineHeight: 1.5,
-              color: '#ffffff',
-              fontWeight: 700,
-              letterSpacing: 0,
-              textShadow: '0 0 4px rgba(26,210,255,0.5)',
-              animation: 'lineReveal 0.25s ease-out',
-              opacity: currentLine ? 1 : 0.45,
-            }}>
-              {currentLine ? (
-                isActive
+            {currentLine && (
+              <span
+                key={currentLine}
+                style={{
+                  color: '#ffffff',
+                  fontWeight: 700,
+                  textShadow: '0 0 6px rgba(26,210,255,0.55)',
+                  animation: 'lineReveal 0.15s ease-out',
+                }}
+              >
+                {isActive
                   ? <><MatrixText text={currentLine} color="#fff" /><span className="doc-cursor" style={{ background: '#1AD2FF' }} /></>
-                  : currentLine
-              ) : (
-                <span style={{ opacity: 0.6, fontWeight: 400 }}>
-                  Listening<span className="doc-cursor" style={{ background: '#1AD2FF' }} />
-                </span>
-              )}
-            </p>
-          </>
+                  : <>{currentLine}<span className="doc-cursor" style={{ background: '#1AD2FF' }} /></>
+                }
+              </span>
+            )}
+            {!currentLine && previousLine && (
+              <span className="doc-cursor" style={{ background: 'rgba(26,210,255,0.7)' }} />
+            )}
+          </p>
         )}
       </div>
     </div>
