@@ -10,7 +10,7 @@ interface Props {
 const PLAN_RANK: Record<string, number> = { free: 0, pro: 1, studio: 2, team: 3 }
 
 interface PlanDef {
-  id: 'pro' | 'studio' | 'team'
+  id: 'free' | 'pro' | 'studio' | 'team'
   name: string
   tagline: string
   monthlyPrice: number
@@ -19,6 +19,20 @@ interface PlanDef {
 }
 
 const PLANS: PlanDef[] = [
+  {
+    id: 'free',
+    name: 'Free',
+    tagline: 'Try ISOL with no commitment',
+    monthlyPrice: 0,
+    annualPrice: 0,
+    bullets: [
+      '3 sessions (lifetime)',
+      '15 minutes per session',
+      '1 language only',
+      'No AI features',
+      'No share links',
+    ],
+  },
   {
     id: 'pro',
     name: 'Pro',
@@ -99,7 +113,7 @@ export default function PricingModal({ currentPlan, workspaceSlug: _workspaceSlu
     >
       <div style={{
         width: '100%',
-        maxWidth: 860,
+        maxWidth: 960,
         background: 'var(--canvas)',
         borderRadius: 24,
         boxShadow: '0 32px 80px rgba(0,0,0,0.40), 0 0 0 1px rgba(255,255,255,0.06)',
@@ -193,12 +207,13 @@ export default function PricingModal({ currentPlan, workspaceSlug: _workspaceSlu
         {/* Cards */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: '1fr 1.08fr 1fr',
-          gap: 12,
-          padding: '0 28px 28px',
+          gridTemplateColumns: 'repeat(4, 1fr)',
+          gap: 10,
+          padding: '0 24px 24px',
           alignItems: 'start',
         }}>
           {PLANS.map(plan => {
+            const isFree = plan.id === 'free'
             const isStudio = plan.id === 'studio'
             const isCurrent = currentPlan === plan.id
             const isUpgrade = PLAN_RANK[plan.id] > PLAN_RANK[currentPlan]
@@ -210,14 +225,20 @@ export default function PricingModal({ currentPlan, workspaceSlug: _workspaceSlu
                 key={plan.id}
                 style={{
                   position: 'relative',
-                  borderRadius: 18,
-                  padding: isStudio ? '28px 24px 24px' : '24px 22px 22px',
+                  borderRadius: 16,
+                  padding: '22px 20px 20px',
                   display: 'flex',
                   flexDirection: 'column',
                   ...(isStudio
                     ? {
                         background: 'linear-gradient(150deg, #4f46e5 0%, #7c3aed 100%)',
-                        boxShadow: '0 20px 50px rgba(99,102,241,0.40), 0 0 0 1px rgba(255,255,255,0.12)',
+                        boxShadow: '0 16px 40px rgba(99,102,241,0.35), 0 0 0 1px rgba(255,255,255,0.10)',
+                      }
+                    : isFree
+                    ? {
+                        background: 'var(--surface-1)',
+                        border: '1px solid var(--divider)',
+                        opacity: isCurrent ? 1 : 0.72,
                       }
                     : {
                         background: 'var(--surface-1)',
@@ -227,14 +248,12 @@ export default function PricingModal({ currentPlan, workspaceSlug: _workspaceSlu
               >
                 {isStudio && (
                   <div style={{
-                    position: 'absolute', top: -1, left: '50%', transform: 'translateX(-50%)',
-                    background: 'linear-gradient(90deg, #22c55e, #16a34a)',
-                    color: '#fff', fontSize: 9, fontWeight: 800,
-                    letterSpacing: '0.12em', textTransform: 'uppercase',
-                    padding: '4px 14px', borderRadius: '0 0 10px 10px',
-                    whiteSpace: 'nowrap',
+                    position: 'absolute', top: 14, right: 14,
+                    fontSize: 9, fontWeight: 700, letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                    color: 'rgba(255,255,255,0.55)',
                   }}>
-                    Most popular
+                    Popular
                   </div>
                 )}
 
@@ -265,7 +284,7 @@ export default function PricingModal({ currentPlan, workspaceSlug: _workspaceSlu
                   </span>
                 </div>
 
-                {isAnnual && (
+                {isAnnual && plan.monthlyPrice > 0 && (
                   <p style={{
                     fontSize: 11, margin: '3px 0 0',
                     color: isStudio ? 'rgba(255,255,255,0.45)' : 'var(--text-muted)',
@@ -273,7 +292,7 @@ export default function PricingModal({ currentPlan, workspaceSlug: _workspaceSlu
                     billed ${plan.annualPrice * 12}/yr
                     {!isStudio && (
                       <span style={{ marginLeft: 6, color: '#16a34a', fontWeight: 600 }}>
-                        (save ${(plan.monthlyPrice - plan.annualPrice) * 12})
+                        save ${(plan.monthlyPrice - plan.annualPrice) * 12}
                       </span>
                     )}
                   </p>
@@ -319,9 +338,17 @@ export default function PricingModal({ currentPlan, workspaceSlug: _workspaceSlu
                     width: '100%', padding: '11px 0', borderRadius: 10, border: 'none',
                     background: isStudio ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.06)',
                     color: isStudio ? 'rgba(255,255,255,0.50)' : 'var(--text-muted)',
-                    fontSize: 13, fontWeight: 600, cursor: 'not-allowed',
+                    fontSize: 13, fontWeight: 600, cursor: 'default',
                   }}>
                     Current plan
+                  </button>
+                ) : isFree ? (
+                  <button onClick={onClose} style={{
+                    width: '100%', padding: '10px 0', borderRadius: 10,
+                    border: '1px solid var(--divider)', background: 'transparent',
+                    color: 'var(--text-muted)', fontSize: 12, fontWeight: 500, cursor: 'pointer',
+                  }}>
+                    Stay on Free
                   </button>
                 ) : isUpgrade ? (
                   <button
@@ -377,17 +404,6 @@ export default function PricingModal({ currentPlan, workspaceSlug: _workspaceSlu
           <span>✓ Cancel anytime</span>
           <span style={{ color: 'var(--divider)' }}>·</span>
           <span>↩ 14-day money-back</span>
-          <span style={{ color: 'var(--divider)' }}>·</span>
-          <button
-            onClick={onClose}
-            style={{
-              background: 'none', border: 'none', cursor: 'pointer',
-              fontSize: 11, color: 'var(--text-muted)',
-              textDecoration: 'underline', padding: 0,
-            }}
-          >
-            Stay on Free
-          </button>
         </div>
       </div>
     </div>
