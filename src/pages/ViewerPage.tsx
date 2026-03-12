@@ -49,6 +49,7 @@ export default function ViewerPage() {
   const notesRunningRef = useRef(false)
   const aiDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const notesDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const notesAbortRef = useRef<AbortController | null>(null)
   const lineNextDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const hasAutoSwitchedRef = useRef(false)
   const aiRetryAfterRef = useRef<number>(0)
@@ -132,12 +133,17 @@ export default function ViewerPage() {
     notesDebounceRef.current = setTimeout(() => {
       if (notesRunningRef.current) return
       if (Date.now() < notesRetryAfterRef.current) return
+      notesAbortRef.current?.abort()
+      const abortCtrl = new AbortController()
+      notesAbortRef.current = abortCtrl
+      const requestLang = targetLangRef.current
       notesRunningRef.current = true
       setAiNotesLoading(true)
       fetch('/api/ai/notes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lines: currentLines.map(l => l.text), targetLang: targetLangRef.current }),
+        body: JSON.stringify({ lines: currentLines.map(l => l.text), targetLang: requestLang }),
+        signal: abortCtrl.signal,
       })
         .then(r => {
           if (r.status === 429) {
@@ -152,9 +158,9 @@ export default function ViewerPage() {
           return r.ok ? r.json() : null
         })
         .then((data: { notes?: string } | null) => {
-          if (data?.notes) setAiNotes(data.notes)
+          if (data?.notes && targetLangRef.current === requestLang) setAiNotes(data.notes)
         })
-        .catch(() => {})
+        .catch(e => { if (e?.name === 'AbortError') return })
         .finally(() => { setAiNotesLoading(false); notesRunningRef.current = false })
     }, 2000)
   }, [transcript.length, transcriptLenMod8, notesRetryTick])  // eslint-disable-line react-hooks/exhaustive-deps
@@ -202,7 +208,12 @@ export default function ViewerPage() {
 
   const wssUrl = import.meta.env.VITE_WSS_URL ?? 'wss://api.isol.live/audio'
   const targetLangRef = useRef(targetLang)
-  useEffect(() => { targetLangRef.current = targetLang }, [targetLang])
+  useEffect(() => {
+    targetLangRef.current = targetLang
+    setAiNotes(undefined)
+    notesAbortRef.current?.abort()
+    notesRunningRef.current = false
+  }, [targetLang])
 
   const handleMessage = useCallback((msg: SubtitleMessage) => {
     if (msg.line_final) {

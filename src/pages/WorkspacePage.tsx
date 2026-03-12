@@ -108,10 +108,17 @@ export default function WorkspacePage() {
   const notesDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const aiRetryAfterRef = useRef<number>(0)
   const notesRetryAfterRef = useRef<number>(0)
+  const notesAbortRef = useRef<AbortController | null>(null)
   const [aiRetryTick, setAiRetryTick] = useState(0)
   const [notesRetryTick, setNotesRetryTick] = useState(0)
   const targetLangRef = useRef(targetLang)
-  useEffect(() => { targetLangRef.current = targetLang }, [targetLang])
+  useEffect(() => {
+    targetLangRef.current = targetLang
+    // Reset notes when language changes — stale notes in wrong language must not persist
+    setAiNotes(undefined)
+    notesAbortRef.current?.abort()
+    notesRunningRef.current = false
+  }, [targetLang])
   // WS-02: reconnect WebSocket when targetLang changes mid-session (new URL with updated target_lang)
   const prevTargetLangRef = useRef(targetLang)
   useEffect(() => {
@@ -267,12 +274,17 @@ export default function WorkspacePage() {
     notesDebounceRef.current = setTimeout(() => {
       if (notesRunningRef.current) return
       if (Date.now() < notesRetryAfterRef.current) return
+      notesAbortRef.current?.abort()
+      const abortCtrl = new AbortController()
+      notesAbortRef.current = abortCtrl
+      const requestLang = targetLangRef.current
       notesRunningRef.current = true
       setAiNotesLoading(true)
       fetch('/api/ai/notes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
-        body: JSON.stringify({ lines: currentLines.map(l => l.text), targetLang: targetLangRef.current }),
+        body: JSON.stringify({ lines: currentLines.map(l => l.text), targetLang: requestLang }),
+        signal: abortCtrl.signal,
       })
         .then(r => {
           if (r.status === 429) {
@@ -287,9 +299,9 @@ export default function WorkspacePage() {
           return r.ok ? r.json() : null
         })
         .then((data: { notes?: string } | null) => {
-          if (data?.notes) setAiNotes(data.notes)
+          if (data?.notes && targetLangRef.current === requestLang) setAiNotes(data.notes)
         })
-        .catch(() => {})
+        .catch(e => { if (e?.name === 'AbortError') return })
         .finally(() => { setAiNotesLoading(false); notesRunningRef.current = false })
     }, 2000)
   }, [transcript.length, transcriptLenMod8, notesRetryTick])  // eslint-disable-line react-hooks/exhaustive-deps
