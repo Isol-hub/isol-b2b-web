@@ -388,9 +388,9 @@ export default function DocumentView({
   }
 
   const TAB_META: Record<ViewMode, { label: string; color: string }> = {
-    raw:   { label: 'Transcript',    color: '#64748B' },
-    ai:    { label: '✦ AI Enhanced', color: '#6366F1' },
-    notes: { label: '✦ Notes',       color: '#D97706' },
+    raw:   { label: 'Transcript', color: '#64748B' },
+    ai:    { label: '✦ AI',       color: '#6366F1' },
+    notes: { label: '✦ Notes',    color: '#D97706' },
   }
 
   const hasAi = !!aiFormatted
@@ -430,7 +430,8 @@ export default function DocumentView({
       {/* ━━ MODE TAB BAR — always visible, sticky ━━━━━━━━━━━━━ */}
       <div style={{
         flexShrink: 0,
-        display: 'grid', gridTemplateColumns: '1fr 1fr 1fr',
+        display: 'flex', alignItems: 'center', gap: 6,
+        padding: '10px 16px',
         borderBottom: '1px solid var(--divider)',
         background: 'var(--surface-1)',
       }}>
@@ -444,21 +445,22 @@ export default function DocumentView({
               key={mode}
               onClick={() => available && onViewModeChange(mode)}
               style={{
-                height: 40, border: 'none',
-                borderBottom: active ? `2.5px solid ${color}` : '2.5px solid transparent',
-                background: active ? `${color}18` : 'transparent',
-                color: active ? color : available ? 'var(--text-muted)' : 'var(--text-muted)',
+                height: 30, padding: '0 14px',
+                borderRadius: 999,
+                border: active ? 'none' : `1px solid ${color}38`,
+                background: active ? color : 'transparent',
+                color: active ? '#fff' : color,
                 fontSize: 12, fontWeight: active ? 700 : 500,
                 cursor: available ? 'pointer' : 'default',
-                opacity: !available && !loading ? 0.38 : 1,
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
-                transition: 'background 0.15s, color 0.15s, border-color 0.15s',
-                padding: '0 4px', userSelect: 'none',
+                opacity: !available && !loading ? 0.35 : 1,
+                display: 'flex', alignItems: 'center', gap: 5,
+                transition: 'all 0.15s',
+                userSelect: 'none', whiteSpace: 'nowrap',
               }}
-              onMouseEnter={e => { if (available && !active) { (e.currentTarget as HTMLElement).style.background = `${color}0d`; (e.currentTarget as HTMLElement).style.color = color } }}
-              onMouseLeave={e => { if (!active) { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)' } }}
+              onMouseEnter={e => { if (available && !active) (e.currentTarget as HTMLElement).style.background = `${color}14` }}
+              onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.background = 'transparent' }}
             >
-              {loading && <span style={{ width: 7, height: 7, border: `1.5px solid ${color}44`, borderTopColor: color, borderRadius: '50%', animation: 'spin 0.9s linear infinite', flexShrink: 0 }} />}
+              {loading && <span style={{ width: 7, height: 7, border: `1.5px solid ${color}55`, borderTopColor: color, borderRadius: '50%', animation: 'spin 0.9s linear infinite', flexShrink: 0 }} />}
               {label}
             </button>
           )
