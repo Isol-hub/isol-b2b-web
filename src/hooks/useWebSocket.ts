@@ -88,9 +88,13 @@ export function useWebSocket({ url, targetLang, onMessage, onStateChange, viewer
           noHelloCloseCount.current = 0
           return
         }
-        // Host stopped: prevent reconnect loop, surface to caller
+        // Server sent end_of_session (silence timeout or host stopped).
+        // Viewers: host has stopped — don't reconnect.
+        // Host sessions: the server-side EOS may be a false alarm (e.g. AudioContext
+        // suspended during a YouTube pause). Don't kill reconnect here; the user's
+        // explicit Stop button calls close() which sets shouldReconnect = false.
         if (msg.type === 'end_of_session') {
-          shouldReconnect.current = false
+          if (viewerSessionId) shouldReconnect.current = false
           onSessionEndRef.current?.()
           return
         }

@@ -12,6 +12,7 @@ import HighlightsSection from '../components/HighlightsSection'
 import type { HighlightItem, HighlightCategory } from '../components/HighlightPopup'
 import PipCaption from '../components/PipCaption'
 import PricingModal from '../components/PricingModal'
+import TeamModal from '../components/TeamModal'
 import { usePip } from '../hooks/usePip'
 import TranscriptModal from '../components/TranscriptModal'
 import GlossaryPanel from '../components/GlossaryPanel'
@@ -72,6 +73,7 @@ export default function WorkspacePage() {
   const [workspacePlan, setWorkspacePlan] = useState<'free'|'pro'|'studio'|'team'>('free')
   const [workspaceDefaultLang, setWorkspaceDefaultLang] = useState('en')
   const [showPricing, setShowPricing] = useState(false)
+  const [showTeam, setShowTeam] = useState(false)
   const [billingSuccess, setBillingSuccess] = useState(() => searchParams.get('billing') === 'success')
   const [currentLine, setCurrentLine] = useState('')
   const [error, setError] = useState('')
@@ -1092,6 +1094,23 @@ export default function WorkspacePage() {
 
         <div style={{ flex: 1 }} />
 
+        {workspacePlan === 'team' && (
+          <button
+            onClick={() => setShowTeam(true)}
+            style={{
+              fontSize: 12, fontWeight: 600, padding: '5px 12px', height: 28,
+              borderRadius: 7, border: '1px solid rgba(245,158,11,0.30)',
+              background: 'rgba(245,158,11,0.08)', color: '#d97706',
+              cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5,
+              transition: 'background 0.15s',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(245,158,11,0.15)' }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(245,158,11,0.08)' }}
+          >
+            <span>👥</span> Team
+          </button>
+        )}
+
         <Link
           to={`/${workspaceSlug}/settings`}
           title="Settings"
@@ -1789,6 +1808,13 @@ export default function WorkspacePage() {
           currentPlan={workspacePlan}
           workspaceSlug={workspaceSlug ?? ''}
           onClose={() => setShowPricing(false)}
+        />
+      )}
+
+      {showTeam && workspaceSlug && (
+        <TeamModal
+          workspaceSlug={workspaceSlug}
+          onClose={() => setShowTeam(false)}
         />
       )}
 

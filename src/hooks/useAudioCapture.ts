@@ -60,6 +60,12 @@ export function useAudioCapture({ chunkMs = 200, onChunk, onError }: AudioCaptur
       const audioCtx = new AudioContext({ sampleRate: 16000 })
       ctxRef.current = audioCtx
 
+      // Chrome suspends AudioContext during silence/tab inactivity.
+      // Resume immediately whenever that happens so onaudioprocess keeps firing.
+      audioCtx.onstatechange = () => {
+        if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {})
+      }
+
       const src = audioCtx.createMediaStreamSource(stream)
       // ScriptProcessorNode requires power-of-2 buffer size
       const rawSize = (audioCtx.sampleRate * chunkMs) / 1000
