@@ -21,24 +21,36 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
   }
 
   try {
-    const workspace = await env.DB.prepare(
-      `SELECT slug, display_name, default_lang, plan, plan_expires_at
-       FROM workspaces WHERE slug = ?`
-    ).bind(workspaceSlug).first()
+    const [workspaceResult, statsResult, topLangResult, usageResult] = await env.DB.batch([
+      env.DB.prepare(
+        'SELECT slug, display_name, default_lang, plan, plan_expires_at FROM workspaces WHERE slug = ?'
+      ).bind(workspaceSlug),
+      env.DB.prepare(
+        'SELECT COUNT(*) as sessions_total, COALESCE(SUM(ended_at - started_at), 0) as total_seconds FROM sessions WHERE workspace_slug = ?'
+      ).bind(workspaceSlug),
+      env.DB.prepare(
+        'SELECT target_lang FROM sessions WHERE workspace_slug = ? GROUP BY target_lang ORDER BY COUNT(*) DESC LIMIT 1'
+      ).bind(workspaceSlug),
+      env.DB.prepare(
+        "SELECT month, endpoint, count FROM ai_usage WHERE workspace_slug = ? AND month >= STRFTIME('%Y-%m', 'now', '-1 month') ORDER BY month DESC, endpoint ASC"
+      ).bind(workspaceSlug),
+    ])
 
+    const workspace = workspaceResult.results[0]
     if (!workspace) {
       return Response.json({ error: 'Not found' }, { status: 404, headers: CORS })
     }
 
-    // Last 2 months of AI usage
-    const usageResult = await env.DB.prepare(
-      `SELECT month, endpoint, count FROM ai_usage
-       WHERE workspace_slug = ? AND month >= STRFTIME('%Y-%m', 'now', '-1 month')
-       ORDER BY month DESC, endpoint ASC`
-    ).bind(workspaceSlug).all()
+    const statsRow = statsResult.results[0] as { sessions_total: number; total_seconds: number } | undefined
+    const topLangRow = topLangResult.results[0] as { target_lang: string } | undefined
 
     return Response.json({
       workspace,
+      stats: {
+        sessions_total: statsRow?.sessions_total ?? 0,
+        minutes_total: Math.round((statsRow?.total_seconds ?? 0) / 60),
+        top_lang: topLangRow?.target_lang ?? null,
+      },
       usage: usageResult.results,
     }, { headers: CORS })
   } catch (err) {
@@ -54,7 +66,6 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env }) => {
   try {
     const body = await request.json<{ display_name?: string; default_lang?: string }>()
 
-    // Only allow patching display_name and default_lang — never plan or billing fields
     const fields: string[] = []
     const values: (string | null)[] = []
 
@@ -95,7 +106,6 @@ export const onRequestDelete: PagesFunction<Env> = async ({ request, env }) => {
   }
 
   try {
-    // Delete all workspace data in dependency order
     await env.DB.batch([
       env.DB.prepare('DELETE FROM transcript_lines WHERE session_id IN (SELECT id FROM sessions WHERE workspace_slug = ?)').bind(workspaceSlug),
       env.DB.prepare('DELETE FROM share_comments WHERE session_id IN (SELECT id FROM sessions WHERE workspace_slug = ?)').bind(workspaceSlug),
