@@ -1,16 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import MatrixText from './MatrixText'
 
-const IDLE_QUOTES = [
-  'Every word, every language.',
-  'Real-time understanding.',
-  'No word left behind.',
-  'From speech to knowledge.',
-  'Any language, any speaker.',
-  'Your voice, understood everywhere.',
-  'Clarity across every border.',
-]
-
 interface Props {
   currentLine: string   // live in-progress text
   previousLine: string  // last committed line
@@ -47,20 +37,6 @@ export default function LiveBanner({ currentLine, previousLine, isActive }: Prop
   const animRef = useRef<number>(0)
   const phaseRef = useRef(0)
   const lastTimeRef = useRef(0)
-
-  // Idle quote rotation
-  const [quoteIdx, setQuoteIdx] = useState(() => Math.floor(Math.random() * IDLE_QUOTES.length))
-  const [quotePhase, setQuotePhase] = useState<'in' | 'out'>('in')
-  useEffect(() => {
-    const t = setInterval(() => {
-      setQuotePhase('out')
-      setTimeout(() => {
-        setQuoteIdx(i => (i + 1) % IDLE_QUOTES.length)
-        setQuotePhase('in')
-      }, 350)
-    }, 4000)
-    return () => clearInterval(t)
-  }, [])
 
   // Delay canvas DOM mount so Chrome doesn't allocate the GPU backing store
   // while React is still mounting WorkspacePage (causes compositor crash on navigation).
@@ -154,27 +130,43 @@ export default function LiveBanner({ currentLine, previousLine, isActive }: Prop
         display: 'flex', flexDirection: 'column', gap: 6,
       }}>
         {isEmpty ? (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', overflow: 'hidden', minHeight: 36 }}>
-            <span
-              key={quoteIdx}
-              style={{
-                fontFamily: "'Bebas Neue', Impact, sans-serif",
-                fontSize: 26,
-                fontStyle: 'normal',
-                fontWeight: 400,
-                letterSpacing: '0.12em',
-                color: 'rgba(226,254,255,0.88)',
-                textShadow: '0 0 18px rgba(26,210,255,0.55), 0 1px 2px rgba(0,0,0,0.4)',
-                userSelect: 'none',
-                display: 'inline-block',
-                textAlign: 'center',
-                animation: quotePhase === 'in'
-                  ? 'quoteFlipIn 0.38s cubic-bezier(0.22,1,0.36,1) forwards'
-                  : 'quoteFlipOut 0.32s cubic-bezier(0.64,0,0.78,0) forwards',
-              }}
-            >
-              {IDLE_QUOTES[quoteIdx]}
-            </span>
+          <div style={{ position: 'relative', width: '100%', minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+            {/* Blob 1 — cyan */}
+            <div style={{
+              position: 'absolute',
+              width: 72, height: 72,
+              borderRadius: '50%',
+              background: 'rgba(26,210,255,0.55)',
+              filter: 'blur(22px)',
+              left: 'calc(50% - 60px)',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              animation: 'blob1 5.8s ease-in-out infinite',
+            }} />
+            {/* Blob 2 — violet */}
+            <div style={{
+              position: 'absolute',
+              width: 60, height: 60,
+              borderRadius: '50%',
+              background: 'rgba(99,102,241,0.60)',
+              filter: 'blur(20px)',
+              left: 'calc(50% + 10px)',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              animation: 'blob2 7.2s ease-in-out infinite',
+            }} />
+            {/* Blob 3 — ice white center merge */}
+            <div style={{
+              position: 'absolute',
+              width: 36, height: 36,
+              borderRadius: '50%',
+              background: 'rgba(226,254,255,0.38)',
+              filter: 'blur(12px)',
+              left: '50%',
+              top: '50%',
+              transform: 'translate(-50%, -50%)',
+              animation: 'blob3 4.5s ease-in-out infinite',
+            }} />
           </div>
         ) : (
           <>
