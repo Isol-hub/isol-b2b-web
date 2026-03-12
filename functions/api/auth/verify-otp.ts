@@ -1,6 +1,7 @@
 interface Env {
   CF_KV_OTP: KVNamespace
   B2B_SERVICE_KEY: string
+  DB: D1Database
 }
 
 const LSOL_AUTH_URL = 'https://api.isol.live/auth/b2b/token'
@@ -33,6 +34,11 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
 
     // Delete OTP only after successful token issuance
     await env.CF_KV_OTP.delete(`otp:${emailLower}`)
+
+    // Activate pending team invite if this login was for a team workspace
+    await env.DB.prepare(
+      "UPDATE workspace_members SET status = 'active', joined_at = ? WHERE member_email = ? AND workspace_slug = ? AND status = 'pending'"
+    ).bind(Date.now(), emailLower, workspace).run().catch(() => {})
 
     return Response.json({ token: access_token }, { status: 200, headers })
   } catch (err) {

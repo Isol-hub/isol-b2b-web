@@ -2,6 +2,7 @@ interface Env {
   CF_KV_OTP: KVNamespace
   RESEND_API_KEY: string
   ALLOWED_EMAIL_DOMAINS?: string  // comma-separated, or * for any
+  DB: D1Database
 }
 
 function generateOtp(): string {
@@ -34,7 +35,13 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     }
 
     const otp = generateOtp()
-    const workspace = slugFromEmail(emailLower)
+
+    // If the email has a pending team invite, route them to the inviting workspace
+    let workspace = slugFromEmail(emailLower)
+    const invite = await env.DB.prepare(
+      "SELECT workspace_slug FROM workspace_members WHERE member_email = ? AND status = 'pending' LIMIT 1"
+    ).bind(emailLower).first<{ workspace_slug: string }>().catch(() => null)
+    if (invite) workspace = invite.workspace_slug
 
     // Store OTP in KV with 10-minute TTL
     await env.CF_KV_OTP.put(

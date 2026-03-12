@@ -12,6 +12,15 @@ interface WorkspaceData {
   default_lang: string
   plan: string
   plan_expires_at: number | null
+  api_key: string | null
+}
+
+interface TeamMember {
+  member_email: string
+  role: string
+  status: string
+  invited_at: number
+  joined_at: number | null
 }
 
 interface WorkspaceStats {
@@ -102,6 +111,28 @@ function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) =>
   )
 }
 
+// ─── team helpers ────────────────────────────────────────────────────────────
+
+const AVATAR_COLORS = ['#6366f1','#8b5cf6','#ec4899','#f43f5e','#f97316','#16a34a','#0891b2','#d97706']
+
+function avatarColor(email: string): string {
+  let h = 0
+  for (const c of email) h = (h * 31 + c.charCodeAt(0)) & 0xFFFFFF
+  return AVATAR_COLORS[h % AVATAR_COLORS.length]
+}
+
+function initials(email: string): string {
+  const local = email.split('@')[0]
+  const parts = local.split(/[._-]/).filter(Boolean)
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase()
+  return local.slice(0, 2).toUpperCase()
+}
+
+function maskApiKey(key: string): string {
+  const prefix = key.slice(0, 12) // 'isol_live_xx'
+  return prefix + '••••••••••••••••'
+}
+
 // ─── plan config ─────────────────────────────────────────────────────────────
 
 const PLAN_COLORS: Record<string, { color: string; bg: string; border: string }> = {
@@ -163,6 +194,15 @@ export default function SettingsPage() {
   const [billingLoading, setBillingLoading] = useState(false)
   const [showPricing, setShowPricing] = useState(false)
 
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
+  const [inviteEmail, setInviteEmail] = useState('')
+  const [inviteLoading, setInviteLoading] = useState(false)
+  const [inviteSent, setInviteSent] = useState<string | null>(null)
+  const [removingMember, setRemovingMember] = useState<string | null>(null)
+  const [apiKey, setApiKey] = useState<string | null>(null)
+  const [apiKeyLoading, setApiKeyLoading] = useState(false)
+  const [apiKeyCopied, setApiKeyCopied] = useState(false)
+
   const [notifPrefs, setNotifPrefs] = useState<NotifPrefs>({ session_summary: true, product_updates: true, billing: true })
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -184,6 +224,7 @@ export default function SettingsPage() {
           setUsage(d.usage)
           setDisplayName(d.workspace.display_name ?? '')
           setDefaultLang(d.workspace.default_lang ?? 'it')
+          setApiKey(d.workspace.api_key ?? null)
         }
       })
       .catch(() => {})
@@ -193,6 +234,16 @@ export default function SettingsPage() {
   useEffect(() => {
     if (workspaceSlug) setNotifPrefs(loadNotifPrefs(workspaceSlug))
   }, [workspaceSlug])
+
+  useEffect(() => {
+    if (!workspace || workspace.plan !== 'team') return
+    const token = getToken()
+    if (!token) return
+    fetch('/api/team/members', { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : null)
+      .then((d: { members: TeamMember[] } | null) => { if (d) setTeamMembers(d.members) })
+      .catch(() => {})
+  }, [workspace])
 
   const handleSave = async () => {
     const token = getToken()
@@ -211,6 +262,72 @@ export default function SettingsPage() {
       }
     } catch { /* silent */ }
     finally { setSaving(false) }
+  }
+
+  const handleInvite = async () => {
+    if (!inviteEmail.trim()) return
+    const token = getToken()
+    if (!token) return
+    setInviteLoading(true)
+    try {
+      const res = await fetch('/api/team/invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ email: inviteEmail.trim() }),
+      })
+      if (res.ok) {
+        const email = inviteEmail.trim().toLowerCase()
+        setTeamMembers(prev => [...prev.filter(m => m.member_email !== email), {
+          member_email: email, role: 'member', status: 'pending',
+          invited_at: Date.now(), joined_at: null,
+        }])
+        setInviteSent(email)
+        setInviteEmail('')
+        setTimeout(() => setInviteSent(null), 3500)
+      }
+    } catch { /* silent */ }
+    finally { setInviteLoading(false) }
+  }
+
+  const handleRemoveMember = async (memberEmail: string) => {
+    const token = getToken()
+    if (!token) return
+    setRemovingMember(memberEmail)
+    try {
+      const res = await fetch('/api/team/members', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ member_email: memberEmail }),
+      })
+      if (res.ok) setTeamMembers(prev => prev.filter(m => m.member_email !== memberEmail))
+    } catch { /* silent */ }
+    finally { setRemovingMember(null) }
+  }
+
+  const handleApiKey = async (action: 'generate' | 'revoke') => {
+    const token = getToken()
+    if (!token) return
+    setApiKeyLoading(true)
+    try {
+      const res = await fetch('/api/workspace/apikey', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ action }),
+      })
+      if (res.ok) {
+        const { api_key } = await res.json() as { api_key: string | null }
+        setApiKey(api_key)
+      }
+    } catch { /* silent */ }
+    finally { setApiKeyLoading(false) }
+  }
+
+  const handleCopyApiKey = () => {
+    if (!apiKey) return
+    navigator.clipboard.writeText(apiKey).then(() => {
+      setApiKeyCopied(true)
+      setTimeout(() => setApiKeyCopied(false), 2000)
+    })
   }
 
   const handleNotifChange = (key: keyof NotifPrefs, value: boolean) => {
@@ -568,31 +685,246 @@ export default function SettingsPage() {
             </div>
 
             {/* ── Team (team plan only) ────────────────────────── */}
-            {currentPlan === 'team' && (
-              <Block label="Team">
-                <Row label="Seats" hint="Members with access to this workspace">
-                  <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>1 / 5 active</span>
-                </Row>
-                <Row label="Invite member" hint="Send a workspace invite by email">
-                  <button disabled style={{
-                    fontSize: 12, fontWeight: 600, padding: '6px 14px',
-                    borderRadius: 7, border: '1px solid var(--divider)',
-                    background: 'transparent', color: 'var(--text-muted)', cursor: 'not-allowed',
-                  }}>
-                    Coming soon
-                  </button>
-                </Row>
-                <Row label="API key" hint="Use in your own integrations" last>
-                  <button disabled style={{
-                    fontSize: 12, fontWeight: 600, padding: '6px 14px',
-                    borderRadius: 7, border: '1px solid var(--divider)',
-                    background: 'transparent', color: 'var(--text-muted)', cursor: 'not-allowed',
-                  }}>
-                    Generate key
-                  </button>
-                </Row>
-              </Block>
-            )}
+            {currentPlan === 'team' && (() => {
+              const activeCount = 1 + teamMembers.filter(m => m.status === 'active').length
+              const totalCount = 1 + teamMembers.length
+              const isOwner = auth?.email === workspace?.owner_email ?? auth?.email
+
+              return (
+                <>
+                  {/* Members block */}
+                  <div style={{ marginBottom: 28 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                      <p style={{
+                        fontSize: 11, fontWeight: 700, letterSpacing: '0.08em',
+                        textTransform: 'uppercase', color: 'var(--text-muted)', margin: 0,
+                      }}>
+                        Team
+                      </p>
+                      <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 500 }}>
+                        {activeCount} / 5 active
+                      </span>
+                    </div>
+                    <div style={{
+                      background: 'var(--canvas)', border: '1px solid var(--divider)',
+                      borderRadius: 12, overflow: 'hidden',
+                    }}>
+
+                      {/* Owner row */}
+                      {workspace && (
+                        <div style={{
+                          display: 'flex', alignItems: 'center', gap: 12,
+                          padding: '13px 16px',
+                          borderBottom: teamMembers.length > 0 ? '1px solid var(--divider)' : 'none',
+                        }}>
+                          <div style={{
+                            width: 34, height: 34, borderRadius: '50%', flexShrink: 0,
+                            background: avatarColor(workspace.owner_email ?? ''),
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: 12, fontWeight: 700, color: '#fff', letterSpacing: '0.02em',
+                          }}>
+                            {initials(workspace.owner_email ?? '')}
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {workspace.owner_email}
+                            </p>
+                          </div>
+                          <span style={{
+                            fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase',
+                            color: '#d97706', background: 'rgba(245,158,11,0.10)',
+                            border: '1px solid rgba(245,158,11,0.22)', padding: '3px 9px', borderRadius: 999,
+                          }}>
+                            Owner
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Member rows */}
+                      {teamMembers.map((m, i) => (
+                        <div key={m.member_email} style={{
+                          display: 'flex', alignItems: 'center', gap: 12,
+                          padding: '13px 16px',
+                          borderBottom: i < teamMembers.length - 1 ? '1px solid var(--divider)' : 'none',
+                          opacity: removingMember === m.member_email ? 0.4 : 1,
+                          transition: 'opacity 0.2s',
+                        }}>
+                          <div style={{
+                            width: 34, height: 34, borderRadius: '50%', flexShrink: 0,
+                            background: avatarColor(m.member_email),
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: 12, fontWeight: 700, color: '#fff', letterSpacing: '0.02em',
+                            opacity: m.status === 'pending' ? 0.55 : 1,
+                          }}>
+                            {initials(m.member_email)}
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {m.member_email}
+                            </p>
+                            {m.status === 'pending' && (
+                              <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '1px 0 0' }}>
+                                Invite pending
+                              </p>
+                            )}
+                          </div>
+                          {m.status === 'active' ? (
+                            <span style={{
+                              fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase',
+                              color: 'var(--text-muted)', background: 'rgba(128,128,128,0.08)',
+                              border: '1px solid var(--divider)', padding: '3px 9px', borderRadius: 999,
+                            }}>
+                              Member
+                            </span>
+                          ) : (
+                            <span style={{
+                              fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase',
+                              color: '#d97706', background: 'rgba(245,158,11,0.08)',
+                              border: '1px solid rgba(245,158,11,0.18)', padding: '3px 9px', borderRadius: 999,
+                            }}>
+                              Pending
+                            </span>
+                          )}
+                          {isOwner && (
+                            <button
+                              onClick={() => handleRemoveMember(m.member_email)}
+                              disabled={removingMember === m.member_email}
+                              style={{
+                                width: 28, height: 28, borderRadius: 7, border: '1px solid var(--divider)',
+                                background: 'transparent', cursor: 'pointer',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                color: 'var(--text-muted)', fontSize: 16, flexShrink: 0,
+                                transition: 'background 0.15s, color 0.15s',
+                              }}
+                              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.08)'; e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.25)' }}
+                              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--divider)' }}
+                              title="Remove member"
+                            >
+                              ×
+                            </button>
+                          )}
+                        </div>
+                      ))}
+
+                      {/* Invite input */}
+                      {isOwner && totalCount < 5 && (
+                        <div style={{
+                          display: 'flex', gap: 8, padding: '12px 16px',
+                          borderTop: teamMembers.length > 0 || workspace ? '1px solid var(--divider)' : 'none',
+                          background: 'rgba(99,102,241,0.02)',
+                        }}>
+                          <input
+                            type="email"
+                            placeholder="colleague@company.com"
+                            value={inviteEmail}
+                            onChange={e => setInviteEmail(e.target.value)}
+                            onKeyDown={e => { if (e.key === 'Enter') handleInvite() }}
+                            className="input-field"
+                            style={{ flex: 1, fontSize: 13 }}
+                          />
+                          <button
+                            onClick={handleInvite}
+                            disabled={inviteLoading || !inviteEmail.trim()}
+                            className="btn-primary"
+                            style={{
+                              width: 'auto', padding: '0 16px', fontSize: 13, flexShrink: 0,
+                              opacity: (!inviteEmail.trim() || inviteLoading) ? 0.5 : 1,
+                            }}
+                          >
+                            {inviteLoading ? '…' : 'Send invite'}
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Invite sent confirmation */}
+                      {inviteSent && (
+                        <div style={{
+                          padding: '10px 16px',
+                          background: 'rgba(34,197,94,0.06)',
+                          borderTop: '1px solid rgba(34,197,94,0.15)',
+                          fontSize: 12, color: '#16a34a', fontWeight: 500,
+                        }}>
+                          ✓ Invite sent to {inviteSent}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* API Key block */}
+                  <div style={{ marginBottom: 28 }}>
+                    <p style={{
+                      fontSize: 11, fontWeight: 700, letterSpacing: '0.08em',
+                      textTransform: 'uppercase', color: 'var(--text-muted)',
+                      margin: '0 0 8px 2px',
+                    }}>
+                      API Access
+                    </p>
+                    <div style={{
+                      background: 'var(--canvas)', border: '1px solid var(--divider)',
+                      borderRadius: 12, padding: '18px 20px',
+                    }}>
+                      {apiKey ? (
+                        <>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+                            <code style={{
+                              flex: 1, fontSize: 12, fontFamily: 'monospace',
+                              color: 'var(--text)', background: 'rgba(0,0,0,0.04)',
+                              border: '1px solid var(--divider)', borderRadius: 7,
+                              padding: '8px 12px', letterSpacing: '0.02em',
+                              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                            }}>
+                              {maskApiKey(apiKey)}
+                            </code>
+                            <button
+                              onClick={handleCopyApiKey}
+                              style={{
+                                flexShrink: 0, padding: '7px 14px', borderRadius: 7,
+                                border: '1px solid var(--divider)', background: 'transparent',
+                                fontSize: 12, fontWeight: 600,
+                                color: apiKeyCopied ? '#16a34a' : 'var(--text-muted)',
+                                cursor: 'pointer', transition: 'all 0.15s', whiteSpace: 'nowrap',
+                              }}
+                            >
+                              {apiKeyCopied ? '✓ Copied' : 'Copy key'}
+                            </button>
+                          </div>
+                          <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '0 0 14px', lineHeight: 1.5 }}>
+                            Use this key in the <code style={{ fontSize: 11 }}>Authorization: Bearer</code> header to call the ISOL REST API.
+                          </p>
+                          <button
+                            onClick={() => handleApiKey('revoke')}
+                            disabled={apiKeyLoading}
+                            style={{
+                              fontSize: 12, fontWeight: 600, padding: '6px 14px',
+                              borderRadius: 7, border: '1px solid rgba(239,68,68,0.30)',
+                              background: 'rgba(239,68,68,0.06)', color: '#ef4444',
+                              cursor: 'pointer', opacity: apiKeyLoading ? 0.5 : 1,
+                            }}
+                          >
+                            Revoke key
+                          </button>
+                        </>
+                      ) : (
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <div>
+                            <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)', margin: '0 0 3px' }}>No API key</p>
+                            <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: 0 }}>Generate a key to access the ISOL REST API from your own integrations</p>
+                          </div>
+                          <button
+                            onClick={() => handleApiKey('generate')}
+                            disabled={apiKeyLoading}
+                            className="btn-primary"
+                            style={{ width: 'auto', padding: '8px 16px', fontSize: 13, opacity: apiKeyLoading ? 0.5 : 1, flexShrink: 0, marginLeft: 16 }}
+                          >
+                            {apiKeyLoading ? '…' : 'Generate key'}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )
+            })()}
 
             {/* ── Notifications ────────────────────────────────── */}
             <Block label="Notifications">
