@@ -215,6 +215,7 @@ export default function PricingModal({ currentPlan, workspaceSlug: _workspaceSlu
           {PLANS.map(plan => {
             const isFree = plan.id === 'free'
             const isStudio = plan.id === 'studio'
+            const isTeam = plan.id === 'team'
             const isCurrent = currentPlan === plan.id
             const isUpgrade = PLAN_RANK[plan.id] > PLAN_RANK[currentPlan]
             const isLoading = loadingPlan === plan.id
@@ -233,6 +234,11 @@ export default function PricingModal({ currentPlan, workspaceSlug: _workspaceSlu
                     ? {
                         background: 'linear-gradient(150deg, #4f46e5 0%, #7c3aed 100%)',
                         boxShadow: '0 16px 40px rgba(99,102,241,0.35), 0 0 0 1px rgba(255,255,255,0.10)',
+                      }
+                    : isTeam
+                    ? {
+                        background: 'linear-gradient(150deg, #0f766e 0%, #0369a1 100%)',
+                        boxShadow: '0 16px 40px rgba(13,148,136,0.28), 0 0 0 1px rgba(255,255,255,0.08)',
                       }
                     : isFree
                     ? {
@@ -256,13 +262,23 @@ export default function PricingModal({ currentPlan, workspaceSlug: _workspaceSlu
                     Popular
                   </div>
                 )}
+                {isTeam && (
+                  <div style={{
+                    position: 'absolute', top: 14, right: 14,
+                    fontSize: 9, fontWeight: 700, letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                    color: 'rgba(255,255,255,0.50)',
+                  }}>
+                    Enterprise
+                  </div>
+                )}
 
                 {/* Plan name */}
                 <div style={{ marginBottom: 12 }}>
                   <span style={{
                     fontSize: 12, fontWeight: 700, letterSpacing: '0.08em',
                     textTransform: 'uppercase',
-                    color: isStudio ? 'rgba(255,255,255,0.70)' : 'var(--text-muted)',
+                    color: (isStudio || isTeam) ? 'rgba(255,255,255,0.70)' : 'var(--text-muted)',
                   }}>
                     {plan.name}
                   </span>
@@ -272,13 +288,13 @@ export default function PricingModal({ currentPlan, workspaceSlug: _workspaceSlu
                 <div style={{ marginBottom: 2 }}>
                   <span style={{
                     fontSize: 42, fontWeight: 900, letterSpacing: '-0.04em', lineHeight: 1,
-                    color: isStudio ? '#fff' : 'var(--text)',
+                    color: (isStudio || isTeam) ? '#fff' : 'var(--text)',
                   }}>
                     ${price}
                   </span>
                   <span style={{
                     fontSize: 13, fontWeight: 500, marginLeft: 3,
-                    color: isStudio ? 'rgba(255,255,255,0.55)' : 'var(--text-muted)',
+                    color: (isStudio || isTeam) ? 'rgba(255,255,255,0.55)' : 'var(--text-muted)',
                   }}>
                     /mo
                   </span>
@@ -287,10 +303,10 @@ export default function PricingModal({ currentPlan, workspaceSlug: _workspaceSlu
                 {isAnnual && plan.monthlyPrice > 0 && (
                   <p style={{
                     fontSize: 11, margin: '3px 0 0',
-                    color: isStudio ? 'rgba(255,255,255,0.45)' : 'var(--text-muted)',
+                    color: (isStudio || isTeam) ? 'rgba(255,255,255,0.45)' : 'var(--text-muted)',
                   }}>
                     billed ${plan.annualPrice * 12}/yr
-                    {!isStudio && (
+                    {!(isStudio || isTeam) && (
                       <span style={{ marginLeft: 6, color: '#16a34a', fontWeight: 600 }}>
                         save ${(plan.monthlyPrice - plan.annualPrice) * 12}
                       </span>
@@ -301,7 +317,7 @@ export default function PricingModal({ currentPlan, workspaceSlug: _workspaceSlu
                 {/* Tagline */}
                 <p style={{
                   fontSize: 12, margin: '12px 0 16px', lineHeight: 1.5,
-                  color: isStudio ? 'rgba(255,255,255,0.65)' : 'var(--text-muted)',
+                  color: (isStudio || isTeam) ? 'rgba(255,255,255,0.65)' : 'var(--text-muted)',
                 }}>
                   {plan.tagline}
                 </p>
@@ -309,7 +325,7 @@ export default function PricingModal({ currentPlan, workspaceSlug: _workspaceSlu
                 {/* Divider */}
                 <div style={{
                   height: 1, marginBottom: 16,
-                  background: isStudio ? 'rgba(255,255,255,0.12)' : 'var(--divider)',
+                  background: (isStudio || isTeam) ? 'rgba(255,255,255,0.12)' : 'var(--divider)',
                 }} />
 
                 {/* Bullets */}
@@ -318,13 +334,13 @@ export default function PricingModal({ currentPlan, workspaceSlug: _workspaceSlu
                     <li key={bullet} style={{ display: 'flex', alignItems: 'flex-start', gap: 9 }}>
                       <span style={{
                         fontSize: 12, fontWeight: 800, lineHeight: 1.5, flexShrink: 0,
-                        color: isStudio ? 'rgba(255,255,255,0.90)' : '#22c55e',
+                        color: (isStudio || isTeam) ? 'rgba(255,255,255,0.90)' : '#22c55e',
                       }}>
                         ✓
                       </span>
                       <span style={{
                         fontSize: 12, lineHeight: 1.5,
-                        color: isStudio ? 'rgba(255,255,255,0.80)' : 'var(--text-dim)',
+                        color: (isStudio || isTeam) ? 'rgba(255,255,255,0.80)' : 'var(--text-dim)',
                       }}>
                         {bullet}
                       </span>
@@ -336,8 +352,8 @@ export default function PricingModal({ currentPlan, workspaceSlug: _workspaceSlu
                 {isCurrent ? (
                   <button disabled style={{
                     width: '100%', padding: '11px 0', borderRadius: 10, border: 'none',
-                    background: isStudio ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.06)',
-                    color: isStudio ? 'rgba(255,255,255,0.50)' : 'var(--text-muted)',
+                    background: (isStudio || isTeam) ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.06)',
+                    color: (isStudio || isTeam) ? 'rgba(255,255,255,0.50)' : 'var(--text-muted)',
                     fontSize: 13, fontWeight: 600, cursor: 'default',
                   }}>
                     Current plan
@@ -360,6 +376,8 @@ export default function PricingModal({ currentPlan, workspaceSlug: _workspaceSlu
                       transition: 'opacity 0.15s, transform 0.12s',
                       ...(isStudio
                         ? { background: '#fff', color: '#4f46e5', boxShadow: '0 4px 16px rgba(0,0,0,0.18)' }
+                        : isTeam
+                        ? { background: '#fff', color: '#0f766e', boxShadow: '0 4px 16px rgba(0,0,0,0.18)' }
                         : { background: 'rgba(99,102,241,0.10)', color: 'var(--accent)', border: '1px solid rgba(99,102,241,0.20)' }
                       ),
                       opacity: isLoading ? 0.7 : 1,

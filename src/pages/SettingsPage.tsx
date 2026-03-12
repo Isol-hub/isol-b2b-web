@@ -108,7 +108,7 @@ const PLAN_COLORS: Record<string, { color: string; bg: string; border: string }>
   free:   { color: 'var(--text-muted)', bg: 'rgba(0,0,0,0.05)', border: 'rgba(0,0,0,0.10)' },
   pro:    { color: '#16a34a',           bg: 'rgba(34,197,94,0.08)',  border: 'rgba(34,197,94,0.20)'  },
   studio: { color: 'var(--accent)',     bg: 'rgba(99,102,241,0.08)', border: 'rgba(99,102,241,0.20)' },
-  team:   { color: '#d97706',           bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.20)' },
+  team:   { color: '#0f766e',           bg: 'rgba(13,148,136,0.08)', border: 'rgba(13,148,136,0.22)' },
 }
 
 const PLAN_NEXT_FEATURES: Record<string, string[]> = {
@@ -499,7 +499,7 @@ export default function SettingsPage() {
                       background: planColors.bg, border: `1px solid ${planColors.border}`,
                       display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20,
                     }}>
-                      {{ pro: '⚡', studio: '✦', team: '👥' }[currentPlan] ?? '●'}
+                      {{ pro: '⚡', studio: '✦', team: '⬡' }[currentPlan] ?? '●'}
                     </div>
                   </div>
 
