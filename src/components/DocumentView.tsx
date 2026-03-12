@@ -47,6 +47,8 @@ interface Props {
   isHost?: boolean
   onDeleteComment?: (commentId: number, lineIndex: number) => Promise<void>
   onEditComment?: (commentId: number, lineIndex: number, newBody: string) => Promise<void>
+  // Override banner lines (viewer mode: supply pre-translated lines instead of using transcript)
+  bannerOverride?: { current: string; previous: string }
 }
 
 interface MarginNoteItem {
@@ -215,6 +217,7 @@ export default function DocumentView({
   sessionStartMs, sessionEndMs,
   highlights, onAddHighlight, onRemoveHighlight,
   isHost, onDeleteComment, onEditComment,
+  bannerOverride,
 }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
@@ -408,8 +411,8 @@ export default function DocumentView({
       {!hideBanner && (
         <div style={{ flexShrink: 0, padding: '16px 24px', borderBottom: timelineSegments.length > 0 ? 'none' : '1px solid var(--divider)', background: 'var(--surface-1)' }}>
           <LiveBanner
-            currentLine={currentLine}
-            previousLine={transcript[transcript.length - 1]?.text ?? ''}
+            currentLine={bannerOverride ? bannerOverride.current : currentLine}
+            previousLine={bannerOverride ? bannerOverride.previous : (transcript[transcript.length - 1]?.text ?? '')}
             isActive={isActive}
           />
         </div>

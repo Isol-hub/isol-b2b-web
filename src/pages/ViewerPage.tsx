@@ -18,6 +18,7 @@ export default function ViewerPage() {
   const [currentLine, setCurrentLine] = useState('')
   const [transcript, setTranscript] = useState<TranscriptLine[]>([])
   const [translatedLines, setTranslatedLines] = useState<Map<number, string>>(new Map())
+  const [viewerBanner, setViewerBanner] = useState<{ current: string; previous: string }>({ current: '', previous: '' })
   const translateQueueRef = useRef<number[]>([])
   const translateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [joined, setJoined] = useState(false)
@@ -206,6 +207,16 @@ export default function ViewerPage() {
     translateTimerRef.current = setTimeout(flushTranslateQueue, 600)
   }, [flushTranslateQueue])
 
+  // Update viewer banner only when the latest line has been translated (never show host language)
+  useEffect(() => {
+    const lastIdx = transcript.length - 1
+    if (lastIdx < 0) return
+    const lastTranslated = translatedLines.get(lastIdx)
+    if (!lastTranslated) return
+    const prevTranslated = lastIdx > 0 ? (translatedLines.get(lastIdx - 1) ?? '') : ''
+    setViewerBanner({ current: lastTranslated, previous: prevTranslated })
+  }, [translatedLines, transcript.length])
+
   const wssUrl = import.meta.env.VITE_WSS_URL ?? 'wss://api.isol.live/audio'
   const targetLangRef = useRef(targetLang)
   useEffect(() => {
@@ -213,6 +224,7 @@ export default function ViewerPage() {
     setAiNotes(undefined)
     notesAbortRef.current?.abort()
     notesRunningRef.current = false
+    setViewerBanner({ current: '', previous: '' })
   }, [targetLang])
 
   const handleMessage = useCallback((msg: SubtitleMessage) => {
@@ -535,6 +547,7 @@ export default function ViewerPage() {
             <DocumentView
               transcript={displayTranscript}
               currentLine=""
+              bannerOverride={viewerBanner}
               isActive={isActive}
               targetLang={targetLang}
               aiFormatted={aiFormatted}
