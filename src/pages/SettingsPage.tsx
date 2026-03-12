@@ -64,11 +64,25 @@ const PLAN_COLORS: Record<string, { color: string; bg: string; border: string }>
   team:   { color: '#d97706', bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.20)' },
 }
 
-const PLAN_DESCRIPTIONS: Record<string, string> = {
-  free:   'Limited to 3 sessions total, 15 min each, 1 language.',
-  pro:    '30 sessions/month, 2 hr max, 40+ languages, AI features.',
-  studio: 'Unlimited sessions & duration, priority processing, all AI features.',
-  team:   'Everything in Studio, API access, up to 5 seats.',
+const PLAN_UNLOCKS: Record<string, { icon: string; label: string }[]> = {
+  free: [
+    { icon: '∞', label: 'Unlimited sessions' },
+    { icon: '🌐', label: '40+ languages' },
+    { icon: '✦', label: 'AI notes & documents' },
+    { icon: '🔗', label: 'Share links' },
+    { icon: '⚡', label: 'Priority processing' },
+  ],
+  pro: [
+    { icon: '∞', label: 'Unlimited sessions' },
+    { icon: '∞', label: 'No time limits' },
+    { icon: '⚡', label: 'Priority processing' },
+    { icon: '🔗', label: 'Unlimited share links' },
+  ],
+  studio: [
+    { icon: '🔑', label: 'API access' },
+    { icon: '👥', label: 'Up to 5 seats' },
+    { icon: '📊', label: 'Team analytics' },
+  ],
 }
 
 const ENDPOINT_LABELS: Record<string, string> = {
@@ -270,71 +284,217 @@ export default function SettingsPage() {
             </div>
 
             {/* Billing */}
-            <Section title="Billing & Plan">
+            <div style={{ marginBottom: 24 }}>
+              {/* Section label */}
+              <p style={{
+                fontSize: 11, fontWeight: 700, letterSpacing: '0.08em',
+                textTransform: 'uppercase', color: 'var(--text-muted)',
+                margin: '0 0 10px',
+              }}>
+                Billing & Plan
+              </p>
 
               {billingSuccess && (
                 <div style={{
-                  marginBottom: 16, padding: '10px 14px',
+                  marginBottom: 12, padding: '10px 16px',
                   background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.20)',
-                  borderRadius: 8, fontSize: 13, color: '#16a34a', fontWeight: 600,
+                  borderRadius: 10, fontSize: 13, color: '#16a34a', fontWeight: 600,
                 }}>
                   ✓ Plan activated! Your workspace has been upgraded.
                 </div>
               )}
 
-              <Field label="Current plan">
-                <span style={{
-                  fontSize: 12, fontWeight: 700, letterSpacing: '0.05em',
-                  textTransform: 'uppercase',
-                  color: planColors.color,
-                  background: planColors.bg,
-                  border: `1px solid ${planColors.border}`,
-                  padding: '3px 10px', borderRadius: 6,
+              {/* Free plan — upsell card */}
+              {!isPaid && (
+                <div style={{
+                  position: 'relative',
+                  borderRadius: 16,
+                  border: '1px solid rgba(99,102,241,0.30)',
+                  background: 'linear-gradient(145deg, rgba(99,102,241,0.10) 0%, rgba(139,92,246,0.06) 60%, rgba(0,0,0,0.02) 100%)',
+                  overflow: 'hidden',
+                  padding: '28px 28px 24px',
                 }}>
-                  {currentPlan}
-                </span>
-              </Field>
+                  {/* Glow orb top-right */}
+                  <div style={{
+                    position: 'absolute', top: -60, right: -60,
+                    width: 200, height: 200,
+                    background: 'radial-gradient(circle, rgba(139,92,246,0.18) 0%, transparent 70%)',
+                    pointerEvents: 'none',
+                  }} />
 
-              <p style={{ fontSize: 13, color: 'var(--text-dim)', margin: '0 0 16px', lineHeight: 1.6 }}>
-                {PLAN_DESCRIPTIONS[currentPlan]}
-              </p>
+                  {/* Badge */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                    <span style={{
+                      fontSize: 10, fontWeight: 800, letterSpacing: '0.1em',
+                      textTransform: 'uppercase',
+                      background: 'rgba(99,102,241,0.14)',
+                      color: 'var(--accent)',
+                      border: '1px solid rgba(99,102,241,0.25)',
+                      padding: '3px 10px', borderRadius: 999,
+                    }}>
+                      Free plan
+                    </span>
+                    <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>3 sessions remaining (lifetime)</span>
+                  </div>
 
-              {renewalDate && (
-                <Field label="Renews on">
-                  <span style={{ fontSize: 13, color: 'var(--text-dim)' }}>{renewalDate}</span>
-                </Field>
-              )}
-
-              {/* AI usage */}
-              {Object.entries(usageByMonth).length > 0 && (
-                <div style={{ marginBottom: 16 }}>
-                  <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                    AI usage
+                  {/* Headline */}
+                  <h3 style={{
+                    fontSize: 22, fontWeight: 800, letterSpacing: '-0.03em',
+                    color: 'var(--text)', margin: '0 0 6px', lineHeight: 1.2,
+                  }}>
+                    Unlock the full ISOL experience
+                  </h3>
+                  <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: '0 0 20px', lineHeight: 1.5 }}>
+                    Professional interpreters use ISOL every day — remove every limit and work without boundaries.
                   </p>
-                  {Object.entries(usageByMonth).map(([month, endpoints]) => (
-                    <div key={month} style={{ marginBottom: 12 }}>
-                      <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6 }}>{month}</p>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                        {Object.entries(endpoints).map(([ep, count]) => (
-                          <div key={ep} style={{
-                            background: 'var(--surface-1)',
-                            border: '1px solid var(--divider)',
-                            borderRadius: 6, padding: '4px 10px',
-                            fontSize: 12,
-                          }}>
-                            <span style={{ color: 'var(--text-muted)' }}>{ENDPOINT_LABELS[ep] ?? ep}: </span>
-                            <span style={{ color: 'var(--text)', fontWeight: 600 }}>{count.toLocaleString()}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
+
+                  {/* Feature chips */}
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 24 }}>
+                    {PLAN_UNLOCKS.free.map(f => (
+                      <span key={f.label} style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 6,
+                        fontSize: 12, fontWeight: 600,
+                        background: 'rgba(255,255,255,0.06)',
+                        border: '1px solid rgba(255,255,255,0.10)',
+                        color: 'var(--text-dim)',
+                        padding: '5px 12px', borderRadius: 999,
+                      }}>
+                        <span style={{ fontSize: 13 }}>{f.icon}</span>
+                        {f.label}
+                      </span>
+                    ))}
+                  </div>
+
+                  {/* CTA */}
+                  <button
+                    onClick={() => setShowPricing(true)}
+                    style={{
+                      width: '100%',
+                      padding: '13px 0',
+                      borderRadius: 12,
+                      border: 'none',
+                      background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                      color: '#fff',
+                      fontSize: 15,
+                      fontWeight: 700,
+                      letterSpacing: '-0.01em',
+                      cursor: 'pointer',
+                      boxShadow: '0 4px 24px rgba(99,102,241,0.40)',
+                      transition: 'box-shadow 0.2s, transform 0.15s',
+                    }}
+                    onMouseEnter={e => {
+                      (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 6px 32px rgba(99,102,241,0.55)'
+                      ;(e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-1px)'
+                    }}
+                    onMouseLeave={e => {
+                      (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 4px 24px rgba(99,102,241,0.40)'
+                      ;(e.currentTarget as HTMLButtonElement).style.transform = 'translateY(0)'
+                    }}
+                  >
+                    Start your subscription →
+                  </button>
+
+                  {/* Trust */}
+                  <p style={{ fontSize: 11, color: 'var(--text-muted)', textAlign: 'center', marginTop: 12, marginBottom: 0 }}>
+                    From $15/mo · Cancel anytime · 14-day money-back guarantee
+                  </p>
                 </div>
               )}
 
-              <div style={{ paddingTop: 16, borderTop: '1px solid var(--divider)', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                {isPaid ? (
-                  <>
+              {/* Paid plan — status card */}
+              {isPaid && (
+                <div style={{
+                  borderRadius: 16,
+                  border: `1px solid ${planColors.border}`,
+                  background: planColors.bg,
+                  padding: '24px 24px 20px',
+                }}>
+                  {/* Plan header */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                    <div>
+                      <span style={{
+                        fontSize: 10, fontWeight: 800, letterSpacing: '0.10em',
+                        textTransform: 'uppercase',
+                        color: planColors.color,
+                        background: planColors.bg,
+                        border: `1px solid ${planColors.border}`,
+                        padding: '3px 10px', borderRadius: 999,
+                      }}>
+                        {currentPlan}
+                      </span>
+                      <p style={{ fontSize: 18, fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--text)', margin: '10px 0 2px' }}>
+                        {{
+                          pro: 'Pro plan',
+                          studio: 'Studio plan',
+                          team: 'Team plan',
+                        }[currentPlan] ?? currentPlan}
+                      </p>
+                      {renewalDate && (
+                        <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>
+                          Renews {renewalDate}
+                        </p>
+                      )}
+                    </div>
+                    <div style={{
+                      width: 48, height: 48, borderRadius: 12,
+                      background: planColors.bg,
+                      border: `1px solid ${planColors.border}`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 22,
+                    }}>
+                      {currentPlan === 'pro' ? '⚡' : currentPlan === 'studio' ? '✦' : '👥'}
+                    </div>
+                  </div>
+
+                  {/* What's included chips */}
+                  {PLAN_UNLOCKS[currentPlan] && PLAN_UNLOCKS[currentPlan].length > 0 && (
+                    <div style={{ marginBottom: 20 }}>
+                      <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.06em', textTransform: 'uppercase', margin: '0 0 10px' }}>
+                        Not yet unlocked
+                      </p>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                        {PLAN_UNLOCKS[currentPlan].map(f => (
+                          <span key={f.label} style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 6,
+                            fontSize: 12, fontWeight: 500,
+                            color: 'var(--text-muted)',
+                            background: 'rgba(255,255,255,0.04)',
+                            border: '1px solid rgba(255,255,255,0.08)',
+                            padding: '4px 10px', borderRadius: 999,
+                          }}>
+                            {f.icon} {f.label}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* AI usage */}
+                  {Object.entries(usageByMonth).length > 0 && (
+                    <div style={{ marginBottom: 20 }}>
+                      <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                        AI usage
+                      </p>
+                      {Object.entries(usageByMonth).map(([month, endpoints]) => (
+                        <div key={month} style={{ marginBottom: 8 }}>
+                          <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6 }}>{month}</p>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                            {Object.entries(endpoints).map(([ep, count]) => (
+                              <div key={ep} style={{
+                                background: 'var(--surface-1)', border: '1px solid var(--divider)',
+                                borderRadius: 6, padding: '4px 10px', fontSize: 12,
+                              }}>
+                                <span style={{ color: 'var(--text-muted)' }}>{ENDPOINT_LABELS[ep] ?? ep}: </span>
+                                <span style={{ color: 'var(--text)', fontWeight: 600 }}>{count.toLocaleString()}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                     <button
                       onClick={handleManageBilling}
                       disabled={billingLoading}
@@ -348,26 +508,18 @@ export default function SettingsPage() {
                         onClick={() => setShowPricing(true)}
                         style={{
                           padding: '8px 20px', fontSize: 13, fontWeight: 600,
-                          borderRadius: 8, border: '1px solid var(--border)',
-                          background: 'transparent', color: 'var(--accent)',
+                          borderRadius: 8, border: `1px solid ${planColors.border}`,
+                          background: 'transparent', color: planColors.color,
                           cursor: 'pointer',
                         }}
                       >
-                        View upgrade options
+                        Upgrade plan
                       </button>
                     )}
-                  </>
-                ) : (
-                  <button
-                    onClick={() => setShowPricing(true)}
-                    className="btn-primary"
-                    style={{ width: 'auto', padding: '8px 20px', fontSize: 13 }}
-                  >
-                    Upgrade plan →
-                  </button>
-                )}
-              </div>
-            </Section>
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* Support */}
             <Section title="Support">
