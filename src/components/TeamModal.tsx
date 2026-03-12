@@ -48,6 +48,7 @@ export default function TeamModal({ workspaceSlug, onClose }: Props) {
   const [removingMember, setRemovingMember] = useState<string | null>(null)
   const [apiKeyLoading, setApiKeyLoading] = useState(false)
   const [apiKeyCopied, setApiKeyCopied] = useState(false)
+  const [apiKeyError, setApiKeyError] = useState<string | null>(null)
 
   useEffect(() => {
     const token = getToken()
@@ -118,18 +119,22 @@ export default function TeamModal({ workspaceSlug, onClose }: Props) {
     const token = getToken()
     if (!token) return
     setApiKeyLoading(true)
+    setApiKeyError(null)
     try {
       const res = await fetch('/api/workspace/apikey', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ action }),
       })
+      const data = await res.json() as { api_key?: string | null; error?: string }
       if (res.ok) {
-        const { api_key } = await res.json() as { api_key: string | null }
-        setApiKey(api_key)
+        setApiKey(data.api_key ?? null)
+      } else {
+        setApiKeyError(data.error ?? `Error ${res.status}`)
       }
-    } catch { /* silent */ }
-    finally { setApiKeyLoading(false) }
+    } catch (e) {
+      setApiKeyError(e instanceof Error ? e.message : 'Network error')
+    } finally { setApiKeyLoading(false) }
   }
 
   const handleCopyKey = () => {
@@ -392,23 +397,31 @@ export default function TeamModal({ workspaceSlug, onClose }: Props) {
                             cursor: 'pointer', opacity: apiKeyLoading ? 0.5 : 1,
                           }}
                         >
-                          Revoke
+                          {apiKeyLoading ? '…' : 'Revoke'}
                         </button>
+                        {apiKeyError && (
+                          <p style={{ fontSize: 11, color: '#ef4444', margin: '8px 0 0' }}>{apiKeyError}</p>
+                        )}
                       </>
                     ) : (
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-                        <div>
-                          <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)', margin: '0 0 3px' }}>No API key</p>
-                          <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: 0 }}>Generate a key to integrate with the ISOL REST API</p>
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                          <div>
+                            <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)', margin: '0 0 3px' }}>No API key</p>
+                            <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: 0 }}>Generate a key to integrate with the ISOL REST API</p>
+                          </div>
+                          <button
+                            onClick={() => handleApiKey('generate')}
+                            disabled={apiKeyLoading}
+                            className="btn-primary"
+                            style={{ width: 'auto', padding: '8px 16px', fontSize: 13, flexShrink: 0, opacity: apiKeyLoading ? 0.5 : 1 }}
+                          >
+                            {apiKeyLoading ? '…' : 'Generate'}
+                          </button>
                         </div>
-                        <button
-                          onClick={() => handleApiKey('generate')}
-                          disabled={apiKeyLoading}
-                          className="btn-primary"
-                          style={{ width: 'auto', padding: '8px 16px', fontSize: 13, flexShrink: 0, opacity: apiKeyLoading ? 0.5 : 1 }}
-                        >
-                          {apiKeyLoading ? '…' : 'Generate'}
-                        </button>
+                        {apiKeyError && (
+                          <p style={{ fontSize: 11, color: '#ef4444', margin: '8px 0 0' }}>{apiKeyError}</p>
+                        )}
                       </div>
                     )}
                   </div>
