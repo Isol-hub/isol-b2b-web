@@ -427,44 +427,51 @@ export default function DocumentView({
         </div>
       )}
 
-      {/* ━━ MODE TAB BAR — always visible, sticky ━━━━━━━━━━━━━ */}
+      {/* ━━ MODE TAB BAR — segmented control ━━━━━━━━━━━━━━━━━ */}
       <div style={{
         flexShrink: 0,
-        display: 'flex', alignItems: 'center', gap: 6,
+        display: 'flex', alignItems: 'center',
         padding: '10px 16px',
         borderBottom: '1px solid var(--divider)',
         background: 'var(--surface-1)',
       }}>
-        {(['raw', 'ai', 'notes'] as ViewMode[]).map(mode => {
-          const { label, color } = TAB_META[mode]
-          const active = viewMode === mode
-          const available = tabAvailable[mode]
-          const loading = tabLoading[mode]
-          return (
-            <button
-              key={mode}
-              onClick={() => available && onViewModeChange(mode)}
-              style={{
-                height: 30, padding: '0 14px',
-                borderRadius: 999,
-                border: active ? 'none' : `1px solid ${color}38`,
-                background: active ? color : 'transparent',
-                color: active ? '#fff' : color,
-                fontSize: 12, fontWeight: active ? 700 : 500,
-                cursor: available ? 'pointer' : 'default',
-                opacity: !available && !loading ? 0.35 : 1,
-                display: 'flex', alignItems: 'center', gap: 5,
-                transition: 'all 0.15s',
-                userSelect: 'none', whiteSpace: 'nowrap',
-              }}
-              onMouseEnter={e => { if (available && !active) (e.currentTarget as HTMLElement).style.background = `${color}14` }}
-              onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.background = 'transparent' }}
-            >
-              {loading && <span style={{ width: 7, height: 7, border: `1.5px solid ${color}55`, borderTopColor: color, borderRadius: '50%', animation: 'spin 0.9s linear infinite', flexShrink: 0 }} />}
-              {label}
-            </button>
-          )
-        })}
+        <div style={{
+          display: 'inline-flex',
+          background: 'var(--surface-2, rgba(0,0,0,0.06))',
+          borderRadius: 10,
+          padding: 3,
+          gap: 1,
+        }}>
+          {(['raw', 'ai', 'notes'] as ViewMode[]).map(mode => {
+            const { label, color } = TAB_META[mode]
+            const active = viewMode === mode
+            const available = tabAvailable[mode]
+            const loading = tabLoading[mode]
+            return (
+              <button
+                key={mode}
+                onClick={() => available && onViewModeChange(mode)}
+                style={{
+                  height: 28, padding: '0 14px',
+                  borderRadius: 7,
+                  border: 'none',
+                  background: active ? 'var(--canvas)' : 'transparent',
+                  color: active ? color : 'var(--text-muted)',
+                  fontSize: 12, fontWeight: active ? 700 : 500,
+                  cursor: available ? 'pointer' : 'default',
+                  opacity: !available && !loading ? 0.35 : 1,
+                  display: 'flex', alignItems: 'center', gap: 5,
+                  boxShadow: active ? '0 1px 4px rgba(0,0,0,0.10), 0 0 0 0.5px rgba(0,0,0,0.06)' : 'none',
+                  transition: 'background 0.15s, box-shadow 0.15s, color 0.15s',
+                  userSelect: 'none', whiteSpace: 'nowrap',
+                }}
+              >
+                {loading && <span style={{ width: 7, height: 7, border: `1.5px solid ${color}55`, borderTopColor: color, borderRadius: '50%', animation: 'spin 0.9s linear infinite', flexShrink: 0 }} />}
+                {label}
+              </button>
+            )
+          })}
+        </div>
       </div>
 
       {/* ━━ DOCUMENT SURFACE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
