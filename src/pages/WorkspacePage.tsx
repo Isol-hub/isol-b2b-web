@@ -1477,17 +1477,31 @@ export default function WorkspacePage() {
                 fontSize: 12,
                 fontWeight: 700,
                 cursor: 'pointer',
-                border: 'none',
+                border: workspacePlan === 'free' ? 'none'
+                  : workspacePlan === 'team' ? '1px solid rgba(245,158,11,0.35)'
+                  : '1px solid rgba(99,102,241,0.25)',
                 background: workspacePlan === 'free'
                   ? 'linear-gradient(135deg, #F59E0B 0%, #F97316 100%)'
+                  : workspacePlan === 'team'
+                  ? 'linear-gradient(135deg, #92400e 0%, #b45309 50%, #d97706 100%)'
                   : 'rgba(99,102,241,0.10)',
-                color: workspacePlan === 'free' ? '#fff' : 'var(--accent)',
+                color: workspacePlan === 'free' ? '#fff'
+                  : workspacePlan === 'team' ? '#fef3c7'
+                  : 'var(--accent)',
                 letterSpacing: '0.01em',
-                boxShadow: workspacePlan === 'free' ? '0 2px 12px rgba(245,158,11,0.35)' : 'none',
+                boxShadow: workspacePlan === 'free'
+                  ? '0 2px 12px rgba(245,158,11,0.35)'
+                  : workspacePlan === 'team'
+                  ? '0 2px 14px rgba(217,119,6,0.40), inset 0 1px 0 rgba(255,255,255,0.10)'
+                  : 'none',
                 transition: 'all 0.15s',
               }}
             >
-              {workspacePlan === 'free' ? <><span>✦</span> Upgrade</> : <><span style={{ fontSize: 10 }}>●</span> {workspacePlan.charAt(0).toUpperCase() + workspacePlan.slice(1)}</>}
+              {workspacePlan === 'free'
+                ? <><span>✦</span> Upgrade</>
+                : workspacePlan === 'team'
+                ? <><span style={{ fontSize: 11 }}>✦</span> Team</>
+                : <><span style={{ fontSize: 10 }}>●</span> {workspacePlan.charAt(0).toUpperCase() + workspacePlan.slice(1)}</>}
             </button>
 
           </div>
