@@ -190,10 +190,9 @@ export default function SharedSessionPage() {
   const formatDate = (ts: number) =>
     new Date(ts).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
 
-  const activeTabStyle = {
-    background: 'var(--accent)',
-    color: '#fff',
-    borderColor: 'var(--accent)',
+  const TAB_COLORS: Record<'ai' | 'transcript', string> = {
+    ai: '#6366F1',
+    transcript: '#64748B',
   }
 
   const totalLineComments = comments.filter(c => c.line_index !== null).length
@@ -292,30 +291,47 @@ export default function SharedSessionPage() {
               {/* Content */}
               {session.ai_formatted_text ? (
                 <>
-                  {/* Tabs */}
-                  <div style={{ display: 'flex', gap: 6, marginBottom: 24 }}>
-                    <button
-                      onClick={() => setActiveTab('ai')}
-                      className="btn-icon"
-                      style={{ fontSize: 12, padding: '5px 12px', height: 30, ...(activeTab === 'ai' ? activeTabStyle : {}) }}
-                    >
-                      ✦ AI Structured
-                    </button>
-                    <button
-                      onClick={() => setActiveTab('transcript')}
-                      className="btn-icon"
-                      style={{ fontSize: 12, padding: '5px 12px', height: 30, ...(activeTab === 'transcript' ? activeTabStyle : {}) }}
-                    >
-                      Transcript
-                      {totalLineComments > 0 && (
-                        <span style={{
-                          fontSize: 10, background: 'rgba(99,102,241,0.12)',
-                          color: 'var(--accent)', borderRadius: 4, padding: '1px 5px', marginLeft: 2,
-                        }}>
-                          {totalLineComments}
-                        </span>
-                      )}
-                    </button>
+                  {/* Tabs — segmented control */}
+                  <div style={{ marginBottom: 24 }}>
+                    <div style={{
+                      display: 'inline-flex',
+                      background: 'var(--surface-2, rgba(0,0,0,0.06))',
+                      borderRadius: 10, padding: 3, gap: 1,
+                    }}>
+                      {(['ai', 'transcript'] as const).map(tab => {
+                        const active = activeTab === tab
+                        const color = TAB_COLORS[tab]
+                        return (
+                          <button
+                            key={tab}
+                            onClick={() => setActiveTab(tab)}
+                            style={{
+                              height: 28, padding: '0 14px',
+                              borderRadius: 7, border: 'none',
+                              background: active ? 'var(--canvas)' : 'transparent',
+                              color: active ? color : 'var(--text-muted)',
+                              fontSize: 12, fontWeight: active ? 700 : 500,
+                              cursor: 'pointer',
+                              display: 'flex', alignItems: 'center', gap: 5,
+                              boxShadow: active ? '0 1px 4px rgba(0,0,0,0.10), 0 0 0 0.5px rgba(0,0,0,0.06)' : 'none',
+                              transition: 'background 0.15s, box-shadow 0.15s, color 0.15s',
+                              userSelect: 'none', whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {tab === 'ai' ? '✦ AI Structured' : 'Transcript'}
+                            {tab === 'transcript' && totalLineComments > 0 && (
+                              <span style={{
+                                fontSize: 10, background: active ? 'rgba(100,116,139,0.15)' : 'rgba(99,102,241,0.10)',
+                                color: active ? color : 'var(--accent)',
+                                borderRadius: 4, padding: '1px 5px',
+                              }}>
+                                {totalLineComments}
+                              </span>
+                            )}
+                          </button>
+                        )
+                      })}
+                    </div>
                   </div>
 
                   {/* AI tab */}
