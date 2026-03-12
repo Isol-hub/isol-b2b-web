@@ -1,30 +1,41 @@
 import { useNavigate } from 'react-router-dom'
 import { getSession } from '../lib/auth'
-import HeroQuotes from '../components/HeroQuotes'
 
-const LP_CSS = `
-@keyframes lp-float  { 0%,100%{transform:translateY(0px)} 50%{transform:translateY(-8px)} }
-@keyframes lp-fadein { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
-@keyframes lp-pulse  { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.85)} }
-.lp-card-hover { transition:transform .2s ease,box-shadow .2s ease; }
-.lp-card-hover:hover { transform:translateY(-4px); box-shadow:0 24px 60px rgba(0,0,0,.18) !important; }
-.lp-btn-hero {
-  display:inline-flex; align-items:center; gap:8px;
-  background:#6366F1; color:#fff; border:none;
-  border-radius:999px; font-size:15px; font-weight:700;
-  padding:0 32px; height:52px; cursor:pointer;
-  box-shadow:0 8px 32px rgba(99,102,241,.45);
-  transition:opacity .15s,transform .1s,box-shadow .15s;
+const CSS = `
+@keyframes ap-pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.3;transform:scale(.8)} }
+@keyframes ap-in    { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
+.ap-nav-link { font-size:13px;color:#1d1d1f;text-decoration:none;opacity:.72;transition:opacity .15s; }
+.ap-nav-link:hover { opacity:1; }
+.ap-cta-pill {
+  display:inline-flex;align-items:center;gap:6px;
+  background:#0071e3;color:#fff;border:none;
+  border-radius:980px;font-size:17px;font-weight:600;
+  padding:0 26px;height:52px;cursor:pointer;
+  transition:background .15s,transform .1s;
   letter-spacing:-.01em;
 }
-.lp-btn-hero:hover { opacity:.9; transform:translateY(-2px); box-shadow:0 12px 40px rgba(99,102,241,.6); }
+.ap-cta-pill:hover { background:#0077ed;transform:scale(1.02); }
+.ap-cta-pill.sm { font-size:14px;height:42px;padding:0 20px; }
+.ap-cta-ghost {
+  display:inline-flex;align-items:center;gap:4px;
+  background:none;border:none;cursor:pointer;
+  color:#0071e3;font-size:17px;font-weight:400;
+  letter-spacing:-.01em;
+  transition:opacity .15s;
+}
+.ap-cta-ghost:hover { opacity:.7; }
+.ap-screen {
+  border-radius:16px;
+  box-shadow:0 32px 80px rgba(0,0,0,.11),0 0 0 1px rgba(0,0,0,.06);
+  overflow:hidden;display:block;width:100%;
+}
+.ap-phone {
+  background:#1c1c1e;border-radius:44px;
+  padding:14px 12px;
+  box-shadow:0 40px 80px rgba(0,0,0,.22),0 0 0 1px rgba(255,255,255,.1);
+  width:220px;
+}
 `
-
-const LANG_CARDS = [
-  { flag: '🇫🇷', lang: 'French',   src: '/screens/viewer-fr.png', quote: 'j\'étais dos au mur. Je me suis dit…' },
-  { flag: '🇯🇵', lang: 'Japanese', src: '/screens/viewer-jp.png', quote: '前に出ることができたのに、知ってるでしょ？' },
-  { flag: '🇰🇷', lang: 'Russian',  src: '/screens/mobile-ru.png', quote: 'кто-то, о ком я думал. Не ска…', mobile: true },
-]
 
 export default function LandingPage() {
   const navigate = useNavigate()
@@ -32,325 +43,307 @@ export default function LandingPage() {
   const goCTA = () => (session ? navigate(`/${session.workspaceSlug}`) : navigate('/login'))
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)', color: 'var(--text)', fontFamily: 'var(--font-ui)', overflowX: 'hidden' }}>
-      <style>{LP_CSS}</style>
+    <div style={{ minHeight: '100vh', background: '#fff', color: '#1d1d1f', fontFamily: '-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",sans-serif', overflowX: 'hidden' }}>
+      <style>{CSS}</style>
 
       {/* ── NAV ─────────────────────────────────────────────────── */}
       <nav style={{
         position: 'sticky', top: 0, zIndex: 200,
-        background: 'rgba(7,7,14,0.88)',
-        backdropFilter: 'blur(16px)',
-        WebkitBackdropFilter: 'blur(16px)',
-        borderBottom: '1px solid rgba(255,255,255,0.07)',
+        background: 'rgba(255,255,255,0.82)',
+        backdropFilter: 'saturate(180%) blur(20px)',
+        WebkitBackdropFilter: 'saturate(180%) blur(20px)',
+        borderBottom: '1px solid rgba(0,0,0,0.08)',
         display: 'flex', alignItems: 'center',
-        padding: '0 clamp(20px,4vw,48px)', height: 58,
+        padding: '0 40px', height: 52,
+        gap: 28,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginRight: 36 }}>
-          <div className="logo-mark" style={{ width: 26, height: 26 }}>
-            <span style={{ color: '#fff', fontWeight: 800, fontSize: 12 }}>i</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginRight: 8 }}>
+          <div className="logo-mark" style={{ width: 24, height: 24 }}>
+            <span style={{ color: '#fff', fontWeight: 800, fontSize: 11 }}>i</span>
           </div>
-          <span style={{ fontSize: 14, fontWeight: 700, letterSpacing: '-0.01em', color: '#fff' }}>ISOL</span>
+          <span style={{ fontSize: 15, fontWeight: 700, letterSpacing: '-0.01em' }}>ISOL</span>
         </div>
         <div style={{ flex: 1 }} />
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-          <button
-            onClick={() => navigate('/login')}
-            style={{ background: 'rgba(255,255,255,0.08)', color: '#fff', border: '1px solid rgba(255,255,255,0.14)', borderRadius: 999, fontSize: 13, fontWeight: 600, padding: '0 18px', height: 36, cursor: 'pointer', transition: 'background .15s' }}
-          >
-            Sign in
-          </button>
-          <button onClick={goCTA} className="lp-btn-hero" style={{ height: 36, fontSize: 13, padding: '0 22px' }}>
-            Start free
-          </button>
-        </div>
+        <button onClick={() => navigate('/login')} className="ap-nav-link" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
+          Sign in
+        </button>
+        <button onClick={goCTA} className="ap-cta-pill sm">
+          Start free
+        </button>
       </nav>
 
-      {/* ── HERO ─────────────────────────────────────────────────── */}
-      <section style={{
-        background: 'linear-gradient(165deg, #05050c 0%, #0d0c1e 60%, #0a0e1a 100%)',
-        padding: 'clamp(56px,8vw,100px) clamp(20px,4vw,56px) clamp(64px,9vw,112px)',
-        position: 'relative', overflow: 'hidden',
-      }}>
-        {/* Ambient glows */}
-        <div style={{ position: 'absolute', top: -120, left: '40%', width: 600, height: 600, borderRadius: '50%', background: 'radial-gradient(circle,rgba(99,102,241,.13) 0%,transparent 70%)', pointerEvents: 'none' }} />
-        <div style={{ position: 'absolute', bottom: -80, left: '15%', width: 400, height: 400, borderRadius: '50%', background: 'radial-gradient(circle,rgba(14,165,233,.08) 0%,transparent 70%)', pointerEvents: 'none' }} />
+      {/* ══════════════════════════════════════════════════════════
+          1. HERO
+      ══════════════════════════════════════════════════════════ */}
+      <section style={{ textAlign: 'center', padding: '88px 40px 0', background: '#fff' }}>
 
-        <div style={{ maxWidth: 1160, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(300px,1fr))', gap: 'clamp(48px,6vw,80px)', alignItems: 'center' }}>
+        <p style={{ fontSize: 13, fontWeight: 600, letterSpacing: '.04em', color: '#6366F1', marginBottom: 20 }}>
+          Real-time · Multilingual · AI-structured
+        </p>
 
-          {/* Left — copy */}
-          <div style={{ animation: 'lp-fadein .6s ease-out both' }}>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, background: 'rgba(99,102,241,.15)', border: '1px solid rgba(99,102,241,.28)', borderRadius: 999, padding: '5px 13px', marginBottom: 28 }}>
-              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22C55E', animation: 'lp-pulse 2s infinite', flexShrink: 0 }} />
-              <span style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,.8)', letterSpacing: '.06em' }}>LIVE · Real-time translation</span>
-            </div>
+        <h1 style={{
+          fontSize: 'clamp(48px,7.5vw,96px)',
+          fontWeight: 700, lineHeight: 1.04,
+          letterSpacing: '-0.04em',
+          marginBottom: 24,
+        }}>
+          Every word.<br />
+          <span style={{ color: '#6366F1' }}>Translated.</span> Live.
+        </h1>
 
-            <h1 style={{ fontSize: 'clamp(38px,5.5vw,66px)', fontWeight: 800, lineHeight: 1.07, letterSpacing: '-0.04em', marginBottom: 22, color: '#fff' }}>
-              Speak once.<br />
-              <span style={{ background: 'linear-gradient(90deg,#818cf8,#38bdf8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                Understood everywhere.
-              </span>
-            </h1>
+        <p style={{
+          fontSize: 'clamp(17px,2.2vw,21px)',
+          color: '#6e6e73', lineHeight: 1.65,
+          maxWidth: 560, margin: '0 auto 40px',
+          fontWeight: 400,
+        }}>
+          ISOL captures any live audio and delivers it as a real-time structured document — in every language your audience needs.
+        </p>
 
-            <p style={{ fontSize: 'clamp(15px,1.8vw,18px)', color: 'rgba(255,255,255,.55)', lineHeight: 1.75, maxWidth: 420, marginBottom: 38 }}>
-              ISOL turns any live audio into real-time captions and translation. One host, unlimited viewers — each reading in their own language.
-            </p>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 20, flexWrap: 'wrap', marginBottom: 72 }}>
+          <button onClick={goCTA} className="ap-cta-pill">
+            Start a session →
+          </button>
+          <button onClick={() => navigate('/login')} className="ap-cta-ghost">
+            Sign in <span style={{ fontSize: 18 }}>›</span>
+          </button>
+        </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', marginBottom: 22 }}>
-              <button onClick={goCTA} className="lp-btn-hero">
-                Start a session →
-              </button>
-              <span style={{ fontSize: 13, color: 'rgba(255,255,255,.35)' }}>No app, no install</span>
-            </div>
-
-            <HeroQuotes fontSize={13} />
-          </div>
-
-          {/* Right — product screenshot */}
-          <div style={{ position: 'relative', animation: 'lp-fadein .7s ease-out .1s both' }}>
-            {/* Main screenshot — browser mockup */}
-            <div className="lp-card-hover" style={{ borderRadius: 14, overflow: 'hidden', boxShadow: '0 40px 80px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.08)', background: '#1a1a2e' }}>
-              {/* Browser chrome */}
-              <div style={{ background: '#12121f', padding: '9px 14px', display: 'flex', alignItems: 'center', gap: 6, borderBottom: '1px solid rgba(255,255,255,.06)' }}>
-                {['#EF4444','#F59E0B','#22C55E'].map(c => (
-                  <span key={c} style={{ width: 9, height: 9, borderRadius: '50%', background: c, opacity: .45, flexShrink: 0 }} />
-                ))}
-                <span style={{ flex: 1, marginLeft: 8, background: 'rgba(255,255,255,.05)', borderRadius: 5, padding: '3px 10px', fontSize: 10, color: 'rgba(255,255,255,.3)', textAlign: 'center' }}>
-                  isolstudio.live
-                </span>
-              </div>
-              <img
-                src="/screens/host-it.png"
-                alt="ISOL Studio — live session in Italian"
-                style={{ width: '100%', display: 'block', height: 380, objectFit: 'cover', objectPosition: 'top' }}
-              />
-            </div>
-
-            {/* Floating viewer cards */}
-            <div style={{
-              position: 'absolute', bottom: -20, right: -16,
-              background: 'rgba(12,12,24,0.92)', backdropFilter: 'blur(12px)',
-              border: '1px solid rgba(255,255,255,0.12)', borderRadius: 12,
-              padding: '10px 14px',
-              animation: 'lp-float 4s ease-in-out infinite',
-              boxShadow: '0 16px 40px rgba(0,0,0,.5)',
-              minWidth: 180,
-            }}>
-              <p style={{ fontSize: 10, color: 'rgba(255,255,255,.35)', margin: '0 0 6px', fontWeight: 700, letterSpacing: '.08em' }}>🇫🇷 VIEWER — FRENCH</p>
-              <p style={{ fontSize: 13, color: 'rgba(255,255,255,.82)', margin: 0, lineHeight: 1.45, fontStyle: 'italic' }}>"j'étais dos au mur…"</p>
-            </div>
-
-            <div style={{
-              position: 'absolute', top: 40, right: -24,
-              background: 'rgba(12,12,24,0.92)', backdropFilter: 'blur(12px)',
-              border: '1px solid rgba(255,255,255,0.12)', borderRadius: 12,
-              padding: '10px 14px',
-              animation: 'lp-float 5.5s ease-in-out .8s infinite',
-              boxShadow: '0 16px 40px rgba(0,0,0,.5)',
-              minWidth: 200,
-            }}>
-              <p style={{ fontSize: 10, color: 'rgba(255,255,255,.35)', margin: '0 0 6px', fontWeight: 700, letterSpacing: '.08em' }}>🇯🇵 VIEWER — JAPANESE</p>
-              <p style={{ fontSize: 13, color: 'rgba(255,255,255,.82)', margin: 0, lineHeight: 1.45 }}>前に出ることができたのに</p>
-            </div>
-          </div>
+        {/* Hero screenshot — full width */}
+        <div style={{ maxWidth: 1080, margin: '0 auto', padding: '0 24px' }}>
+          <img
+            src="/screens/host-it.png"
+            alt="ISOL Studio live session — AI Notes in Italian"
+            className="ap-screen"
+            style={{ objectFit: 'cover', objectPosition: 'top', height: 'auto', maxHeight: 580 }}
+          />
         </div>
       </section>
 
-      {/* ── ONE SESSION, EVERY LANGUAGE ──────────────────────────── */}
-      <section style={{ padding: 'clamp(64px,9vw,110px) clamp(20px,4vw,48px)', background: 'var(--bg)' }}>
+      {/* ══════════════════════════════════════════════════════════
+          2. ANNOTATIONS FEATURE
+      ══════════════════════════════════════════════════════════ */}
+      <section style={{ background: '#f5f5f7', padding: 'clamp(80px,10vw,140px) 40px' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: 52 }}>
-            <p style={{ fontSize: 11, fontWeight: 800, letterSpacing: '.1em', color: 'var(--accent)', marginBottom: 12 }}>MULTILINGUAL · SIMULTANEOUS</p>
-            <h2 style={{ fontSize: 'clamp(28px,4vw,48px)', fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1.1, marginBottom: 16 }}>
-              One session.<br />Every viewer in their language.
+
+          {/* Section label */}
+          <div style={{ textAlign: 'center', marginBottom: 56 }}>
+            <p style={{ fontSize: 13, fontWeight: 600, letterSpacing: '.04em', color: '#6366F1', marginBottom: 16 }}>
+              COMMENTS & HIGHLIGHTS
+            </p>
+            <h2 style={{ fontSize: 'clamp(36px,5.5vw,72px)', fontWeight: 700, letterSpacing: '-0.04em', lineHeight: 1.05, marginBottom: 18 }}>
+              The full picture,<br />annotated.
             </h2>
-            <p style={{ fontSize: 16, color: 'var(--text-dim)', lineHeight: 1.7, maxWidth: 520, margin: '0 auto' }}>
-              Viewers join with a link and pick their language. Italian, French, Japanese, Russian — all live, simultaneously.
+            <p style={{ fontSize: 'clamp(16px,2vw,19px)', color: '#6e6e73', lineHeight: 1.65, maxWidth: 500, margin: '0 auto' }}>
+              Viewers annotate any line with handwritten-style comments, pinned directly in the margin — tied to the exact moment they were made.
             </p>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: 20 }}>
-            {LANG_CARDS.map(({ flag, lang, src, quote, mobile }) => (
-              <div
-                key={lang}
-                className="lp-card-hover"
-                style={{ background: 'var(--canvas)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden', boxShadow: '0 4px 24px rgba(0,0,0,.07)' }}
-              >
-                {/* Screenshot preview — top strip (banner area) */}
-                <div style={{ overflow: 'hidden', height: mobile ? 200 : 180, position: 'relative', background: '#0d0c1a' }}>
-                  <img
-                    src={src}
-                    alt={`${lang} viewer`}
-                    style={{
-                      width: '100%', height: '100%',
-                      objectFit: 'cover',
-                      objectPosition: mobile ? 'top center' : 'top left',
-                    }}
-                  />
-                  <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom,transparent 70%,rgba(0,0,0,.3) 100%)', pointerEvents: 'none' }} />
-                </div>
+          {/* Two screenshots side by side */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(300px,1fr))', gap: 20 }}>
 
-                <div style={{ padding: '16px 18px 18px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                    <span style={{ fontSize: 18 }}>{flag}</span>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{lang}</span>
-                    <span style={{ marginLeft: 'auto', fontSize: 10, fontWeight: 700, color: '#22C55E', background: 'rgba(34,197,94,.1)', border: '1px solid rgba(34,197,94,.2)', borderRadius: 20, padding: '2px 8px' }}>LIVE</span>
-                  </div>
-                  <p style={{ fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.55, margin: 0, fontStyle: 'italic' }}>
-                    "{quote}"
-                  </p>
-                </div>
+            {/* French viewer with annotations */}
+            <div style={{ position: 'relative' }}>
+              <img
+                src="/screens/viewer-fr.png"
+                alt="Viewer in French with margin annotations"
+                className="ap-screen"
+                style={{ objectFit: 'cover', objectPosition: 'top', height: 520 }}
+              />
+              <div style={{
+                position: 'absolute', bottom: 20, left: 20,
+                background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(12px)',
+                borderRadius: 12, padding: '10px 16px',
+              }}>
+                <p style={{ fontSize: 12, fontWeight: 700, color: '#6e6e73', margin: '0 0 2px', letterSpacing: '.04em' }}>🇫🇷 VIEWER — FRENCH</p>
+                <p style={{ fontSize: 13, color: '#1d1d1f', margin: 0, fontStyle: 'italic' }}>Live AI structured transcript</p>
+              </div>
+            </div>
+
+            {/* Japanese viewer */}
+            <div style={{ position: 'relative' }}>
+              <img
+                src="/screens/viewer-jp.png"
+                alt="Viewer in Japanese with margin annotations"
+                className="ap-screen"
+                style={{ objectFit: 'cover', objectPosition: 'top', height: 520 }}
+              />
+              <div style={{
+                position: 'absolute', bottom: 20, left: 20,
+                background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(12px)',
+                borderRadius: 12, padding: '10px 16px',
+              }}>
+                <p style={{ fontSize: 12, fontWeight: 700, color: '#6e6e73', margin: '0 0 2px', letterSpacing: '.04em' }}>🇯🇵 VIEWER — JAPANESE</p>
+                <p style={{ fontSize: 13, color: '#1d1d1f', margin: 0, fontStyle: 'italic' }}>Same session, own language</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Feature callouts */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 16, marginTop: 24 }}>
+            {[
+              { icon: '✍️', title: 'Margin annotations', desc: 'Handwritten-style comments pinned to transcript lines, visible to everyone.' },
+              { icon: '✦', title: 'AI structured notes', desc: 'Speech is automatically formatted into titled sections with bullet points.' },
+              { icon: '💬', title: 'Line comments', desc: 'Any viewer can comment on any line — visible live alongside the transcript.' },
+            ].map(({ icon, title, desc }) => (
+              <div key={title} style={{ background: '#fff', borderRadius: 16, padding: '22px 20px' }}>
+                <span style={{ fontSize: 24, display: 'block', marginBottom: 10 }}>{icon}</span>
+                <p style={{ fontSize: 15, fontWeight: 600, margin: '0 0 6px', letterSpacing: '-0.01em' }}>{title}</p>
+                <p style={{ fontSize: 13, color: '#6e6e73', lineHeight: 1.6, margin: 0 }}>{desc}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── WORKS WITH ANY AUDIO ─────────────────────────────────── */}
-      <section style={{ background: 'var(--surface-1)', borderTop: '1px solid var(--divider)', borderBottom: '1px solid var(--divider)', padding: 'clamp(56px,8vw,100px) clamp(20px,4vw,48px)' }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: 'clamp(40px,5vw,72px)', alignItems: 'center' }}>
+      {/* ══════════════════════════════════════════════════════════
+          3. ONE SOURCE → EVERY LANGUAGE
+      ══════════════════════════════════════════════════════════ */}
+      <section style={{ background: '#fff', padding: 'clamp(80px,10vw,140px) 40px' }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
 
-          {/* YouTube source screenshot */}
-          <div style={{ position: 'relative' }}>
-            <div className="lp-card-hover" style={{ borderRadius: 14, overflow: 'hidden', boxShadow: '0 16px 48px rgba(0,0,0,.14)', border: '1px solid var(--border)' }}>
-              <img
-                src="/screens/source-yt.png"
-                alt="Any video source"
-                style={{ width: '100%', display: 'block', height: 280, objectFit: 'cover', objectPosition: 'center top' }}
-              />
-            </div>
-            {/* Label */}
-            <div style={{ position: 'absolute', top: 12, left: 12, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)', borderRadius: 8, padding: '5px 11px' }}>
-              <span style={{ fontSize: 11, fontWeight: 700, color: '#fff', letterSpacing: '.05em' }}>🎬 Any audio source</span>
-            </div>
+          <div style={{ textAlign: 'center', marginBottom: 56 }}>
+            <p style={{ fontSize: 13, fontWeight: 600, letterSpacing: '.04em', color: '#0ea5e9', marginBottom: 16 }}>
+              SIMULTANEOUS · MULTILINGUAL
+            </p>
+            <h2 style={{ fontSize: 'clamp(36px,5.5vw,72px)', fontWeight: 700, letterSpacing: '-0.04em', lineHeight: 1.05, marginBottom: 18 }}>
+              One session.<br />Every language.
+            </h2>
+            <p style={{ fontSize: 'clamp(16px,2vw,19px)', color: '#6e6e73', lineHeight: 1.65, maxWidth: 560, margin: '0 auto' }}>
+              Each viewer picks their own language. The same session — live, simultaneously — in Italian, French, Japanese, Russian, and more.
+            </p>
           </div>
 
-          {/* Copy */}
-          <div>
-            <p style={{ fontSize: 11, fontWeight: 800, letterSpacing: '.1em', color: 'var(--accent)', marginBottom: 14 }}>UNIVERSAL · ZERO SETUP</p>
-            <h2 style={{ fontSize: 'clamp(26px,3.5vw,40px)', fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1.15, marginBottom: 18 }}>
-              Works with any live audio.
-            </h2>
-            <p style={{ fontSize: 15, color: 'var(--text-dim)', lineHeight: 1.75, marginBottom: 28 }}>
-              YouTube videos, online conferences, room microphones, screen audio — if it plays, ISOL can transcribe and translate it. No special hardware. No integrations.
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {/* Source → outputs layout */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+            {/* Source: YouTube screenshot */}
+            <div style={{ position: 'relative', borderRadius: 20, overflow: 'hidden', boxShadow: '0 24px 60px rgba(0,0,0,.1),0 0 0 1px rgba(0,0,0,.06)' }}>
+              <img
+                src="/screens/source-yt.png"
+                alt="Source: Variety & CNN Town Hall"
+                style={{ width: '100%', display: 'block', height: 320, objectFit: 'cover', objectPosition: 'center 20%' }}
+              />
+              {/* Dark overlay + label */}
+              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top,rgba(0,0,0,.72) 0%,transparent 55%)', pointerEvents: 'none' }} />
+              <div style={{ position: 'absolute', bottom: 24, left: 28, right: 28, display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+                <div>
+                  <p style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,.5)', letterSpacing: '.08em', margin: '0 0 4px' }}>ANY SCREEN AUDIO · YOUTUBE · MEETINGS · LECTURES</p>
+                  <p style={{ fontSize: 18, fontWeight: 700, color: '#fff', margin: 0, letterSpacing: '-0.01em', lineHeight: 1.3 }}>
+                    Timothée Chalamet & Matthew McConaughey<br />
+                    <span style={{ fontWeight: 400, fontSize: 14, opacity: .7 }}>Variety & CNN Town Hall · Captured live with ISOL</span>
+                  </p>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 7, background: 'rgba(255,255,255,.1)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,.18)', borderRadius: 999, padding: '6px 14px' }}>
+                  <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#22C55E', flexShrink: 0, animation: 'ap-pulse 2s infinite' }} />
+                  <span style={{ fontSize: 12, fontWeight: 700, color: '#fff', letterSpacing: '.05em' }}>LIVE</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Connector */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
+              <div style={{ height: 1, flex: 1, background: 'linear-gradient(to right,transparent,rgba(0,0,0,.1))' }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#f5f5f7', borderRadius: 999, padding: '8px 18px', border: '1px solid rgba(0,0,0,.08)' }}>
+                <div className="logo-mark" style={{ width: 18, height: 18 }}>
+                  <span style={{ color: '#fff', fontWeight: 800, fontSize: 8 }}>i</span>
+                </div>
+                <span style={{ fontSize: 12, fontWeight: 700, color: '#6e6e73', letterSpacing: '.04em' }}>ISOL · instant translation</span>
+              </div>
+              <div style={{ height: 1, flex: 1, background: 'linear-gradient(to left,transparent,rgba(0,0,0,.1))' }} />
+            </div>
+
+            {/* Output: 3 viewer screenshots */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(260px,1fr))', gap: 16 }}>
               {[
-                ['🖥', 'Screen audio — stream any tab or app'],
-                ['🎙', 'Microphone — works on any device'],
-                ['📱', 'Phone recording — via any browser'],
-              ].map(([icon, text]) => (
-                <div key={text as string} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <span style={{ fontSize: 16, width: 34, height: 34, flexShrink: 0, background: 'rgba(99,102,241,.08)', border: '1px solid rgba(99,102,241,.15)', borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{icon}</span>
-                  <span style={{ fontSize: 14, color: 'var(--text-dim)' }}>{text}</span>
+                { src: '/screens/host-it.png',   flag: '🇮🇹', lang: 'Italian',  pos: 'top' },
+                { src: '/screens/viewer-fr.png',  flag: '🇫🇷', lang: 'French',   pos: 'top' },
+                { src: '/screens/viewer-jp.png',  flag: '🇯🇵', lang: 'Japanese', pos: 'top' },
+              ].map(({ src, flag, lang, pos }) => (
+                <div key={lang} style={{ position: 'relative', borderRadius: 16, overflow: 'hidden', boxShadow: '0 12px 40px rgba(0,0,0,.09),0 0 0 1px rgba(0,0,0,.06)' }}>
+                  <img
+                    src={src}
+                    alt={`${lang} viewer`}
+                    style={{ width: '100%', display: 'block', height: 240, objectFit: 'cover', objectPosition: pos }}
+                  />
+                  <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top,rgba(0,0,0,.6) 0%,transparent 60%)', pointerEvents: 'none' }} />
+                  <div style={{ position: 'absolute', bottom: 14, left: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 20 }}>{flag}</span>
+                    <div>
+                      <p style={{ fontSize: 11, color: 'rgba(255,255,255,.55)', margin: 0, fontWeight: 600, letterSpacing: '.05em' }}>VIEWER</p>
+                      <p style={{ fontSize: 14, fontWeight: 700, color: '#fff', margin: 0 }}>{lang}</p>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
+
           </div>
         </div>
       </section>
 
-      {/* ── MOBILE ────────────────────────────────────────────────── */}
-      <section style={{ background: 'linear-gradient(160deg,#05050c 0%,#0f0c20 100%)', padding: 'clamp(64px,9vw,110px) clamp(20px,4vw,48px)', overflow: 'hidden' }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: 'clamp(40px,5vw,72px)', alignItems: 'center' }}>
+      {/* ══════════════════════════════════════════════════════════
+          4. MOBILE
+      ══════════════════════════════════════════════════════════ */}
+      <section style={{ background: '#1d1d1f', padding: 'clamp(80px,10vw,140px) 40px' }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: 64, alignItems: 'center' }}>
 
-          {/* Copy */}
           <div>
-            <p style={{ fontSize: 11, fontWeight: 800, letterSpacing: '.1em', color: '#38bdf8', marginBottom: 14 }}>MOBILE · NO APP REQUIRED</p>
-            <h2 style={{ fontSize: 'clamp(26px,3.5vw,44px)', fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1.15, marginBottom: 18, color: '#fff' }}>
-              Your audience,<br />anywhere.
+            <p style={{ fontSize: 13, fontWeight: 600, letterSpacing: '.04em', color: '#38bdf8', marginBottom: 16 }}>MOBILE · NO APP</p>
+            <h2 style={{ fontSize: 'clamp(34px,5vw,64px)', fontWeight: 700, letterSpacing: '-0.04em', lineHeight: 1.07, marginBottom: 20, color: '#f5f5f7' }}>
+              Follow live.<br />From anywhere.
             </h2>
-            <p style={{ fontSize: 15, color: 'rgba(255,255,255,.5)', lineHeight: 1.75, marginBottom: 32 }}>
-              Viewers join via a shared link on their phone, tablet or laptop. No download, no account — just open and pick a language.
+            <p style={{ fontSize: 'clamp(16px,2vw,19px)', color: 'rgba(245,245,247,.5)', lineHeight: 1.65, marginBottom: 36, maxWidth: 420 }}>
+              Viewers join on any device via a shared link. No download, no account — open and pick a language. The transcript follows live.
             </p>
-            <button onClick={goCTA} className="lp-btn-hero">
+            <button onClick={goCTA} className="ap-cta-pill">
               Try it now →
             </button>
           </div>
 
-          {/* Mobile screenshot in phone frame */}
           <div style={{ display: 'flex', justifyContent: 'center' }}>
-            <div style={{
-              width: 220,
-              background: '#1c1c2a',
-              borderRadius: 40,
-              padding: '12px 10px',
-              boxShadow: '0 40px 80px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.1)',
-              animation: 'lp-float 5s ease-in-out infinite',
-            }}>
-              {/* Phone notch */}
-              <div style={{ height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 4 }}>
-                <div style={{ width: 60, height: 8, background: '#2a2a3a', borderRadius: 99 }} />
+            <div className="ap-phone">
+              <div style={{ height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: 56, height: 6, background: 'rgba(255,255,255,.12)', borderRadius: 99 }} />
               </div>
-              {/* Screen */}
-              <div style={{ borderRadius: 28, overflow: 'hidden' }}>
-                <img
-                  src="/screens/mobile-ru.png"
-                  alt="ISOL mobile viewer in Russian"
-                  style={{ width: '100%', display: 'block', objectFit: 'cover', objectPosition: 'top' }}
-                />
+              <div style={{ borderRadius: 30, overflow: 'hidden' }}>
+                <img src="/screens/mobile-ru.png" alt="Mobile viewer in Russian" style={{ width: '100%', display: 'block' }} />
               </div>
-              {/* Home bar */}
-              <div style={{ height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <div style={{ width: 48, height: 4, background: 'rgba(255,255,255,.2)', borderRadius: 99 }} />
+              <div style={{ height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: 44, height: 4, background: 'rgba(255,255,255,.12)', borderRadius: 99 }} />
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ── HOW IT WORKS ─────────────────────────────────────────── */}
-      <section style={{ padding: 'clamp(56px,8vw,100px) clamp(20px,4vw,48px)', background: 'var(--bg)' }}>
-        <div style={{ maxWidth: 900, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: 52 }}>
-            <p style={{ fontSize: 11, fontWeight: 800, letterSpacing: '.1em', color: 'var(--accent)', marginBottom: 12 }}>HOW IT WORKS</p>
-            <h2 style={{ fontSize: 'clamp(28px,4vw,44px)', fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1.1 }}>Up in 30 seconds</h2>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 20 }}>
-            {[
-              { n: '01', title: 'Start a session', desc: 'Open ISOL, choose Screen or Mic, pick the source language.', color: '#6366F1' },
-              { n: '02', title: 'Share the link', desc: 'Viewers open a link on any device and choose their language.', color: '#0EA5E9' },
-              { n: '03', title: 'Everyone follows live', desc: 'Speech is transcribed, translated & AI-structured in real time.', color: '#10B981' },
-            ].map(({ n, title, desc, color }) => (
-              <div key={n} style={{ background: 'var(--canvas)', border: '1px solid var(--border)', borderRadius: 16, padding: '24px 22px' }}>
-                <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '.1em', color, display: 'block', marginBottom: 14 }}>{n}</span>
-                <p style={{ fontSize: 15, fontWeight: 700, margin: '0 0 8px', letterSpacing: '-0.01em' }}>{title}</p>
-                <p style={{ fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.65, margin: 0 }}>{desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── CLOSING CTA ──────────────────────────────────────────── */}
-      <section style={{ background: 'linear-gradient(160deg,#05050c 0%,#0d0c1e 100%)', padding: 'clamp(80px,11vw,140px) clamp(20px,4vw,48px)', textAlign: 'center' }}>
-        <div style={{ position: 'relative', maxWidth: 640, margin: '0 auto' }}>
-          <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 500, height: 500, borderRadius: '50%', background: 'radial-gradient(circle,rgba(99,102,241,.12) 0%,transparent 70%)', pointerEvents: 'none' }} />
-          <h2 style={{ fontSize: 'clamp(34px,5.5vw,62px)', fontWeight: 800, letterSpacing: '-0.04em', lineHeight: 1.08, marginBottom: 20, color: '#fff' }}>
-            Speech becomes<br />
-            <span style={{ background: 'linear-gradient(90deg,#818cf8,#38bdf8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-              knowledge.
-            </span>
-          </h2>
-          <p style={{ fontSize: 16, color: 'rgba(255,255,255,.45)', lineHeight: 1.7, marginBottom: 40, maxWidth: 420, margin: '0 auto 40px' }}>
-            Start your first session in seconds. No credit card, no setup.
-          </p>
-          <button onClick={goCTA} className="lp-btn-hero" style={{ fontSize: 16, height: 56, padding: '0 40px' }}>
-            Start your first session →
-          </button>
-        </div>
+      {/* ══════════════════════════════════════════════════════════
+          5. CTA
+      ══════════════════════════════════════════════════════════ */}
+      <section style={{ background: '#f5f5f7', textAlign: 'center', padding: 'clamp(88px,12vw,160px) 40px' }}>
+        <h2 style={{ fontSize: 'clamp(38px,6vw,80px)', fontWeight: 700, letterSpacing: '-0.04em', lineHeight: 1.05, marginBottom: 20 }}>
+          Speech becomes<br />
+          <span style={{ color: '#6366F1' }}>knowledge.</span>
+        </h2>
+        <p style={{ fontSize: 'clamp(16px,2vw,19px)', color: '#6e6e73', lineHeight: 1.65, marginBottom: 40, maxWidth: 460, margin: '0 auto 40px' }}>
+          Start your first session in seconds. No credit card. No setup.
+        </p>
+        <button onClick={goCTA} className="ap-cta-pill" style={{ fontSize: 19, height: 58, padding: '0 36px' }}>
+          Start a session →
+        </button>
       </section>
 
       {/* ── FOOTER ───────────────────────────────────────────────── */}
-      <footer style={{ background: '#05050c', borderTop: '1px solid rgba(255,255,255,.06)', padding: '24px clamp(20px,4vw,48px)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+      <footer style={{ background: '#f5f5f7', borderTop: '1px solid rgba(0,0,0,.1)', padding: '24px 40px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <div className="logo-mark" style={{ width: 20, height: 20 }}>
             <span style={{ color: '#fff', fontWeight: 800, fontSize: 10 }}>i</span>
           </div>
-          <span style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,.3)' }}>ISOL</span>
+          <span style={{ fontSize: 12, fontWeight: 600, color: '#6e6e73' }}>ISOL Studio</span>
         </div>
         <div style={{ display: 'flex', gap: 24 }}>
           {['Privacy', 'Terms', 'Contact'].map(l => (
-            <a key={l} href="#" style={{ fontSize: 12, color: 'rgba(255,255,255,.28)', textDecoration: 'none' }}>{l}</a>
+            <a key={l} href="#" style={{ fontSize: 12, color: '#6e6e73', textDecoration: 'none' }}>{l}</a>
           ))}
         </div>
       </footer>
