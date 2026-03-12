@@ -1,4 +1,4 @@
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { getSession, clearSession, getToken } from '../lib/auth'
@@ -65,12 +65,14 @@ function buildCommentMap(arr: (CommentItem & { line_index: number | null })[]): 
 export default function WorkspacePage() {
   const { workspaceSlug } = useParams<{ workspaceSlug: string }>()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const session = getSession()
 
   const [targetLang, setTargetLang] = useState('en')
   const [workspacePlan, setWorkspacePlan] = useState<'free'|'pro'|'studio'|'team'>('free')
   const [workspaceDefaultLang, setWorkspaceDefaultLang] = useState('en')
   const [showPricing, setShowPricing] = useState(false)
+  const [billingSuccess, setBillingSuccess] = useState(() => searchParams.get('billing') === 'success')
   const [currentLine, setCurrentLine] = useState('')
   const [error, setError] = useState('')
   const pip = usePip()
@@ -425,7 +427,7 @@ export default function WorkspacePage() {
   useEffect(() => { fetchGlossary() }, [fetchGlossary])
 
   // Apply workspace default language on first mount (before any session starts)
-  useEffect(() => {
+  const fetchWorkspaceData = useCallback(() => {
     const token = getToken()
     if (!token || !workspaceSlug) return
     fetch(`/api/workspace?workspace_slug=${workspaceSlug}`, {
@@ -443,6 +445,17 @@ export default function WorkspacePage() {
       })
       .catch(() => {})
   }, [workspaceSlug]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => { fetchWorkspaceData() }, [fetchWorkspaceData])
+
+  // After successful Stripe checkout, clean URL and refresh plan
+  useEffect(() => {
+    if (!billingSuccess) return
+    fetchWorkspaceData()
+    setSearchParams({}, { replace: true })
+    const t = setTimeout(() => setBillingSuccess(false), 5000)
+    return () => clearTimeout(t)
+  }, [billingSuccess]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Fetch draft on mount — show recovery banner if stale session found
   useEffect(() => {
@@ -1777,6 +1790,21 @@ export default function WorkspacePage() {
           workspaceSlug={workspaceSlug ?? ''}
           onClose={() => setShowPricing(false)}
         />
+      )}
+
+      {billingSuccess && (
+        <div style={{
+          position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)',
+          zIndex: 200, background: 'var(--live)', color: '#fff',
+          padding: '12px 24px', borderRadius: 12,
+          fontWeight: 700, fontSize: 14,
+          boxShadow: '0 4px 24px rgba(34,197,94,0.35)',
+          display: 'flex', alignItems: 'center', gap: 10,
+          animation: 'lineReveal 0.3s ease-out',
+        }}>
+          <span>✓</span>
+          Plan activated! Welcome to {workspacePlan.charAt(0).toUpperCase() + workspacePlan.slice(1)}.
+        </div>
       )}
     </div>
   )

@@ -288,20 +288,6 @@ export default function PricingModal({ currentPlan, workspaceSlug: _workspaceSlu
                 </span>
               )}
             </button>
-            {!isAnnual && (
-              <span style={{
-                fontSize: 10,
-                fontWeight: 700,
-                background: 'rgba(34,197,94,0.12)',
-                color: '#16a34a',
-                borderRadius: 999,
-                padding: '3px 10px',
-                marginRight: 4,
-                letterSpacing: '0.02em',
-              }}>
-                Save 2 months →
-              </span>
-            )}
           </div>
         </div>
 

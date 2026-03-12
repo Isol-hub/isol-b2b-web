@@ -122,8 +122,8 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       'payment_method_types[0]': 'card',
       'line_items[0][price]': priceId,
       'line_items[0][quantity]': '1',
-      success_url: `${origin}/${workspace.slug}/settings?billing=success`,
-      cancel_url: `${origin}/${workspace.slug}/settings`,
+      success_url: `${origin}/${workspace.slug}?billing=success`,
+      cancel_url: `${origin}/${workspace.slug}`,
       'subscription_data[metadata][workspace_slug]': workspace.slug,
       'subscription_data[metadata][plan]': plan,
     }, env.STRIPE_SECRET_KEY)
