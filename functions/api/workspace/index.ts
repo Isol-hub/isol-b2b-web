@@ -23,7 +23,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
   try {
     const [workspaceResult, statsResult, topLangResult, usageResult] = await env.DB.batch([
       env.DB.prepare(
-        'SELECT slug, display_name, default_lang, plan, plan_expires_at, api_key FROM workspaces WHERE slug = ?'
+        'SELECT slug, owner_email, display_name, default_lang, plan, plan_expires_at, api_key FROM workspaces WHERE slug = ?'
       ).bind(workspaceSlug),
       env.DB.prepare(
         'SELECT COUNT(*) as sessions_total, COALESCE(SUM(ended_at - started_at), 0) as total_seconds FROM sessions WHERE workspace_slug = ?'

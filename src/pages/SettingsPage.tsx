@@ -8,6 +8,7 @@ import { LANGUAGES } from '../lib/languages'
 
 interface WorkspaceData {
   slug: string
+  owner_email: string
   display_name: string | null
   default_lang: string
   plan: string
@@ -688,7 +689,7 @@ export default function SettingsPage() {
             {currentPlan === 'team' && (() => {
               const activeCount = 1 + teamMembers.filter(m => m.status === 'active').length
               const totalCount = 1 + teamMembers.length
-              const isOwner = auth?.email === workspace?.owner_email ?? auth?.email
+              const isOwner = auth?.email === workspace?.owner_email
 
               return (
                 <>
