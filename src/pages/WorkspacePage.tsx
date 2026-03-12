@@ -171,6 +171,7 @@ export default function WorkspacePage() {
   // Archived session comments — separate so live lineComments are never overwritten
   const [archivedComments, setArchivedComments] = useState<Map<number, CommentItem[]>>(new Map())
   const [archivedViewMode, setArchivedViewMode] = useState<'raw' | 'ai' | 'notes'>('raw')
+  const [archivedTab, setArchivedTab] = useState<'doc' | 'highlights'>('doc')
   const [openCommentLine, setOpenCommentLine] = useState<number | null>(null)
   const [commentAuthor, setCommentAuthor] = useState(
     () => localStorage.getItem('isol_commenter_name') || ''
@@ -1579,7 +1580,7 @@ export default function WorkspacePage() {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             padding: 24,
           }}
-          onClick={e => { if (e.target === e.currentTarget) { setViewingSession(null); setArchivedComments(new Map()); setSharePending(false); setArchivedViewMode('raw') } }}
+          onClick={e => { if (e.target === e.currentTarget) { setViewingSession(null); setArchivedComments(new Map()); setSharePending(false); setArchivedViewMode('raw'); setArchivedTab('doc') } }}
         >
           <div style={{
             width: '100%', maxWidth: 700,
@@ -1633,16 +1634,51 @@ export default function WorkspacePage() {
                 )}
               </div>
               <button
-                onClick={() => { setViewingSession(null); setArchivedComments(new Map()); setSharePending(false); setArchivedViewMode('raw') }}
+                onClick={() => { setViewingSession(null); setArchivedComments(new Map()); setSharePending(false); setArchivedViewMode('raw'); setArchivedTab('doc') }}
                 style={{ background: 'none', color: 'var(--text-muted)', fontSize: 20, padding: '2px 8px', borderRadius: 4, flexShrink: 0 }}
               >×</button>
             </div>
+            {/* Tab bar */}
+            {viewingSession && !sessionDetailLoading && (
+              <div style={{
+                display: 'flex', gap: 2,
+                padding: '0 24px',
+                borderBottom: '1px solid var(--divider)',
+                flexShrink: 0,
+              }}>
+                {([
+                  { id: 'doc', label: 'Transcript' },
+                  { id: 'highlights', label: `Highlights${(viewingSession.highlights ?? []).length > 0 ? ` (${(viewingSession.highlights ?? []).length})` : ''}` },
+                ] as const).map(tab => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setArchivedTab(tab.id)}
+                    style={{
+                      background: 'none', border: 'none', cursor: 'pointer',
+                      padding: '10px 14px',
+                      fontSize: 12, fontWeight: 600,
+                      color: archivedTab === tab.id ? 'var(--text)' : 'var(--text-muted)',
+                      borderBottom: archivedTab === tab.id ? '2px solid var(--accent)' : '2px solid transparent',
+                      marginBottom: -1,
+                      transition: 'color 0.15s',
+                    }}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+            )}
+
             {/* Content */}
             <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
               {sessionDetailLoading ? (
                 <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)', fontSize: 14 }}>
                   Loading…
                 </div>
+              ) : viewingSession && archivedTab === 'highlights' ? (
+                <HighlightsSection
+                  highlights={viewingSession.highlights ?? []}
+                />
               ) : viewingSession ? (
                 <DocumentView
                   transcript={viewingSession.lines.map(l => ({ text: l.text, time: new Date(viewingSession.session.started_at as number) }))}
