@@ -123,13 +123,16 @@ export default function WorkspacePage() {
   }, [targetLang, sessionActive]) // eslint-disable-line react-hooks/exhaustive-deps
   // Refs for fresh values inside debounce callbacks (avoid stale closures)
   const aiFormattedAtRef = useRef<number | undefined>(undefined)
+  const aiFormattedRef = useRef<string | undefined>(undefined)
   const notesRunCountRef = useRef(0)
   useEffect(() => { aiFormattedAtRef.current = aiFormattedAt }, [aiFormattedAt])
+  useEffect(() => { aiFormattedRef.current = aiFormatted }, [aiFormatted])
 
   const wordIndex = useRef<Map<string, string[]>>(new Map())
   const sessionStartRef = useRef<number>(0)
-  // WP-01: mirror transcript in a ref so handleStop can read latest value without a state-updater side-effect
+  // WP-01: mirror transcript and highlights in refs so handleStop always reads the latest values
   const transcriptRef = useRef<TranscriptLine[]>([])
+  const highlightsRef = useRef<HighlightItem[]>([])
 
   // Session history
   interface SessionMeta { id: number; started_at: number; target_lang: string; line_count: number; title?: string; share_token?: string }
@@ -291,6 +294,7 @@ export default function WorkspacePage() {
   }, [transcript.length, transcriptLenMod8, notesRetryTick])  // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { transcriptRef.current = transcript }, [transcript])
+  useEffect(() => { highlightsRef.current = highlights }, [highlights])
 
   // Speaker heuristic — incremental, runs only during live sessions
   useEffect(() => {
@@ -918,11 +922,11 @@ export default function WorkspacePage() {
     prevSessionIdRef.current = null
     if (commentPollRef.current) { clearInterval(commentPollRef.current); commentPollRef.current = null }
     setOpenCommentLine(null)
-    saveSession(transcriptRef.current, aiFormatted, sessionStartRef.current, highlights, {
+    saveSession(transcriptRef.current, aiFormattedRef.current, sessionStartRef.current, highlightsRef.current, {
       assignments: speakerAssignmentsRef.current,
       profiles: speakerProfilesRef.current,
     })
-  }, [audio, ws, saveSession, aiFormatted, highlights])
+  }, [audio, ws, saveSession])
 
   const handleLogout = useCallback(() => {
     handleStop(); clearSession()
