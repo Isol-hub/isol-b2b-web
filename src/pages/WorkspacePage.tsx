@@ -1497,21 +1497,23 @@ export default function WorkspacePage() {
                 fontWeight: 700,
                 cursor: 'pointer',
                 border: workspacePlan === 'free' ? 'none'
-                  : workspacePlan === 'team' ? '1px solid rgba(245,158,11,0.35)'
+                  : workspacePlan === 'team' ? '1px solid rgba(13,148,136,0.40)'
                   : '1px solid rgba(99,102,241,0.25)',
                 background: workspacePlan === 'free'
                   ? 'linear-gradient(135deg, #F59E0B 0%, #F97316 100%)'
                   : workspacePlan === 'team'
-                  ? 'linear-gradient(135deg, #92400e 0%, #b45309 50%, #d97706 100%)'
+                  ? 'linear-gradient(135deg, #0f766e 0%, #0e7490 55%, #0369a1 100%)'
                   : 'rgba(99,102,241,0.10)',
                 color: workspacePlan === 'free' ? '#fff'
-                  : workspacePlan === 'team' ? '#fef3c7'
+                  : workspacePlan === 'team' ? '#fff'
                   : 'var(--accent)',
-                letterSpacing: '0.01em',
+                letterSpacing: '0.04em',
+                textTransform: workspacePlan === 'team' ? 'uppercase' : 'none',
+                fontSize: workspacePlan === 'team' ? 10 : 12,
                 boxShadow: workspacePlan === 'free'
                   ? '0 2px 12px rgba(245,158,11,0.35)'
                   : workspacePlan === 'team'
-                  ? '0 2px 14px rgba(217,119,6,0.40), inset 0 1px 0 rgba(255,255,255,0.10)'
+                  ? '0 2px 16px rgba(13,148,136,0.45), inset 0 1px 0 rgba(255,255,255,0.15)'
                   : 'none',
                 transition: 'all 0.15s',
               }}
@@ -1519,7 +1521,7 @@ export default function WorkspacePage() {
               {workspacePlan === 'free'
                 ? <><span>✦</span> Upgrade</>
                 : workspacePlan === 'team'
-                ? <><span style={{ fontSize: 11 }}>✦</span> Team</>
+                ? <><span style={{ fontSize: 10, letterSpacing: 0 }}>⬡</span> Team</>
                 : <><span style={{ fontSize: 10 }}>●</span> {workspacePlan.charAt(0).toUpperCase() + workspacePlan.slice(1)}</>}
             </button>
 
