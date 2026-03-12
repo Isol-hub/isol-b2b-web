@@ -219,6 +219,12 @@ export default function DocumentView({
   const bottomRef = useRef<HTMLDivElement>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const lineRefs = useRef<(HTMLDivElement | null)[]>([])
+
+  // Swipe gesture state (touch + pointer for desktop drag)
+  const swipeRef = useRef<{ x: number; y: number; lockedAxis: 'h' | 'v' | null } | null>(null)
+  const viewModeRef = useRef(viewMode)
+  const hasAiRef = useRef(false)
+  const hasNotesRef = useRef(false)
   const [editingIndex, setEditingIndex] = useState<number | null>(null)
   const [hoveredLine, setHoveredLine] = useState<number | null>(null)
   const [editingText, setEditingText] = useState('')
@@ -290,6 +296,53 @@ export default function DocumentView({
     el.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }
 
+  // Keep refs in sync for swipe handler (avoids stale closures in passive listeners)
+  useEffect(() => { viewModeRef.current = viewMode }, [viewMode])
+
+  // Swipe: register non-passive touchmove on the scroll container so we can preventDefault
+  useEffect(() => {
+    const el = scrollContainerRef.current
+    if (!el) return
+    const onStart = (e: TouchEvent) => {
+      swipeRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, lockedAxis: null }
+    }
+    const onMove = (e: TouchEvent) => {
+      if (!swipeRef.current) return
+      const dx = e.touches[0].clientX - swipeRef.current.x
+      const dy = e.touches[0].clientY - swipeRef.current.y
+      if (!swipeRef.current.lockedAxis) {
+        swipeRef.current.lockedAxis = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v'
+      }
+      if (swipeRef.current.lockedAxis === 'h') e.preventDefault()
+    }
+    const onEnd = (e: TouchEvent) => {
+      if (!swipeRef.current || swipeRef.current.lockedAxis !== 'h') { swipeRef.current = null; return }
+      const dx = e.changedTouches[0].clientX - swipeRef.current.x
+      const dy = e.changedTouches[0].clientY - swipeRef.current.y
+      swipeRef.current = null
+      if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy)) return
+      const modes: ViewMode[] = ['raw', 'ai', 'notes']
+      const idx = modes.indexOf(viewModeRef.current)
+      if (dx < 0) {
+        for (let i = idx + 1; i < modes.length; i++) {
+          if (modes[i] === 'ai' && !hasAiRef.current) continue
+          if (modes[i] === 'notes' && !hasNotesRef.current) continue
+          onViewModeChange(modes[i]); break
+        }
+      } else {
+        for (let i = idx - 1; i >= 0; i--) { onViewModeChange(modes[i]); break }
+      }
+    }
+    el.addEventListener('touchstart', onStart, { passive: true })
+    el.addEventListener('touchmove', onMove, { passive: false })
+    el.addEventListener('touchend', onEnd)
+    return () => {
+      el.removeEventListener('touchstart', onStart)
+      el.removeEventListener('touchmove', onMove)
+      el.removeEventListener('touchend', onEnd)
+    }
+  }, [onViewModeChange])
+
   // Build timeline segments from transcript when sessionStartMs is available
   const timelineSegments: TimelineSegment[] = sessionStartMs
     ? transcript
@@ -303,9 +356,6 @@ export default function DocumentView({
     : []
 
   const isEmpty = transcript.length === 0 && !currentLine
-  const hasAi = !!aiFormatted
-  const hasNotes = !!aiNotes
-  const showModeBar = hasAi || hasNotes || !!aiLoading || !!aiNotesLoading
 
   // Flat list of annotations for read-only panel in AI/Notes views
   const annotationsForPanel: MarginNoteItem[] = []
@@ -322,39 +372,19 @@ export default function DocumentView({
     setEditingIndex(null)
   }
 
-  const MODE_COLORS: Record<ViewMode, { text: string; bg: string; border: string }> = {
-    raw:   { text: 'var(--text-dim)',  bg: 'rgba(120,120,140,0.10)', border: 'rgba(120,120,140,0.18)' },
-    ai:    { text: '#6366F1',          bg: 'rgba(99,102,241,0.10)',  border: 'rgba(99,102,241,0.22)'  },
-    notes: { text: '#D97706',          bg: 'rgba(217,119,6,0.10)',   border: 'rgba(217,119,6,0.22)'   },
+  const TAB_META: Record<ViewMode, { label: string; color: string }> = {
+    raw:   { label: 'Transcript',    color: '#64748B' },
+    ai:    { label: '✦ AI Enhanced', color: '#6366F1' },
+    notes: { label: '✦ Notes',       color: '#D97706' },
   }
 
-  const modeBtn = (mode: ViewMode, label: string, available: boolean, loading: boolean) => {
-    const active = viewMode === mode
-    const c = MODE_COLORS[mode]
-    return (
-      <button
-        onClick={() => available && onViewModeChange(mode)}
-        disabled={!available && !loading}
-        style={{
-          fontSize: 11, fontWeight: 600, padding: '4px 14px', borderRadius: 20, height: 28,
-          border: `1px solid ${active ? c.border : 'transparent'}`,
-          background: active ? c.bg : 'transparent',
-          color: active ? c.text : 'var(--text-muted)',
-          cursor: available ? 'pointer' : 'default',
-          opacity: !available && !loading ? 0.35 : 1,
-          display: 'flex', alignItems: 'center', gap: 5,
-          transition: 'all 0.18s',
-        }}
-        onMouseEnter={e => { if (available && !active) (e.currentTarget as HTMLElement).style.color = c.text }}
-        onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)' }}
-      >
-        {loading && (
-          <span style={{ width: 7, height: 7, border: `1.5px solid ${c.border}`, borderTopColor: c.text, borderRadius: '50%', animation: 'spin 0.9s linear infinite', display: 'inline-block' }} />
-        )}
-        {label}
-      </button>
-    )
-  }
+  const hasAi = !!aiFormatted
+  const hasNotes = !!aiNotes
+  hasAiRef.current = hasAi
+  hasNotesRef.current = hasNotes
+
+  const tabAvailable: Record<ViewMode, boolean> = { raw: true, ai: hasAi, notes: hasNotes }
+  const tabLoading: Record<ViewMode, boolean> = { raw: false, ai: !!aiLoading && !hasAi, notes: !!aiNotesLoading && !hasNotes }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -382,21 +412,47 @@ export default function DocumentView({
         </div>
       )}
 
+      {/* ━━ MODE TAB BAR — always visible, sticky ━━━━━━━━━━━━━ */}
+      <div style={{
+        flexShrink: 0,
+        display: 'grid', gridTemplateColumns: '1fr 1fr 1fr',
+        borderBottom: '1px solid var(--divider)',
+        background: 'var(--surface-1)',
+      }}>
+        {(['raw', 'ai', 'notes'] as ViewMode[]).map(mode => {
+          const { label, color } = TAB_META[mode]
+          const active = viewMode === mode
+          const available = tabAvailable[mode]
+          const loading = tabLoading[mode]
+          return (
+            <button
+              key={mode}
+              onClick={() => available && onViewModeChange(mode)}
+              style={{
+                height: 40, border: 'none',
+                borderBottom: active ? `2.5px solid ${color}` : '2.5px solid transparent',
+                background: active ? `${color}18` : 'transparent',
+                color: active ? color : available ? 'var(--text-muted)' : 'var(--text-muted)',
+                fontSize: 12, fontWeight: active ? 700 : 500,
+                cursor: available ? 'pointer' : 'default',
+                opacity: !available && !loading ? 0.38 : 1,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+                transition: 'background 0.15s, color 0.15s, border-color 0.15s',
+                padding: '0 4px', userSelect: 'none',
+              }}
+              onMouseEnter={e => { if (available && !active) { (e.currentTarget as HTMLElement).style.background = `${color}0d`; (e.currentTarget as HTMLElement).style.color = color } }}
+              onMouseLeave={e => { if (!active) { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)' } }}
+            >
+              {loading && <span style={{ width: 7, height: 7, border: `1.5px solid ${color}44`, borderTopColor: color, borderRadius: '50%', animation: 'spin 0.9s linear infinite', flexShrink: 0 }} />}
+              {label}
+            </button>
+          )
+        })}
+      </div>
+
       {/* ━━ DOCUMENT SURFACE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
       <div ref={scrollContainerRef} style={{ flex: 1, overflowY: 'auto', background: 'var(--surface-1)' }}>
         <div className="doc-surface" style={{ maxWidth: 980, margin: '0 auto', padding: '28px 32px calc(40px + 80px)' }}>
-          {/* ── Mode pills — float inside doc, no external bar ── */}
-          {showModeBar ? (
-            <div style={{ display: 'flex', gap: 4, alignItems: 'center', marginBottom: 28 }}>
-              {modeBtn('raw', 'Transcript', true, false)}
-              {modeBtn('ai', '✦ AI Enhanced', hasAi, !!aiLoading && !hasAi)}
-              {modeBtn('notes', '✦ Notes', hasNotes, !!aiNotesLoading && !hasNotes)}
-            </div>
-          ) : isActive ? (
-            <p style={{ fontSize: 11, color: 'var(--text-muted)', letterSpacing: '0.05em', opacity: 0.5, marginBottom: 28, userSelect: 'none' }}>
-              AI enhancement available after ~5 lines
-            </p>
-          ) : null}
           <div style={{ minWidth: 0, position: 'relative' }}>
           {isEmpty ? (
             <div style={{ paddingTop: 80, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14, color: 'var(--text-muted)', textAlign: 'center' }}>
