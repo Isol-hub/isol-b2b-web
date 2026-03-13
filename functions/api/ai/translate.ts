@@ -13,11 +13,16 @@ const CORS = {
 
 // ISO 639-1 → full language name for clearer Claude prompt
 const LANG_NAMES: Record<string, string> = {
-  en: 'English', it: 'Italian', es: 'Spanish', fr: 'French', de: 'German',
-  pt: 'Portuguese', nl: 'Dutch', pl: 'Polish', ru: 'Russian', zh: 'Chinese',
-  ja: 'Japanese', ko: 'Korean', ar: 'Arabic', hi: 'Hindi', tr: 'Turkish',
-  sv: 'Swedish', da: 'Danish', fi: 'Finnish', no: 'Norwegian', cs: 'Czech',
-  ro: 'Romanian', hu: 'Hungarian', uk: 'Ukrainian', he: 'Hebrew', id: 'Indonesian',
+  en: 'English',    it: 'Italian',     es: 'Spanish',    fr: 'French',      de: 'German',
+  pt: 'Portuguese', nl: 'Dutch',       pl: 'Polish',     ru: 'Russian',     zh: 'Chinese',
+  ja: 'Japanese',   ko: 'Korean',      ar: 'Arabic',     hi: 'Hindi',       tr: 'Turkish',
+  uk: 'Ukrainian',  sv: 'Swedish',     da: 'Danish',     fi: 'Finnish',     nb: 'Norwegian',
+  no: 'Norwegian',  el: 'Greek',       cs: 'Czech',      ro: 'Romanian',    hu: 'Hungarian',
+  sk: 'Slovak',     bg: 'Bulgarian',   hr: 'Croatian',   sr: 'Serbian',     sl: 'Slovenian',
+  mk: 'Macedonian', be: 'Belarusian',  et: 'Estonian',   lv: 'Latvian',     lt: 'Lithuanian',
+  id: 'Indonesian', ms: 'Malay',       tl: 'Filipino',   vi: 'Vietnamese',  th: 'Thai',
+  ta: 'Tamil',      bn: 'Bengali',     ur: 'Urdu',       he: 'Hebrew',      kk: 'Kazakh',
+  sw: 'Swahili',    am: 'Amharic',     si: 'Sinhala',
 }
 
 interface TranslateBody {
