@@ -6,7 +6,7 @@
 ## CATEGORIA 1 — LANCIO STANOTTE
 *Da completare prima della distribuzione commerciale*
 
-- [ ] **A1** — Pagine legali mancanti (`/legal/terms`, `/legal/privacy`) — link in SettingsPage danno 404
+- [x] **A1** — Pagine legali mancanti (`/legal/terms`, `/legal/privacy`) — link in SettingsPage danno 404
 - [ ] **A2** — Nuovo utente: workspace 404 al primo login — WorkspacePage crasha perché il workspace non esiste finché non si salva una sessione
 - [ ] **A3** — `Math.random()` per OTP — non è crittograficamente sicuro, usare `crypto.getRandomValues()`
 - [ ] **A4** — Limite 3 sessioni piano free non applicato server-side — `sessions/save.ts` non conta le sessioni esistenti prima di inserire
@@ -42,4 +42,4 @@
 
 | Data | Item | Commit | Note |
 |------|------|--------|------|
-| — | — | — | — |
+| 2026-03-13 | A1 | 8544c33 | LegalPage.tsx con Terms + Privacy GDPR; route /legal/:doc in App.tsx |
