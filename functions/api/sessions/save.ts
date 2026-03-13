@@ -65,17 +65,34 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       return Response.json({ error: 'Forbidden' }, { status: 403, headers: CORS })
     }
 
-    // Enforce free plan session limit (server-side)
-    const [planRow, countRow] = await env.DB.batch([
+    // Enforce session limits per plan
+    const monthStart = new Date()
+    monthStart.setUTCDate(1)
+    monthStart.setUTCHours(0, 0, 0, 0)
+    const monthStartMs = monthStart.getTime()
+
+    const [planRow, countRow, monthCountRow] = await env.DB.batch([
       env.DB.prepare('SELECT plan FROM workspaces WHERE slug = ?').bind(workspace_slug),
       env.DB.prepare('SELECT COUNT(*) as cnt FROM sessions WHERE workspace_slug = ?').bind(workspace_slug),
+      env.DB.prepare('SELECT COUNT(*) as cnt FROM sessions WHERE workspace_slug = ? AND started_at >= ?').bind(workspace_slug, monthStartMs),
     ])
     const plan = (planRow.results[0] as { plan: string } | undefined)?.plan ?? 'free'
+
     if (plan === 'free') {
       const cnt = (countRow.results[0] as { cnt: number } | undefined)?.cnt ?? 0
       if (cnt >= 3) {
         return Response.json(
           { error: 'Session limit reached', code: 'FREE_LIMIT', limit: 3 },
+          { status: 403, headers: CORS }
+        )
+      }
+    }
+
+    if (plan === 'pro') {
+      const monthCnt = (monthCountRow.results[0] as { cnt: number } | undefined)?.cnt ?? 0
+      if (monthCnt >= 30) {
+        return Response.json(
+          { error: 'Monthly session limit reached', code: 'PRO_LIMIT', limit: 30 },
           { status: 403, headers: CORS }
         )
       }
