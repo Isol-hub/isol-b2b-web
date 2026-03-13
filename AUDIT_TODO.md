@@ -9,7 +9,7 @@
 - [x] **A1** — Pagine legali mancanti (`/legal/terms`, `/legal/privacy`) — link in SettingsPage danno 404
 - [x] **A2** — Nuovo utente: workspace 404 al primo login — WorkspacePage crasha perché il workspace non esiste finché non si salva una sessione
 - [x] **A3** — `Math.random()` per OTP — non è crittograficamente sicuro, usare `crypto.getRandomValues()`
-- [ ] **A4** — Limite 3 sessioni piano free non applicato server-side — `sessions/save.ts` non conta le sessioni esistenti prima di inserire
+- [x] **A4** — Limite 3 sessioni piano free non applicato server-side — `sessions/save.ts` non conta le sessioni esistenti prima di inserire
 
 ---
 
@@ -45,3 +45,4 @@
 | 2026-03-13 | A1 | 8544c33 | LegalPage.tsx con Terms + Privacy GDPR; route /legal/:doc in App.tsx |
 | 2026-03-13 | A2 | c632348 | workspace/index.ts GET: INSERT OR IGNORE + re-fetch se workspace null |
 | 2026-03-13 | A3 | 33276d0 | request-otp.ts: generateOtp() usa crypto.getRandomValues() invece di Math.random() |
+| 2026-03-13 | A4 | a0f892d | sessions/save.ts: batch SELECT plan+count → 403 FREE_LIMIT; WorkspacePage apre PricingModal |
