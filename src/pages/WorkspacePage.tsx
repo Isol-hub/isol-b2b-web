@@ -1765,32 +1765,37 @@ export default function WorkspacePage() {
                     </button>
                   </div>
                 ) : sharePending ? (
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                    <select
-                      className="input-field"
-                      value={shareDurationHours ?? ''}
-                      onChange={e => setShareDurationHours(e.target.value === '' ? null : Number(e.target.value))}
-                      style={{ fontSize: 12, flex: 1, height: 32 }}
-                    >
-                      <option value="">No expiry</option>
-                      <option value="24">24 hours</option>
-                      <option value="168">7 days</option>
-                      <option value="720">30 days</option>
-                    </select>
-                    <button
-                      onClick={() => generateShareLink(viewingSession.session.id as number, shareDurationHours)}
-                      className="btn-icon"
-                      style={{ fontSize: 12, flexShrink: 0, background: 'var(--accent)', color: '#fff', borderColor: 'var(--accent)' }}
-                    >
-                      Generate
-                    </button>
-                    <button
-                      onClick={() => setSharePending(false)}
-                      className="btn-icon"
-                      style={{ fontSize: 12, flexShrink: 0 }}
-                    >
-                      ✕
-                    </button>
+                  <div>
+                    <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 7 }}>
+                      Link expires in:
+                    </p>
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                      {([
+                        { label: 'Never', hours: null },
+                        { label: '24 h', hours: 24 },
+                        { label: '7 days', hours: 168 },
+                        { label: '30 days', hours: 720 },
+                      ] as { label: string; hours: number | null }[]).map(opt => (
+                        <button
+                          key={opt.label}
+                          onClick={() => generateShareLink(viewingSession.session.id as number, opt.hours)}
+                          className="btn-icon"
+                          style={{ fontSize: 11, padding: '4px 10px' }}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                      <button
+                        onClick={() => setSharePending(false)}
+                        style={{
+                          background: 'none', border: 'none', cursor: 'pointer',
+                          fontSize: 12, color: 'var(--text-muted)', padding: '4px 2px',
+                          fontFamily: 'inherit', marginLeft: 2,
+                        }}
+                      >
+                        ✕
+                      </button>
+                    </div>
                   </div>
                 ) : (
                   <button
