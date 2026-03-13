@@ -66,7 +66,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
       workspace,
       stats: {
         sessions_total: statsRow?.sessions_total ?? 0,
-        minutes_total: Math.round((statsRow?.total_seconds ?? 0) / 60),
+        minutes_total: Math.round((statsRow?.total_seconds ?? 0) / 60000),
         top_lang: topLangRow?.target_lang ?? null,
       },
       usage: usageResult.results,
