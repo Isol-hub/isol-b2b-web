@@ -500,14 +500,14 @@ export default function LandingPage() {
           <div className="lp-grid-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16, alignItems: 'start' }}>
             {[
               { plan: 'Free', price: '€0', period: 'forever', desc: 'Try ISOL with no commitment.', featured: false,
-                features: ['3 sessions', '14 languages', 'Live caption banner', 'Shareable viewer links'],
+                features: ['3 sessions lifetime', '1 language', 'Live caption banner', 'No AI features'],
                 cta: 'Start free', ctaAction: goCTA },
-              { plan: 'Pro', price: '€29', period: '/month', desc: 'For professionals who use ISOL daily.', featured: true,
-                features: ['Unlimited sessions', 'All 47 languages', 'AI-structured documents', 'Session archive & search', 'Custom glossary', 'Priority support'],
+              { plan: 'Pro', price: '€19', period: '/month', desc: 'For professionals who use ISOL daily.', featured: true,
+                features: ['30 sessions per month', '47 languages', 'AI notes & formatting', 'Session archive & search', '5 shareable links'],
                 cta: 'Start Pro →', ctaAction: goCTA },
-              { plan: 'Studio', price: 'Custom', period: '', desc: 'For teams and organizations.', featured: false,
-                features: ['Everything in Pro', 'Multiple seats', 'Team workspace', 'Usage analytics', 'Dedicated onboarding', 'SLA & invoice billing'],
-                cta: 'Contact us', ctaAction: () => navigate('/login') },
+              { plan: 'Studio', price: '€49', period: '/month', desc: 'No caps. No interruptions. Just work.', featured: false,
+                features: ['Unlimited sessions', '47 languages', 'All AI features', 'Priority processing', 'Unlimited shareable links'],
+                cta: 'Start Studio →', ctaAction: goCTA },
             ].map(({ plan, price, period, desc, featured, features, cta, ctaAction }) => (
               <div key={plan} className={`lp-plan${featured ? ' featured' : ''}`}>
                 {featured && <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.08em', color: '#6366F1', background: 'rgba(99,102,241,.1)', border: '1px solid rgba(99,102,241,.2)', borderRadius: 999, padding: '3px 10px', alignSelf: 'flex-start', marginBottom: 16 }}>MOST POPULAR</div>}

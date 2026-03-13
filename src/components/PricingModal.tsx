@@ -290,7 +290,7 @@ export default function PricingModal({ currentPlan, workspaceSlug: _workspaceSlu
                     fontSize: 42, fontWeight: 900, letterSpacing: '-0.04em', lineHeight: 1,
                     color: (isStudio || isTeam) ? '#fff' : 'var(--text)',
                   }}>
-                    ${price}
+                    €{price}
                   </span>
                   <span style={{
                     fontSize: 13, fontWeight: 500, marginLeft: 3,
@@ -305,10 +305,10 @@ export default function PricingModal({ currentPlan, workspaceSlug: _workspaceSlu
                     fontSize: 11, margin: '3px 0 0',
                     color: (isStudio || isTeam) ? 'rgba(255,255,255,0.45)' : 'var(--text-muted)',
                   }}>
-                    billed ${plan.annualPrice * 12}/yr
+                    billed €{plan.annualPrice * 12}/yr
                     {!(isStudio || isTeam) && (
                       <span style={{ marginLeft: 6, color: '#16a34a', fontWeight: 600 }}>
-                        save ${(plan.monthlyPrice - plan.annualPrice) * 12}
+                        save €{(plan.monthlyPrice - plan.annualPrice) * 12}
                       </span>
                     )}
                   </p>
