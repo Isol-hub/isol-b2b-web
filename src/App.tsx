@@ -6,6 +6,7 @@ import SettingsPage from './pages/SettingsPage'
 import SessionsPage from './pages/SessionsPage'
 import ViewerPage from './pages/ViewerPage'
 import SharedSessionPage from './pages/SharedSessionPage'
+import LegalPage from './pages/LegalPage'
 import { getSession } from './lib/auth'
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
@@ -36,6 +37,7 @@ export default function App() {
             <WorkspacePage />
           </RequireAuth>
         } />
+        <Route path="/legal/:doc" element={<LegalPage />} />
         <Route path="/" element={<LandingPage />} />
       </Routes>
     </BrowserRouter>
