@@ -7,7 +7,9 @@ interface Env {
 }
 
 function generateOtp(): string {
-  return String(Math.floor(100000 + Math.random() * 900000))
+  const array = new Uint32Array(1)
+  crypto.getRandomValues(array)
+  return String(100000 + (array[0] % 900000)).padStart(6, '0')
 }
 
 function slugFromEmail(email: string): string {
