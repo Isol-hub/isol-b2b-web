@@ -271,7 +271,7 @@ export default function SessionsPage() {
   if (!auth) return null
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column', isolation: 'isolate' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
 
       {/* Header */}
       <header className="header-glass" style={{
@@ -371,16 +371,14 @@ export default function SessionsPage() {
               return (
                 <div
                   key={s.id}
+                  className="session-row"
                   style={{
                     display: 'flex', alignItems: 'center', gap: 14,
                     padding: '11px 16px',
                     background: 'var(--canvas)',
                     borderRadius: 'var(--radius-lg)',
                     border: '1px solid var(--border)',
-                    transition: 'box-shadow 0.15s',
                   }}
-                  onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 1px 8px rgba(0,0,0,0.07)')}
-                  onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}
                 >
                   {/* Info */}
                   <div style={{ flex: 1, minWidth: 0 }}>

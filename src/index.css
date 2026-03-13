@@ -554,6 +554,14 @@ input, select { font-family: inherit; outline: none; }
   100% { background: transparent; }
 }
 
+/* ─── Session list row hover ────────────────────── */
+.session-row {
+  transition: background 0.12s;
+}
+.session-row:hover {
+  background: var(--surface-1) !important;
+}
+
 /* ─── Cursor ─────────────────────────────────────── */
 .doc-cursor {
   display: inline-block;
