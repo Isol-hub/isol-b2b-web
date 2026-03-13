@@ -210,9 +210,16 @@ export default function LandingPage() {
 
         <div style={{ position: 'relative', maxWidth: 860, animation: 'heroIn .7s ease both' }}>
           {/* Badge */}
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(99,102,241,.15)', border: '1px solid rgba(99,102,241,.35)', borderRadius: 999, padding: '5px 14px 5px 10px', fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,.75)', marginBottom: 32, letterSpacing: '.02em' }}>
-            <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#818CF8', animation: 'pulse 2s infinite', flexShrink: 0 }} />
-            47 languages · &lt; 2 second latency
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 32 }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, background: 'rgba(99,102,241,.12)', border: '1px solid rgba(99,102,241,.3)', borderRadius: 999, padding: '6px 14px 6px 11px' }}>
+              <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#818CF8', animation: 'pulse 2s infinite', flexShrink: 0 }} />
+              <span style={{ fontSize: 12, fontWeight: 700, color: '#a5b4fc', letterSpacing: '.04em' }}>47 LANGUAGES</span>
+            </div>
+            <div style={{ width: 1, height: 16, background: 'rgba(255,255,255,.1)' }} />
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, background: 'rgba(14,165,233,.08)', border: '1px solid rgba(14,165,233,.2)', borderRadius: 999, padding: '6px 14px 6px 11px' }}>
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M5 1v3.5L7 6" stroke="#38bdf8" strokeWidth="1.4" strokeLinecap="round"/><circle cx="5" cy="5" r="4.25" stroke="#38bdf8" strokeWidth="1.1"/></svg>
+              <span style={{ fontSize: 12, fontWeight: 700, color: '#7dd3fc', letterSpacing: '.04em' }}>&lt; 2s LATENCY</span>
+            </div>
           </div>
 
           <h1 className="lp-hero-h1" style={{ fontSize: 'clamp(52px,9vw,108px)', fontWeight: 700, lineHeight: 0.97, letterSpacing: '-0.05em', margin: '0 0 28px' }}>
@@ -269,17 +276,16 @@ export default function LandingPage() {
 
           <div className="lp-steps" style={{ display: 'flex', alignItems: 'flex-start', gap: 0 }}>
             {[
-              { Icon: IconCapture, num: '01', color: '#6366F1', title: 'Open ISOL and start capturing', desc: 'Choose your audio source — screen audio, microphone, or any live input. Hit start.' },
-              { Icon: IconShare,   num: '02', color: '#0ea5e9', title: 'Share the viewer link', desc: 'One click to copy the link. Send it by message, QR code, or project it on screen. No account needed to join.' },
-              { Icon: IconRead,    num: '03', color: '#10B981', title: 'They read in their language', desc: 'Each viewer opens the link and picks their language. The live banner updates as you speak.' },
-            ].map(({ Icon, num, color, title, desc }, i) => (
-              <div key={num} style={{ flex: 1, display: 'flex', gap: 0, alignItems: 'stretch' }}>
+              { Icon: IconCapture, color: '#6366F1', title: 'Open ISOL and start capturing', desc: 'Choose your audio source — screen audio, microphone, or any live input. Hit start.' },
+              { Icon: IconShare,   color: '#0ea5e9', title: 'Share the viewer link', desc: 'One click to copy the link. Send it by message, QR code, or project it on screen. No account needed to join.' },
+              { Icon: IconRead,    color: '#10B981', title: 'They read in their language', desc: 'Each viewer opens the link and picks their language. The live banner updates as you speak.' },
+            ].map(({ Icon, color, title, desc }, i) => (
+              <div key={title} style={{ flex: 1, display: 'flex', gap: 0, alignItems: 'stretch' }}>
                 <div style={{ flex: 1, padding: '0 clamp(12px,2vw,28px)', borderLeft: i > 0 ? '1px solid rgba(0,0,0,.07)' : 'none' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
                     <div className="lp-step-num" style={{ background: `${color}15`, color }}>
                       <Icon />
                     </div>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: 'rgba(0,0,0,.25)', letterSpacing: '.06em' }}>{num}</span>
                   </div>
                   <p style={{ fontSize: 16, fontWeight: 700, color: '#1d1d1f', margin: '0 0 8px', letterSpacing: '-0.01em' }}>{title}</p>
                   <p style={{ fontSize: 14, color: '#6e6e73', lineHeight: 1.65, margin: 0 }}>{desc}</p>
@@ -305,7 +311,7 @@ export default function LandingPage() {
             </p>
           </div>
 
-          {/* Host screenshot */}
+          {/* Host screenshot — annotated */}
           <div className="lp-host-frame" style={{ borderRadius: 16, overflow: 'hidden', border: '10px solid #1a1a2e', boxShadow: '0 40px 120px rgba(0,0,0,.7)', position: 'relative' }}>
             {/* Browser bar */}
             <div style={{ background: '#1a1a2e', padding: '8px 14px', display: 'flex', alignItems: 'center', gap: 8, borderBottom: '1px solid rgba(255,255,255,.06)' }}>
@@ -316,22 +322,30 @@ export default function LandingPage() {
                 <span style={{ fontSize: 10, color: 'rgba(255,255,255,.3)', fontWeight: 500 }}>isolstudio.live</span>
               </div>
             </div>
-            <img src="/screens/host-it.png" alt="ISOL host workspace" style={{ width: '100%', display: 'block' }} />
-          </div>
-
-          {/* Feature callouts */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', gap: 1, marginTop: 2, background: 'rgba(255,255,255,.04)', borderRadius: '0 0 12px 12px', overflow: 'hidden' }}>
-            {[
-              { label: 'Live banner', desc: 'Updates as you speak' },
-              { label: 'AI document', desc: 'Auto-structured in real-time' },
-              { label: 'Speaker detection', desc: 'Labels each voice' },
-              { label: 'Share in 1 click', desc: 'Link + QR always ready' },
-            ].map(({ label, desc }) => (
-              <div key={label} style={{ padding: '16px 20px', background: 'rgba(255,255,255,.02)' }}>
-                <p style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,.7)', margin: '0 0 3px' }}>{label}</p>
-                <p style={{ fontSize: 11, color: 'rgba(255,255,255,.3)', margin: 0 }}>{desc}</p>
-              </div>
-            ))}
+            <div style={{ position: 'relative' }}>
+              <img src="/screens/host-it.png" alt="ISOL host workspace" style={{ width: '100%', display: 'block' }} />
+              {/* Annotation dots */}
+              {[
+                { id: 1, color: '#818CF8', top: '12%',  left: '54%',  label: 'Live banner',       desc: 'Updates as you speak' },
+                { id: 2, color: '#34D399', top: '28%',  left: '57%',  label: 'AI document',       desc: 'Structured in real-time' },
+                { id: 3, color: '#F59E0B', top: '42%',  left: '88%',  label: 'Speaker labels',    desc: 'Each voice, identified' },
+                { id: 4, color: '#38BDF8', top: '62%',  left: '8.5%', label: 'Share in 1 click',  desc: 'Link + QR, always ready' },
+              ].map(({ id, color, top, left, label, desc }) => (
+                <div key={id} style={{ position: 'absolute', top, left, transform: 'translate(-50%,-50%)', zIndex: 10 }}>
+                  {/* Outer ring pulse */}
+                  <div style={{ position: 'absolute', inset: -5, borderRadius: '50%', border: `1.5px solid ${color}`, opacity: .35, animation: 'pulse 2.5s infinite' }} />
+                  {/* Dot */}
+                  <div style={{ width: 22, height: 22, borderRadius: '50%', background: color, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 0 12px ${color}88`, cursor: 'default', position: 'relative' }}>
+                    <span style={{ fontSize: 10, fontWeight: 800, color: '#000' }}>{id}</span>
+                  </div>
+                  {/* Tooltip — right side for left-edge dots, left for right-edge */}
+                  <div style={{ position: 'absolute', top: '50%', ...(parseFloat(left) > 50 ? { right: 30, left: 'auto' } : { left: 30 }), transform: 'translateY(-50%)', background: 'rgba(10,10,20,.88)', backdropFilter: 'blur(8px)', border: `1px solid ${color}44`, borderRadius: 8, padding: '7px 11px', whiteSpace: 'nowrap', pointerEvents: 'none' }}>
+                    <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: '#fff', letterSpacing: '.01em' }}>{label}</p>
+                    <p style={{ margin: 0, fontSize: 10, color: 'rgba(255,255,255,.45)', marginTop: 1 }}>{desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>
