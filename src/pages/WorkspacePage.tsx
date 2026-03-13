@@ -764,10 +764,20 @@ export default function WorkspacePage() {
             }
           }
         } catch { /* silent */ }
+        setSaveStatus('saved')
+        if (saveStatusTimerRef.current) clearTimeout(saveStatusTimerRef.current)
+        saveStatusTimerRef.current = setTimeout(() => setSaveStatus('idle'), 1800)
+      } else {
+        const errData = await res.json().catch(() => ({} as { code?: string }))
+        if (errData.code === 'FREE_LIMIT') {
+          setShowPricing(true)
+          setSaveStatus('idle')
+        } else {
+          setSaveStatus('error')
+          if (saveStatusTimerRef.current) clearTimeout(saveStatusTimerRef.current)
+          saveStatusTimerRef.current = setTimeout(() => setSaveStatus('idle'), 3000)
+        }
       }
-      setSaveStatus('saved')
-      if (saveStatusTimerRef.current) clearTimeout(saveStatusTimerRef.current)
-      saveStatusTimerRef.current = setTimeout(() => setSaveStatus('idle'), 1800)
     } catch {
       setSaveStatus('error')
       if (saveStatusTimerRef.current) clearTimeout(saveStatusTimerRef.current)
