@@ -4,7 +4,6 @@ import { saveToken, getSession } from '../lib/auth'
 
 type Step = 'email' | 'otp'
 
-/* ── Banner demo data ──────────────────────────────────────────────────────── */
 const DEMO = [
   { lang: 'Italian',  flag: '🇮🇹', prev: 'Il personaggio di Marty Supreme trascura le relazioni', curr: 'per cui Matthew ha vinto l\'Oscar.' },
   { lang: 'French',   flag: '🇫🇷', prev: 'ainsi je pouvais faire mes affaires. J\'étais comme une éponge', curr: 'j\'étais dos au mur. Je me suis dit…' },
@@ -22,9 +21,47 @@ const CSS = `
 @keyframes ann-float-b { 0%,100%{transform:translateY(0px)} 50%{transform:translateY(-4px)} }
 @keyframes lp-scene-in { from{opacity:0;transform:translateY(18px)} to{opacity:1;transform:translateY(0)} }
 @keyframes lp-text-in  { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+
 @media (max-width:768px) {
-  .login-hero { display:none !important; }
-  .login-form-wrap { max-width:100% !important; width:100% !important; }
+  .login-root {
+    flex-direction: column !important;
+  }
+  .login-hero {
+    min-height: auto !important;
+    padding: 52px 20px 28px !important;
+    justify-content: flex-start !important;
+  }
+  .login-hero-headline {
+    margin-bottom: 20px !important;
+  }
+  .login-hero-headline h1 {
+    font-size: 30px !important;
+  }
+  .login-hero-scene {
+    max-width: 100% !important;
+  }
+  .login-hero-video {
+    height: 200px !important;
+  }
+  .lp-lang-pills {
+    flex-wrap: wrap !important;
+    gap: 4px !important;
+  }
+  .login-hero-stats {
+    margin-top: 20px !important;
+    gap: 20px !important;
+  }
+  .login-form-wrap {
+    max-width: 100% !important;
+    width: 100% !important;
+    border-left: none !important;
+    border-top: 1px solid rgba(0,0,0,0.06) !important;
+    padding: 36px 20px 48px !important;
+    justify-content: flex-start !important;
+  }
+  .login-form-inner {
+    max-width: 100% !important;
+  }
 }
 `
 
@@ -51,13 +88,12 @@ function LiveBanner() {
     }}>
       <div style={{ position:'absolute', inset:0, backgroundImage:'radial-gradient(ellipse at 70% 0%,rgba(255,255,255,.07) 0%,transparent 60%)', pointerEvents:'none' }} />
 
-      {/* LIVE badge */}
+      {/* LIVE + pills */}
       <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:10 }}>
         <div style={{ width:6, height:6, borderRadius:'50%', background:'#EF4444', animation:'lp-pulse 1.2s ease-in-out infinite', flexShrink:0 }} />
         <span style={{ fontSize:10, fontWeight:800, letterSpacing:'0.12em', color:'#EF4444' }}>LIVE</span>
         <div style={{ flex:1 }} />
-        {/* Language pills */}
-        <div style={{ display:'flex', gap:5 }}>
+        <div className="lp-lang-pills" style={{ display:'flex', gap:5 }}>
           {DEMO.map((d2, i) => (
             <button
               key={d2.lang}
@@ -89,7 +125,6 @@ function LiveBanner() {
   )
 }
 
-/* ── Main component ─────────────────────────────────────────────────────────── */
 export default function LoginPage() {
   const navigate = useNavigate()
   const [step, setStep] = useState<Step>('email')
@@ -136,10 +171,13 @@ export default function LoginPage() {
   }
 
   return (
-    <div style={{ minHeight:'100vh', display:'flex', fontFamily:'-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",sans-serif' }}>
+    <div
+      className="login-root"
+      style={{ minHeight:'100vh', display:'flex', fontFamily:'-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",sans-serif' }}
+    >
       <style>{CSS}</style>
 
-      {/* ══ LEFT: immersive hero panel ══════════════════════════════════════ */}
+      {/* ══ LEFT / TOP: immersive hero ══════════════════════════════════════ */}
       <div
         className="login-hero"
         style={{
@@ -147,9 +185,8 @@ export default function LoginPage() {
           background:'#06060f',
           display:'flex', flexDirection:'column',
           alignItems:'center', justifyContent:'center',
-          padding:'80px clamp(32px,5vw,72px)',
+          padding:'80px clamp(20px,5vw,72px)',
           position:'relative', overflow:'hidden',
-          gap:0,
         }}
       >
         {/* Ambient glows */}
@@ -157,90 +194,83 @@ export default function LoginPage() {
         <div style={{ position:'absolute', bottom:-160, right:-80, width:440, height:440, borderRadius:'50%', background:'radial-gradient(circle,rgba(14,165,233,.10) 0%,transparent 68%)', pointerEvents:'none' }} />
 
         {/* Logo */}
-        <div style={{ position:'absolute', top:28, left:32, display:'flex', alignItems:'center', gap:9 }}>
+        <div style={{ position:'absolute', top:22, left:22, display:'flex', alignItems:'center', gap:9 }}>
           <div className="logo-mark" style={{ width:26, height:26 }}>
             <span style={{ color:'#fff', fontWeight:800, fontSize:12 }}>i</span>
           </div>
           <span style={{ fontSize:15, fontWeight:700, color:'#fff', letterSpacing:'-0.01em' }}>ISOL Studio</span>
         </div>
 
-        {/* ── Headline ── */}
-        <div style={{ width:'100%', maxWidth:480, marginBottom:32, animation:'lp-text-in .5s ease both' }}>
+        {/* Headline */}
+        <div className="login-hero-headline" style={{ width:'100%', maxWidth:480, marginBottom:32, animation:'lp-text-in .5s ease both' }}>
           <p style={{
             fontSize:11, fontWeight:700, letterSpacing:'0.14em',
-            color:'rgba(255,255,255,.28)', margin:'0 0 14px',
-            textTransform:'uppercase',
+            color:'rgba(255,255,255,.28)', margin:'0 0 14px', textTransform:'uppercase',
           }}>
             Real-time &nbsp;·&nbsp; 42 languages &nbsp;·&nbsp; Zero storage
           </p>
           <h1 style={{
-            fontSize:'clamp(32px,3.5vw,44px)', fontWeight:800,
+            fontSize:'clamp(30px,3.5vw,44px)', fontWeight:800,
             letterSpacing:'-0.04em', color:'#fff',
-            margin:'0 0 14px', lineHeight:1.1,
-            whiteSpace:'pre-line',
+            margin:'0 0 12px', lineHeight:1.1, whiteSpace:'pre-line',
           }}>{"Speech becomes\na living document"}</h1>
           <p style={{ fontSize:15, color:'rgba(255,255,255,.38)', lineHeight:1.65, margin:0, maxWidth:380 }}>
             Transcription and translation captured as it happens — in any language, from any source.
           </p>
         </div>
 
-        {/* ── 3D Scene ── */}
-        <div style={{ width:'100%', maxWidth:480, position:'relative', animation:'lp-scene-in .55s ease .1s both' }}>
+        {/* 3D Scene */}
+        <div className="login-hero-scene" style={{ width:'100%', maxWidth:480, position:'relative', animation:'lp-scene-in .55s ease .1s both' }}>
 
-          {/* Banner floats above the video */}
+          {/* Banner */}
           <div style={{ animation:'lp-float 5s ease-in-out infinite', marginBottom:14, position:'relative', zIndex:2 }}>
             <LiveBanner />
           </div>
 
           {/* Video card */}
           <div style={{
-            position:'relative',
-            borderRadius:18,
+            position:'relative', borderRadius:18,
             boxShadow:'0 48px 96px rgba(0,0,0,.65), 0 0 0 1px rgba(255,255,255,.07)',
           }}>
             <div style={{ borderRadius:18, overflow:'hidden' }}>
               <img
                 src="/screens/source-yt.png"
                 alt="Variety & CNN Town Hall"
+                className="login-hero-video"
                 style={{ width:'100%', display:'block', height:340, objectFit:'cover', objectPosition:'center 18%' }}
               />
-              {/* Gradient overlay */}
               <div style={{ position:'absolute', inset:0, background:'linear-gradient(to top,rgba(0,0,0,.72) 0%,rgba(0,0,0,.0) 50%)', pointerEvents:'none' }} />
-              {/* Video label */}
-              <div style={{ position:'absolute', bottom:18, left:20 }}>
-                <p style={{ fontSize:10, fontWeight:700, color:'rgba(255,255,255,.35)', letterSpacing:'.1em', margin:'0 0 4px', textTransform:'uppercase' }}>Any screen audio</p>
-                <p style={{ fontSize:15, fontWeight:700, color:'#fff', margin:0, lineHeight:1.3 }}>Timothée Chalamet &amp; Matthew McConaughey</p>
-                <p style={{ fontSize:11, color:'rgba(255,255,255,.42)', margin:'3px 0 0' }}>Variety &amp; CNN Town Hall</p>
+              <div style={{ position:'absolute', bottom:14, left:16 }}>
+                <p style={{ fontSize:10, fontWeight:700, color:'rgba(255,255,255,.35)', letterSpacing:'.1em', margin:'0 0 3px', textTransform:'uppercase' }}>Any screen audio</p>
+                <p style={{ fontSize:14, fontWeight:700, color:'#fff', margin:0, lineHeight:1.3 }}>Timothée Chalamet &amp; Matthew McConaughey</p>
+                <p style={{ fontSize:11, color:'rgba(255,255,255,.42)', margin:'2px 0 0' }}>Variety &amp; CNN Town Hall</p>
               </div>
             </div>
 
-            {/* ANNOTATION 1 — "← Matthew" */}
-            <div style={{ position:'absolute', top:'22%', right:18, animation:'ann-float-a 4.6s ease-in-out .5s infinite', zIndex:10 }}>
+            {/* Annotation 1 */}
+            <div style={{ position:'absolute', top:'22%', right:16, animation:'ann-float-a 4.6s ease-in-out .5s infinite', zIndex:10 }}>
               <div style={{
                 transform:'perspective(600px) rotateY(-22deg) rotateX(-4deg)',
-                background:'rgba(255,255,255,0.97)',
-                borderRadius:9, padding:'7px 14px 7px 11px',
+                background:'rgba(255,255,255,0.97)', borderRadius:9, padding:'6px 12px 6px 10px',
                 boxShadow:'-8px 12px 28px rgba(0,0,0,.32), -2px 3px 8px rgba(0,0,0,.16)',
-                display:'flex', alignItems:'center', gap:7,
-                pointerEvents:'none',
+                display:'flex', alignItems:'center', gap:6, pointerEvents:'none',
               }}>
-                <span style={{ color:'#B91C1C', fontSize:13, opacity:.45, lineHeight:1 }}>←</span>
-                <span style={{ fontFamily:"'Caveat',cursive", fontSize:22, color:'#B91C1C', fontStyle:'italic', lineHeight:1, whiteSpace:'nowrap' }}>Matthew</span>
+                <span style={{ color:'#B91C1C', fontSize:12, opacity:.45 }}>←</span>
+                <span style={{ fontFamily:"'Caveat',cursive", fontSize:20, color:'#B91C1C', fontStyle:'italic', lineHeight:1, whiteSpace:'nowrap' }}>Matthew</span>
               </div>
             </div>
 
-            {/* ANNOTATION 2 — "← questions from the audience" */}
-            <div style={{ position:'absolute', bottom:'24%', right:18, animation:'ann-float-b 5.6s ease-in-out 1.2s infinite', zIndex:10 }}>
+            {/* Annotation 2 */}
+            <div style={{ position:'absolute', bottom:'24%', right:16, animation:'ann-float-b 5.6s ease-in-out 1.2s infinite', zIndex:10 }}>
               <div style={{
                 transform:'perspective(600px) rotateY(-18deg) rotateX(5deg)',
-                background:'rgba(255,255,255,0.97)',
-                borderRadius:9, padding:'8px 14px 8px 11px',
+                background:'rgba(255,255,255,0.97)', borderRadius:9, padding:'7px 12px 7px 10px',
                 boxShadow:'-8px 12px 28px rgba(0,0,0,.32), -2px 3px 8px rgba(0,0,0,.16)',
                 pointerEvents:'none',
               }}>
-                <div style={{ display:'flex', alignItems:'flex-start', gap:7 }}>
-                  <span style={{ color:'#B91C1C', fontSize:13, opacity:.45, marginTop:2, lineHeight:1 }}>←</span>
-                  <span style={{ fontFamily:"'Caveat',cursive", fontSize:18, color:'#B91C1C', fontStyle:'italic', lineHeight:1.35, whiteSpace:'nowrap' }}>
+                <div style={{ display:'flex', alignItems:'flex-start', gap:6 }}>
+                  <span style={{ color:'#B91C1C', fontSize:12, opacity:.45, marginTop:2 }}>←</span>
+                  <span style={{ fontFamily:"'Caveat',cursive", fontSize:16, color:'#B91C1C', fontStyle:'italic', lineHeight:1.35, whiteSpace:'nowrap' }}>
                     questions from<br />the audience
                   </span>
                 </div>
@@ -249,8 +279,8 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* ── Stats row ── */}
-        <div style={{ display:'flex', gap:32, marginTop:32, width:'100%', maxWidth:480, animation:'lp-text-in .5s ease .25s both' }}>
+        {/* Stats */}
+        <div className="login-hero-stats" style={{ display:'flex', gap:32, marginTop:32, width:'100%', maxWidth:480, animation:'lp-text-in .5s ease .25s both' }}>
           {([['42+', 'Languages'], ['< 1 s', 'Latency'], ['Zero', 'Audio stored']] as const).map(([val, label]) => (
             <div key={label} style={{ display:'flex', alignItems:'baseline', gap:6 }}>
               <span style={{ fontSize:17, fontWeight:800, color:'rgba(255,255,255,.75)', letterSpacing:'-0.03em' }}>{val}</span>
@@ -260,7 +290,7 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* ══ RIGHT: form panel ═══════════════════════════════════════════════ */}
+      {/* ══ RIGHT / BOTTOM: form ════════════════════════════════════════════ */}
       <div
         className="login-form-wrap"
         style={{
@@ -271,17 +301,9 @@ export default function LoginPage() {
           borderLeft:'1px solid rgba(0,0,0,0.055)',
         }}
       >
-        <div style={{ width:'100%', maxWidth:360 }}>
+        <div className="login-form-inner" style={{ width:'100%', maxWidth:360 }}>
 
-          {/* Mobile logo (hidden on desktop via CSS in index.css) */}
-          <div className="login-mobile-logo" style={{ marginBottom:40, display:'none' }}>
-            <div className="logo-mark" style={{ width:40, height:40, marginBottom:12 }}>
-              <span style={{ color:'#fff', fontWeight:800, fontSize:18 }}>i</span>
-            </div>
-            <p style={{ fontSize:14, color:'#6e6e73', margin:0 }}>ISOL Studio</p>
-          </div>
-
-          {/* Step indicator */}
+          {/* Step bar */}
           <div style={{ display:'flex', gap:5, marginBottom:40 }}>
             {(['email', 'otp'] as Step[]).map((s, i) => (
               <div key={s} style={{
@@ -292,7 +314,6 @@ export default function LoginPage() {
             ))}
           </div>
 
-          {/* Heading */}
           <h2 style={{ fontSize:28, fontWeight:800, margin:'0 0 8px', letterSpacing:'-0.035em', color:'#1a1a1a', lineHeight:1.2 }}>
             {step === 'email' ? 'Sign in to ISOL' : 'Check your inbox'}
           </h2>
@@ -366,7 +387,6 @@ export default function LoginPage() {
             </form>
           )}
 
-          {/* Divider + privacy note */}
           <div style={{ marginTop:36, paddingTop:24, borderTop:'1px solid rgba(0,0,0,0.06)' }}>
             <p style={{ textAlign:'center', fontSize:12, color:'#aeaeb2', margin:0, lineHeight:1.7 }}>
               No audio is ever recorded or stored permanently.<br />
