@@ -4,7 +4,7 @@ import { saveToken, getSession } from '../lib/auth'
 
 type Step = 'email' | 'otp'
 
-/* ── Banner demo data (same as landing) ─────────────────────────────────── */
+/* ── Banner demo data ──────────────────────────────────────────────────────── */
 const DEMO = [
   { lang: 'Italian',  flag: '🇮🇹', prev: 'Il personaggio di Marty Supreme trascura le relazioni', curr: 'per cui Matthew ha vinto l\'Oscar.' },
   { lang: 'French',   flag: '🇫🇷', prev: 'ainsi je pouvais faire mes affaires. J\'étais comme une éponge', curr: 'j\'étais dos au mur. Je me suis dit…' },
@@ -13,16 +13,19 @@ const DEMO = [
 ]
 
 const CSS = `
-@keyframes lp-cur   { 0%,100%{opacity:1} 49%{opacity:1} 50%{opacity:0} }
-@keyframes lp-fadU  { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
-@keyframes lp-fadD  { from{opacity:1;transform:translateY(0)} to{opacity:0;transform:translateY(-8px)} }
-@keyframes lp-pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.3;transform:scale(.75)} }
-@keyframes lp-float { 0%,100%{transform:perspective(1400px) rotateX(18deg) translateY(0px)}
-                      50%{transform:perspective(1400px) rotateX(18deg) translateY(-6px)} }
-@keyframes ann-float-a { 0%,100%{transform:perspective(700px) rotateY(-24deg) rotateX(-3deg) translateY(0px)}
-                         50%{transform:perspective(700px) rotateY(-24deg) rotateX(-3deg) translateY(-5px)} }
-@keyframes ann-float-b { 0%,100%{transform:perspective(700px) rotateY(-20deg) rotateX(4deg) translateY(0px)}
-                         50%{transform:perspective(700px) rotateY(-20deg) rotateX(4deg) translateY(-4px)} }
+@keyframes lp-cur    { 0%,100%{opacity:1} 49%{opacity:1} 50%{opacity:0} }
+@keyframes lp-fadU   { from{opacity:0;transform:translateY(9px)} to{opacity:1;transform:translateY(0)} }
+@keyframes lp-fadD   { from{opacity:1;transform:translateY(0)} to{opacity:0;transform:translateY(-9px)} }
+@keyframes lp-pulse  { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.3;transform:scale(.75)} }
+@keyframes lp-float  { 0%,100%{transform:translateY(0px)} 50%{transform:translateY(-7px)} }
+@keyframes ann-float-a { 0%,100%{transform:translateY(0px)} 50%{transform:translateY(-5px)} }
+@keyframes ann-float-b { 0%,100%{transform:translateY(0px)} 50%{transform:translateY(-4px)} }
+@keyframes lp-scene-in { from{opacity:0;transform:translateY(18px)} to{opacity:1;transform:translateY(0)} }
+@keyframes lp-text-in  { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+@media (max-width:768px) {
+  .login-hero { display:none !important; }
+  .login-form-wrap { max-width:100% !important; width:100% !important; }
+}
 `
 
 function LiveBanner() {
@@ -32,7 +35,7 @@ function LiveBanner() {
   useEffect(() => {
     const t = setInterval(() => {
       setVis(false)
-      setTimeout(() => { setIdx(i => (i + 1) % DEMO.length); setVis(true) }, 420)
+      setTimeout(() => { setIdx(i => (i + 1) % DEMO.length); setVis(true) }, 400)
     }, 4000)
     return () => clearInterval(t)
   }, [])
@@ -40,46 +43,53 @@ function LiveBanner() {
   const d = DEMO[idx]
   return (
     <div style={{
-      background: 'linear-gradient(100deg,#05091a 0%,#161050 28%,#3b2a8a 52%,#1e6fa0 76%,#0ea5e9 100%)',
-      borderRadius: '16px 16px 8px 8px',
-      padding: '16px 24px 20px',
-      boxShadow: '0 -6px 32px rgba(99,102,241,.22), 0 20px 40px rgba(0,0,0,.4)',
+      background: 'linear-gradient(108deg,#05091a 0%,#14104a 28%,#3b2a8a 52%,#1e6fa0 78%,#0ea5e9 100%)',
+      borderRadius: 18,
+      padding: '18px 22px 22px',
+      boxShadow: '0 2px 0 rgba(255,255,255,0.06) inset, 0 24px 48px rgba(99,102,241,.28), 0 6px 16px rgba(0,0,0,.4)',
       position: 'relative', overflow: 'hidden',
     }}>
-      <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(ellipse at 65% 0%,rgba(255,255,255,.06) 0%,transparent 60%)', pointerEvents: 'none' }} />
-      <p style={{ fontSize: 13, color: 'rgba(255,255,255,.38)', margin: '0 0 4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', animation: vis ? 'lp-fadU .3s ease both' : 'lp-fadD .25s ease both' }}>
+      <div style={{ position:'absolute', inset:0, backgroundImage:'radial-gradient(ellipse at 70% 0%,rgba(255,255,255,.07) 0%,transparent 60%)', pointerEvents:'none' }} />
+
+      {/* LIVE badge */}
+      <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:10 }}>
+        <div style={{ width:6, height:6, borderRadius:'50%', background:'#EF4444', animation:'lp-pulse 1.2s ease-in-out infinite', flexShrink:0 }} />
+        <span style={{ fontSize:10, fontWeight:800, letterSpacing:'0.12em', color:'#EF4444' }}>LIVE</span>
+        <div style={{ flex:1 }} />
+        {/* Language pills */}
+        <div style={{ display:'flex', gap:5 }}>
+          {DEMO.map((d2, i) => (
+            <button
+              key={d2.lang}
+              onClick={() => { setVis(false); setTimeout(() => { setIdx(i); setVis(true) }, 160) }}
+              style={{
+                background: i === idx ? 'rgba(255,255,255,.2)' : 'rgba(255,255,255,.07)',
+                border: `1px solid ${i === idx ? 'rgba(255,255,255,.38)' : 'rgba(255,255,255,.1)'}`,
+                borderRadius: 999, padding: '2px 9px',
+                fontSize: 11, fontWeight: 600,
+                color: i === idx ? '#fff' : 'rgba(255,255,255,.4)',
+                cursor: 'pointer', fontFamily: 'inherit',
+                transition: 'all .18s',
+              }}
+            >
+              {d2.flag} {d2.lang}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <p style={{ fontSize:12, color:'rgba(255,255,255,.35)', margin:'0 0 5px', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', animation: vis ? 'lp-fadU .3s ease both' : 'lp-fadD .25s ease both' }}>
         {d.prev}
       </p>
-      <p style={{ fontSize: 18, fontWeight: 700, color: '#fff', margin: 0, lineHeight: 1.4, textShadow: '0 0 18px rgba(120,160,255,.4)', animation: vis ? 'lp-fadU .3s ease .04s both' : 'lp-fadD .25s ease both' }}>
+      <p style={{ fontSize:20, fontWeight:700, color:'#fff', margin:0, lineHeight:1.38, textShadow:'0 0 20px rgba(120,160,255,.4)', animation: vis ? 'lp-fadU .3s ease .05s both' : 'lp-fadD .25s ease both' }}>
         {d.curr}
-        <span style={{ display: 'inline-block', width: 2, height: '0.85em', background: '#fff', marginLeft: 3, verticalAlign: 'text-bottom', animation: 'lp-cur 1s step-end infinite' }} />
+        <span style={{ display:'inline-block', width:2, height:'0.82em', background:'#fff', marginLeft:3, verticalAlign:'text-bottom', animation:'lp-cur 1s step-end infinite' }} />
       </p>
-
-      {/* Language pills inside banner */}
-      <div style={{ display: 'flex', gap: 6, marginTop: 12, flexWrap: 'wrap' }}>
-        {DEMO.map((d2, i) => (
-          <button
-            key={d2.lang}
-            onClick={() => { setVis(false); setTimeout(() => { setIdx(i); setVis(true) }, 160) }}
-            style={{
-              background: i === idx ? 'rgba(255,255,255,.18)' : 'rgba(255,255,255,.07)',
-              border: `1px solid ${i === idx ? 'rgba(255,255,255,.35)' : 'rgba(255,255,255,.12)'}`,
-              borderRadius: 999, padding: '3px 10px',
-              fontSize: 11, fontWeight: 600,
-              color: i === idx ? '#fff' : 'rgba(255,255,255,.45)',
-              cursor: 'pointer', fontFamily: 'inherit',
-              transition: 'all .18s',
-            }}
-          >
-            {d2.flag} {d2.lang}
-          </button>
-        ))}
-      </div>
     </div>
   )
 }
 
-/* ── Main component ──────────────────────────────────────────────────────── */
+/* ── Main component ─────────────────────────────────────────────────────────── */
 export default function LoginPage() {
   const navigate = useNavigate()
   const [step, setStep] = useState<Step>('email')
@@ -126,148 +136,177 @@ export default function LoginPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', fontFamily: '-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",sans-serif' }}>
+    <div style={{ minHeight:'100vh', display:'flex', fontFamily:'-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",sans-serif' }}>
       <style>{CSS}</style>
 
-      {/* ── LEFT: visual panel ────────────────────────────────── */}
-      <div style={{
-        flex: '1 1 0', minHeight: '100vh', minWidth: 0,
-        background: '#07070e',
-        display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center',
-        padding: 'clamp(48px,6vw,72px) clamp(28px,4vw,56px)',
-        position: 'relative', overflow: 'hidden',
-      }} className="login-hero">
-
-        {/* Ambient glow */}
-        <div style={{ position: 'absolute', top: '40%', left: '50%', transform: 'translate(-50%,-50%)', width: 600, height: 600, borderRadius: '50%', background: 'radial-gradient(circle,rgba(99,102,241,.10) 0%,transparent 65%)', pointerEvents: 'none' }} />
+      {/* ══ LEFT: immersive hero panel ══════════════════════════════════════ */}
+      <div
+        className="login-hero"
+        style={{
+          flex:'1 1 0', minHeight:'100vh', minWidth:0,
+          background:'#06060f',
+          display:'flex', flexDirection:'column',
+          alignItems:'center', justifyContent:'center',
+          padding:'80px clamp(32px,5vw,72px)',
+          position:'relative', overflow:'hidden',
+          gap:0,
+        }}
+      >
+        {/* Ambient glows */}
+        <div style={{ position:'absolute', top:-180, left:-120, width:560, height:560, borderRadius:'50%', background:'radial-gradient(circle,rgba(99,102,241,.13) 0%,transparent 68%)', pointerEvents:'none' }} />
+        <div style={{ position:'absolute', bottom:-160, right:-80, width:440, height:440, borderRadius:'50%', background:'radial-gradient(circle,rgba(14,165,233,.10) 0%,transparent 68%)', pointerEvents:'none' }} />
 
         {/* Logo */}
-        <div style={{ position: 'absolute', top: 28, left: 32, display: 'flex', alignItems: 'center', gap: 9 }}>
-          <div className="logo-mark" style={{ width: 26, height: 26 }}>
-            <span style={{ color: '#fff', fontWeight: 800, fontSize: 12 }}>i</span>
+        <div style={{ position:'absolute', top:28, left:32, display:'flex', alignItems:'center', gap:9 }}>
+          <div className="logo-mark" style={{ width:26, height:26 }}>
+            <span style={{ color:'#fff', fontWeight:800, fontSize:12 }}>i</span>
           </div>
-          <span style={{ fontSize: 15, fontWeight: 700, color: '#fff', letterSpacing: '-0.01em' }}>ISOL Studio</span>
+          <span style={{ fontSize:15, fontWeight:700, color:'#fff', letterSpacing:'-0.01em' }}>ISOL Studio</span>
+        </div>
+
+        {/* ── Headline ── */}
+        <div style={{ width:'100%', maxWidth:480, marginBottom:32, animation:'lp-text-in .5s ease both' }}>
+          <p style={{
+            fontSize:11, fontWeight:700, letterSpacing:'0.14em',
+            color:'rgba(255,255,255,.28)', margin:'0 0 14px',
+            textTransform:'uppercase',
+          }}>
+            Real-time &nbsp;·&nbsp; 42 languages &nbsp;·&nbsp; Zero storage
+          </p>
+          <h1 style={{
+            fontSize:'clamp(32px,3.5vw,44px)', fontWeight:800,
+            letterSpacing:'-0.04em', color:'#fff',
+            margin:'0 0 14px', lineHeight:1.1,
+            whiteSpace:'pre-line',
+          }}>{"Speech becomes\na living document"}</h1>
+          <p style={{ fontSize:15, color:'rgba(255,255,255,.38)', lineHeight:1.65, margin:0, maxWidth:380 }}>
+            Transcription and translation captured as it happens — in any language, from any source.
+          </p>
         </div>
 
         {/* ── 3D Scene ── */}
-        <div style={{ width: '100%', maxWidth: 520, position: 'relative' }}>
+        <div style={{ width:'100%', maxWidth:480, position:'relative', animation:'lp-scene-in .55s ease .1s both' }}>
 
-          {/* Banner — floating, tilted back */}
-          <div style={{
-            animation: 'lp-float 5s ease-in-out infinite',
-            transformOrigin: 'bottom center',
-            marginBottom: -6,
-            position: 'relative', zIndex: 2,
-          }}>
+          {/* Banner floats above the video */}
+          <div style={{ animation:'lp-float 5s ease-in-out infinite', marginBottom:14, position:'relative', zIndex:2 }}>
             <LiveBanner />
           </div>
 
-          {/* YouTube video — flat base */}
+          {/* Video card */}
           <div style={{
-            position: 'relative',
-            borderRadius: '4px 4px 18px 18px',
-            overflow: 'visible',
-            boxShadow: '0 40px 80px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.06)',
+            position:'relative',
+            borderRadius:18,
+            boxShadow:'0 48px 96px rgba(0,0,0,.65), 0 0 0 1px rgba(255,255,255,.07)',
           }}>
-            <div style={{ borderRadius: '4px 4px 18px 18px', overflow: 'hidden' }}>
+            <div style={{ borderRadius:18, overflow:'hidden' }}>
               <img
                 src="/screens/source-yt.png"
                 alt="Variety & CNN Town Hall"
-                style={{ width: '100%', display: 'block', height: 300, objectFit: 'cover', objectPosition: 'center 18%' }}
+                style={{ width:'100%', display:'block', height:340, objectFit:'cover', objectPosition:'center 18%' }}
               />
-              {/* Bottom gradient */}
-              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top,rgba(0,0,0,.65) 0%,transparent 55%)', pointerEvents: 'none' }} />
+              {/* Gradient overlay */}
+              <div style={{ position:'absolute', inset:0, background:'linear-gradient(to top,rgba(0,0,0,.72) 0%,rgba(0,0,0,.0) 50%)', pointerEvents:'none' }} />
               {/* Video label */}
-              <div style={{ position: 'absolute', bottom: 16, left: 18 }}>
-                <p style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,.4)', letterSpacing: '.08em', margin: '0 0 3px' }}>ANY SCREEN AUDIO</p>
-                <p style={{ fontSize: 14, fontWeight: 700, color: '#fff', margin: 0, lineHeight: 1.3 }}>
-                  Timothée Chalamet & Matthew McConaughey
-                </p>
-                <p style={{ fontSize: 11, color: 'rgba(255,255,255,.45)', margin: '2px 0 0' }}>Variety & CNN Town Hall</p>
+              <div style={{ position:'absolute', bottom:18, left:20 }}>
+                <p style={{ fontSize:10, fontWeight:700, color:'rgba(255,255,255,.35)', letterSpacing:'.1em', margin:'0 0 4px', textTransform:'uppercase' }}>Any screen audio</p>
+                <p style={{ fontSize:15, fontWeight:700, color:'#fff', margin:0, lineHeight:1.3 }}>Timothée Chalamet &amp; Matthew McConaughey</p>
+                <p style={{ fontSize:11, color:'rgba(255,255,255,.42)', margin:'3px 0 0' }}>Variety &amp; CNN Town Hall</p>
               </div>
             </div>
 
             {/* ANNOTATION 1 — "← Matthew" */}
-            <div style={{
-              position: 'absolute', top: '26%', right: -16,
-              animation: 'ann-float-a 4.5s ease-in-out .5s infinite',
-              transformOrigin: 'right center',
-              background: 'rgba(255,255,255,0.97)',
-              borderRadius: 8, padding: '7px 13px 7px 10px',
-              boxShadow: '-10px 10px 32px rgba(0,0,0,.35), -2px 2px 6px rgba(0,0,0,.18)',
-              display: 'flex', alignItems: 'center', gap: 7,
-              pointerEvents: 'none', zIndex: 10,
-            }}>
-              <span style={{ color: '#B91C1C', fontSize: 12, opacity: .55 }}>←</span>
-              <span style={{ fontFamily: "'Caveat',cursive", fontSize: 20, color: '#B91C1C', fontStyle: 'italic', lineHeight: 1, whiteSpace: 'nowrap' }}>
-                Matthew
-              </span>
+            <div style={{ position:'absolute', top:'22%', right:18, animation:'ann-float-a 4.6s ease-in-out .5s infinite', zIndex:10 }}>
+              <div style={{
+                transform:'perspective(600px) rotateY(-22deg) rotateX(-4deg)',
+                background:'rgba(255,255,255,0.97)',
+                borderRadius:9, padding:'7px 14px 7px 11px',
+                boxShadow:'-8px 12px 28px rgba(0,0,0,.32), -2px 3px 8px rgba(0,0,0,.16)',
+                display:'flex', alignItems:'center', gap:7,
+                pointerEvents:'none',
+              }}>
+                <span style={{ color:'#B91C1C', fontSize:13, opacity:.45, lineHeight:1 }}>←</span>
+                <span style={{ fontFamily:"'Caveat',cursive", fontSize:22, color:'#B91C1C', fontStyle:'italic', lineHeight:1, whiteSpace:'nowrap' }}>Matthew</span>
+              </div>
             </div>
 
             {/* ANNOTATION 2 — "← questions from the audience" */}
-            <div style={{
-              position: 'absolute', bottom: '20%', right: -16,
-              animation: 'ann-float-b 5.5s ease-in-out 1.2s infinite',
-              transformOrigin: 'right center',
-              background: 'rgba(255,255,255,0.97)',
-              borderRadius: 8, padding: '7px 13px 7px 10px',
-              boxShadow: '-10px 10px 32px rgba(0,0,0,.35), -2px 2px 6px rgba(0,0,0,.18)',
-              pointerEvents: 'none', zIndex: 10,
-            }}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 7 }}>
-                <span style={{ color: '#B91C1C', fontSize: 12, opacity: .55, marginTop: 3 }}>←</span>
-                <span style={{ fontFamily: "'Caveat',cursive", fontSize: 17, color: '#B91C1C', fontStyle: 'italic', lineHeight: 1.3, whiteSpace: 'nowrap' }}>
-                  questions from<br />the audience
-                </span>
+            <div style={{ position:'absolute', bottom:'24%', right:18, animation:'ann-float-b 5.6s ease-in-out 1.2s infinite', zIndex:10 }}>
+              <div style={{
+                transform:'perspective(600px) rotateY(-18deg) rotateX(5deg)',
+                background:'rgba(255,255,255,0.97)',
+                borderRadius:9, padding:'8px 14px 8px 11px',
+                boxShadow:'-8px 12px 28px rgba(0,0,0,.32), -2px 3px 8px rgba(0,0,0,.16)',
+                pointerEvents:'none',
+              }}>
+                <div style={{ display:'flex', alignItems:'flex-start', gap:7 }}>
+                  <span style={{ color:'#B91C1C', fontSize:13, opacity:.45, marginTop:2, lineHeight:1 }}>←</span>
+                  <span style={{ fontFamily:"'Caveat',cursive", fontSize:18, color:'#B91C1C', fontStyle:'italic', lineHeight:1.35, whiteSpace:'nowrap' }}>
+                    questions from<br />the audience
+                  </span>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Bottom tagline */}
-        <p style={{ fontSize: 12, color: 'rgba(255,255,255,.2)', marginTop: 40, textAlign: 'center', lineHeight: 1.6 }}>
-          No audio is ever recorded or stored permanently.
-        </p>
+        {/* ── Stats row ── */}
+        <div style={{ display:'flex', gap:32, marginTop:32, width:'100%', maxWidth:480, animation:'lp-text-in .5s ease .25s both' }}>
+          {([['42+', 'Languages'], ['< 1 s', 'Latency'], ['Zero', 'Audio stored']] as const).map(([val, label]) => (
+            <div key={label} style={{ display:'flex', alignItems:'baseline', gap:6 }}>
+              <span style={{ fontSize:17, fontWeight:800, color:'rgba(255,255,255,.75)', letterSpacing:'-0.03em' }}>{val}</span>
+              <span style={{ fontSize:11, color:'rgba(255,255,255,.28)', fontWeight:500 }}>{label}</span>
+            </div>
+          ))}
+        </div>
       </div>
 
-      {/* ── RIGHT: form ──────────────────────────────────────────── */}
-      <div style={{
-        flex: '0 0 auto', width: '100%', maxWidth: 440,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: '48px 40px',
-        background: '#fff',
-      }}>
-        <div style={{ width: '100%' }}>
+      {/* ══ RIGHT: form panel ═══════════════════════════════════════════════ */}
+      <div
+        className="login-form-wrap"
+        style={{
+          flex:'0 0 auto', width:'100%', maxWidth:460,
+          display:'flex', alignItems:'center', justifyContent:'center',
+          padding:'52px 48px',
+          background:'#fff',
+          borderLeft:'1px solid rgba(0,0,0,0.055)',
+        }}
+      >
+        <div style={{ width:'100%', maxWidth:360 }}>
 
-          {/* Mobile logo */}
-          <div className="login-mobile-logo" style={{ marginBottom: 36 }}>
-            <div className="logo-mark" style={{ width: 44, height: 44, marginBottom: 14 }}>
-              <span style={{ color: '#fff', fontWeight: 800, fontSize: 22 }}>i</span>
+          {/* Mobile logo (hidden on desktop via CSS in index.css) */}
+          <div className="login-mobile-logo" style={{ marginBottom:40, display:'none' }}>
+            <div className="logo-mark" style={{ width:40, height:40, marginBottom:12 }}>
+              <span style={{ color:'#fff', fontWeight:800, fontSize:18 }}>i</span>
             </div>
-            <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 5, letterSpacing: '-0.02em' }}>ISOL Studio</h1>
-            <p style={{ fontSize: 14, color: '#6e6e73' }}>Live translation for your team</p>
+            <p style={{ fontSize:14, color:'#6e6e73', margin:0 }}>ISOL Studio</p>
           </div>
 
-          {/* Step progress bar */}
-          <div style={{ display: 'flex', gap: 4, marginBottom: 32 }}>
-            <div style={{ height: 3, flex: 1, borderRadius: 2, background: '#6366F1' }} />
-            <div style={{ height: 3, flex: 1, borderRadius: 2, background: step === 'otp' ? '#6366F1' : '#e5e5ea', transition: 'background .3s' }} />
+          {/* Step indicator */}
+          <div style={{ display:'flex', gap:5, marginBottom:40 }}>
+            {(['email', 'otp'] as Step[]).map((s, i) => (
+              <div key={s} style={{
+                height:3, flex:1, borderRadius:2,
+                background: (i === 0 || step === 'otp') ? '#6366F1' : 'rgba(0,0,0,0.08)',
+                transition:'background .3s',
+              }} />
+            ))}
           </div>
 
-          <h2 style={{ fontSize: 26, fontWeight: 700, marginBottom: 7, letterSpacing: '-0.03em', color: '#1d1d1f' }}>
-            {step === 'email' ? 'Sign in' : 'Check your inbox'}
+          {/* Heading */}
+          <h2 style={{ fontSize:28, fontWeight:800, margin:'0 0 8px', letterSpacing:'-0.035em', color:'#1a1a1a', lineHeight:1.2 }}>
+            {step === 'email' ? 'Sign in to ISOL' : 'Check your inbox'}
           </h2>
-          <p style={{ fontSize: 15, color: '#6e6e73', marginBottom: 32, lineHeight: 1.55 }}>
+          <p style={{ fontSize:15, color:'#6e6e73', margin:'0 0 36px', lineHeight:1.6 }}>
             {step === 'email'
               ? "Enter your work email. We'll send a one-time code — no password needed."
-              : <>Code sent to <strong style={{ color: '#1d1d1f' }}>{email}</strong></>}
+              : <><span style={{ color:'#1a1a1a', fontWeight:600 }}>{email}</span> — a 6-digit code is on its way.</>
+            }
           </p>
 
           {step === 'email' ? (
-            <form onSubmit={requestOtp} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <form onSubmit={requestOtp} style={{ display:'flex', flexDirection:'column', gap:14 }}>
               <div>
-                <label style={{ display: 'block', fontSize: 11, color: '#6e6e73', marginBottom: 6, fontWeight: 600, letterSpacing: '.06em', textTransform: 'uppercase' }}>
+                <label style={{ display:'block', fontSize:11, color:'#8e8e93', marginBottom:7, fontWeight:600, letterSpacing:'.07em', textTransform:'uppercase' }}>
                   Work email
                 </label>
                 <input
@@ -277,23 +316,23 @@ export default function LoginPage() {
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   required autoFocus
-                  style={{ fontSize: 16, height: 50, borderRadius: 12 }}
+                  style={{ fontSize:16, height:52, borderRadius:12 }}
                 />
               </div>
-              {error && <p style={{ color: 'var(--red)', fontSize: 13, margin: 0 }}>{error}</p>}
+              {error && <p style={{ color:'var(--red)', fontSize:13, margin:0 }}>{error}</p>}
               <button
                 className="btn-primary"
                 type="submit"
                 disabled={loading || !email}
-                style={{ width: '100%', height: 50, fontSize: 15, fontWeight: 700, borderRadius: 12 }}
+                style={{ width:'100%', height:52, fontSize:15, fontWeight:700, borderRadius:12, marginTop:4 }}
               >
                 {loading ? 'Sending…' : 'Continue →'}
               </button>
             </form>
           ) : (
-            <form onSubmit={verifyOtp} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <form onSubmit={verifyOtp} style={{ display:'flex', flexDirection:'column', gap:14 }}>
               <div>
-                <label style={{ display: 'block', fontSize: 11, color: '#6e6e73', marginBottom: 6, fontWeight: 600, letterSpacing: '.06em', textTransform: 'uppercase' }}>
+                <label style={{ display:'block', fontSize:11, color:'#8e8e93', marginBottom:7, fontWeight:600, letterSpacing:'.07em', textTransform:'uppercase' }}>
                   6-digit code
                 </label>
                 <input
@@ -301,35 +340,39 @@ export default function LoginPage() {
                   type="text"
                   inputMode="numeric"
                   pattern="[0-9]{6}"
-                  placeholder="000000"
+                  placeholder="000 000"
                   value={otp}
                   onChange={e => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
                   required autoFocus
-                  style={{ textAlign: 'center', fontSize: 34, letterSpacing: '0.3em', fontWeight: 800, padding: '14px', height: 72, borderRadius: 12 }}
+                  style={{ textAlign:'center', fontSize:36, letterSpacing:'0.28em', fontWeight:800, height:76, borderRadius:12, padding:'14px' }}
                 />
               </div>
-              {error && <p style={{ color: 'var(--red)', fontSize: 13, margin: 0 }}>{error}</p>}
+              {error && <p style={{ color:'var(--red)', fontSize:13, margin:0 }}>{error}</p>}
               <button
                 className="btn-primary"
                 type="submit"
                 disabled={loading || otp.length !== 6}
-                style={{ width: '100%', height: 50, fontSize: 15, fontWeight: 700, borderRadius: 12 }}
+                style={{ width:'100%', height:52, fontSize:15, fontWeight:700, borderRadius:12, marginTop:4 }}
               >
                 {loading ? 'Verifying…' : 'Sign in →'}
               </button>
               <button
                 type="button"
                 onClick={() => { setStep('email'); setOtp(''); setError('') }}
-                style={{ background: 'none', border: 'none', color: '#6e6e73', fontSize: 14, cursor: 'pointer', padding: '4px 0', fontFamily: 'inherit' }}
+                style={{ background:'none', border:'none', color:'#8e8e93', fontSize:13, cursor:'pointer', padding:'4px 0', fontFamily:'inherit' }}
               >
                 ← Use a different email
               </button>
             </form>
           )}
 
-          <p style={{ textAlign: 'center', fontSize: 12, color: '#aeaeb2', marginTop: 28, lineHeight: 1.6 }}>
-            No audio is ever recorded or stored.
-          </p>
+          {/* Divider + privacy note */}
+          <div style={{ marginTop:36, paddingTop:24, borderTop:'1px solid rgba(0,0,0,0.06)' }}>
+            <p style={{ textAlign:'center', fontSize:12, color:'#aeaeb2', margin:0, lineHeight:1.7 }}>
+              No audio is ever recorded or stored permanently.<br />
+              <span style={{ color:'#c7c7cc' }}>Your words are yours.</span>
+            </p>
+          </div>
         </div>
       </div>
     </div>
