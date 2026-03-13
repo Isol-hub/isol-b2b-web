@@ -36,9 +36,27 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
       ).bind(workspaceSlug),
     ])
 
-    const workspace = workspaceResult.results[0]
+    let workspace = workspaceResult.results[0]
     if (!workspace) {
-      return Response.json({ error: 'Not found' }, { status: 404, headers: CORS })
+      // First login — no workspace row exists yet. Auto-create with defaults so the
+      // app is usable immediately without waiting for the first session save.
+      await env.DB.prepare(
+        'INSERT OR IGNORE INTO workspaces (slug, owner_email, created_at) VALUES (?, ?, ?)'
+      ).bind(workspaceSlug, auth.email, Date.now()).run()
+
+      workspace = await env.DB.prepare(
+        'SELECT slug, owner_email, display_name, default_lang, plan, plan_expires_at, api_key FROM workspaces WHERE slug = ?'
+      ).bind(workspaceSlug).first()
+
+      if (!workspace) {
+        return Response.json({ error: 'Not found' }, { status: 404, headers: CORS })
+      }
+
+      return Response.json({
+        workspace,
+        stats: { sessions_total: 0, minutes_total: 0, top_lang: null },
+        usage: [],
+      }, { headers: CORS })
     }
 
     const statsRow = statsResult.results[0] as { sessions_total: number; total_seconds: number } | undefined
