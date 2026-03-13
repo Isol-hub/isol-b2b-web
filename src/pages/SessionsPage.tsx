@@ -146,12 +146,29 @@ export default function SessionsPage() {
     setShareExpiryChoice('never')
   }, [])
 
+  const copyToClipboard = useCallback(async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text)
+    } catch {
+      // Fallback for Chrome when document is not focused (e.g. inside a modal overlay)
+      const ta = document.createElement('textarea')
+      ta.value = text
+      ta.style.position = 'fixed'
+      ta.style.opacity = '0'
+      document.body.appendChild(ta)
+      ta.focus()
+      ta.select()
+      document.execCommand('copy')
+      document.body.removeChild(ta)
+    }
+  }, [])
+
   const handleGenerateOrCopy = useCallback(async (s: SessionMeta) => {
     const token = getToken()
     if (!token) return
 
     if (s.share_token) {
-      navigator.clipboard.writeText(`${window.location.origin}/share/${s.share_token}`)
+      await copyToClipboard(`${window.location.origin}/share/${s.share_token}`)
       setShareCopied(s.id)
       setTimeout(() => setShareCopied(null), 2400)
       return
@@ -177,13 +194,13 @@ export default function SessionsPage() {
         setSessions(prev => prev.map(x =>
           x.id === s.id ? { ...x, share_token: data.token, share_expires_at: data.share_expires_at } : x
         ))
-        navigator.clipboard.writeText(`${window.location.origin}/share/${data.token}`)
+        await copyToClipboard(`${window.location.origin}/share/${data.token}`)
         setShareCopied(s.id)
         setTimeout(() => setShareCopied(null), 2400)
       }
     } catch { /* silent */ }
     finally { setShareLoading(null) }
-  }, [shareExpiryChoice])
+  }, [shareExpiryChoice, copyToClipboard])
 
   const handleRevoke = useCallback(async (s: SessionMeta) => {
     const token = getToken()
@@ -526,7 +543,7 @@ export default function SessionsPage() {
       {/* Detail modal */}
       {(detail || detailLoading) && (
         <div
-          onClick={e => { if (e.target === e.currentTarget) setDetail(null) }}
+          onClick={e => { if (e.target === e.currentTarget) { setDetail(null); setDetailLoading(false) } }}
           style={{
             position: 'fixed', inset: 0, zIndex: 10000,
             background: 'rgba(0,0,0,0.50)',
@@ -580,7 +597,7 @@ export default function SessionsPage() {
                   <p style={{ fontSize: 14, color: 'var(--text-muted)', margin: 0 }}>Loading…</p>
                 )}
               </div>
-              <button onClick={() => setDetail(null)} className="btn-icon" style={{ fontSize: 16 }}>✕</button>
+              <button onClick={() => { setDetail(null); setDetailLoading(false) }} className="btn-icon" style={{ fontSize: 16 }}>✕</button>
             </div>
 
             <div style={{ flex: 1, overflowY: 'auto', padding: '24px' }}>
