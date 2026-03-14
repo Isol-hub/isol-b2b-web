@@ -30,7 +30,7 @@
 *Da completare entro 7 giorni dal lancio*
 
 - [x] **C1** — CSP + CORS headers — nessun file `_headers` Cloudflare Pages; CORS è `*` su tutti gli endpoint
-- [ ] **C2** — Audit log — nessun log immutabile per delete workspace, delete session, cambio piano
+- [x] **C2** — Audit log — nessun log immutabile per delete workspace, delete session, cambio piano
 - [ ] **C3** — Data Export UI — sezione "Coming soon" in SettingsPage; librerie jsPDF e docx già installate
 - [ ] **C4** — TypeScript strict — `noUnusedLocals: false`, `noUnusedParameters: false` in tsconfig.app.json
 - [ ] **C5** — Magic strings → constants file — `'pending'`, `'active'`, `'otp_req:'`, `'isol_session'`, `'b2b'` sparsi in 15+ file
@@ -53,4 +53,5 @@
 | 2026-03-14 | B5 | 7cfd5ac | sessions/index.ts: LIMIT 200→50, before_id cursor param, next_cursor in response; SessionsPage: Load more button |
 | 2026-03-14 | B6 | eb02b16 | 0016_fts_backfill.sql: idempotent INSERT WHERE id NOT IN sessions_fts; applied to remote D1 |
 | 2026-03-14 | B7 | 87409ff | @sentry/react in main.tsx (disabled when VITE_SENTRY_DSN unset); structured console.error in jwt.ts + ratelimit.ts |
-| 2026-03-14 | C1 | 1af18c9 | corsHeaders() in lib/cors.ts (isol.studio only); 28 endpoints migrated; public/_headers con CSP + X-Frame-Options |
+| 2026-03-14 | C1 | 1af18c9 | corsHeaders() in lib/cors.ts (isol.studio only); 28 endpoints migrati; public/_headers con CSP + X-Frame-Options |
+| 2026-03-14 | C2 | 837e971 | audit_log table + logAudit() fire-and-forget; 8 endpoint strumentati (save/delete session, workspace, share, member) |
