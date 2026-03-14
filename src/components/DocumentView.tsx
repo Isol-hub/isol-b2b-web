@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
-import MatrixText from './MatrixText'
 import { type CommentItem } from './CommentThread'
 import LiveBanner from './LiveBanner'
 import SessionTimeline, { type TimelineSegment } from './SessionTimeline'
@@ -151,32 +150,6 @@ function CommentMarginalia({
 }
 
 
-function InlineComments({ comments, rotateOffset = 0 }: { comments: CommentItem[]; rotateOffset?: number }) {
-  return (
-    <div style={{ paddingLeft: 6, paddingTop: 3, paddingBottom: 2 }}>
-      {comments.map((comment, ci) => (
-        <div
-          key={comment.id}
-          style={{
-            color: '#B91C1C',
-            fontFamily: 'var(--font-note)',
-            fontSize: 16,
-            fontStyle: 'italic',
-            lineHeight: 1.35,
-            transform: `rotate(${-0.7 - (ci + rotateOffset) * 0.4}deg)`,
-            marginTop: ci === 0 ? 0 : 5,
-            wordBreak: 'break-word',
-            userSelect: 'none',
-            opacity: (comment as CommentItem & { pending?: boolean }).pending ? 0.5 : 1,
-            pointerEvents: 'none',
-          }}
-        >
-          — {comment.body}
-        </div>
-      ))}
-    </div>
-  )
-}
 
 function AiContent({ text, onWordClick }: { text: string; onWordClick?: (w: string, s: string) => void }) {
   const lines = text.split('\n')
@@ -206,16 +179,16 @@ function AiContent({ text, onWordClick }: { text: string; onWordClick?: (w: stri
 }
 
 export default function DocumentView({
-  transcript, currentLine, isActive, targetLang, hideBanner,
+  transcript, currentLine, isActive, targetLang: _targetLang, hideBanner,
   aiFormatted, aiFormattedAt, aiLoading,
   aiNotes, aiNotesLoading,
   viewMode, onViewModeChange,
   onWordClick,
   isEditable, onLineEdit,
-  lineComments, openCommentLine, onOpenCommentLine,
-  commentAuthor, onCommentAuthorChange, onAddComment, commentSubmitting,
+  lineComments, openCommentLine, onOpenCommentLine: _onOpenCommentLine,
+  commentAuthor: _commentAuthor, onCommentAuthorChange: _onCommentAuthorChange, onAddComment, commentSubmitting: _commentSubmitting,
   sessionStartMs, sessionEndMs,
-  highlights, onAddHighlight, onRemoveHighlight,
+  highlights, onAddHighlight, onRemoveHighlight: _onRemoveHighlight,
   isHost, onDeleteComment, onEditComment,
   bannerOverride,
 }: Props) {

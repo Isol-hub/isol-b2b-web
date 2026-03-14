@@ -56,4 +56,4 @@
 | 2026-03-14 | C1 | 1af18c9 | corsHeaders() in lib/cors.ts (isol.studio only); 28 endpoints migrati; public/_headers con CSP + X-Frame-Options |
 | 2026-03-14 | C2 | 837e971 | audit_log table + logAudit() fire-and-forget; 8 endpoint strumentati (save/delete session, workspace, share, member) |
 | 2026-03-14 | C3 | — | export.ts GET endpoint (chunked batch); SettingsPage: Export JSON/PDF/Word buttons via jsPDF + docx |
-| 2026-03-14 | C4 | — | tsconfig.app.json: noUnusedLocals + noUnusedParameters → true; zero errori |
+| 2026-03-14 | C4 | 83a8775 | tsconfig.app.json: noUnusedLocals + noUnusedParameters → true; zero errori |

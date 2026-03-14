@@ -101,8 +101,6 @@ export default function LiveBanner({ currentLine, previousLine, isActive }: Prop
     return () => obs.disconnect()
   }, [canvasReady])
 
-  const isEmpty = !currentLine && !previousLine
-
   return (
     <div style={{
       position: 'relative',

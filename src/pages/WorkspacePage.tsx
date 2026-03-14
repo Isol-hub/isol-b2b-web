@@ -136,7 +136,6 @@ export default function WorkspacePage() {
   const aiFormattedAtRef = useRef<number | undefined>(undefined)
   const aiFormattedRef = useRef<string | undefined>(undefined)
   const aiNotesRef = useRef<string | undefined>(undefined)
-  const notesRunCountRef = useRef(0)
   useEffect(() => { aiFormattedAtRef.current = aiFormattedAt }, [aiFormattedAt])
   useEffect(() => { aiFormattedRef.current = aiFormatted }, [aiFormatted])
   useEffect(() => { aiNotesRef.current = aiNotes }, [aiNotes])
@@ -162,8 +161,8 @@ export default function WorkspacePage() {
   const [highlights, setHighlights] = useState<HighlightItem[]>([])
 
   // Speaker diarization state (live session)
-  const [speakerAssignments, setSpeakerAssignments] = useState<LineAssignment[]>([])
-  const [speakerLabels, setSpeakerLabels] = useState<Map<string, SpeakerProfile>>(new Map())
+  const [_speakerAssignments, setSpeakerAssignments] = useState<LineAssignment[]>([])
+  const [_speakerLabels, setSpeakerLabels] = useState<Map<string, SpeakerProfile>>(new Map())
 
   // Speaker map for archived session modal — built from API response
   const speakerAssignmentsRef = useRef<LineAssignment[]>([])
@@ -177,7 +176,7 @@ export default function WorkspacePage() {
   const [editingTitle, setEditingTitle] = useState('')
   const [shareCopied, setShareCopied] = useState(false)
   const [sharePending, setSharePending] = useState(false)
-  const [shareDurationHours, setShareDurationHours] = useState<number | null>(null)
+  const [, setShareDurationHours] = useState<number | null>(null)
 
   // Inline annotations (live session only)
   const [lineComments, setLineComments] = useState<Map<number, CommentItem[]>>(new Map())
@@ -838,36 +837,6 @@ export default function WorkspacePage() {
     setHighlights(prev => prev.filter(h => h.id !== id))
   }, [])
 
-  const handleSpeakerRename = useCallback((speakerId: string, label: string) => {
-    const existing = speakerProfilesRef.current.get(speakerId)
-    if (!existing) return
-    speakerProfilesRef.current.set(speakerId, { ...existing, label, is_user_edited: true })
-    setSpeakerLabels(new Map(speakerProfilesRef.current))
-    // Confirm all lines for this speaker (user made an explicit choice)
-    setSpeakerAssignments(prev => {
-      const next = prev.map(a =>
-        a.speakerId === speakerId ? { ...a, state: 'confirmed' as SpeakerState, source: 'manual' as SpeakerSource } : a
-      )
-      speakerAssignmentsRef.current = next
-      return next
-    })
-  }, [])
-
-  const handleSpeakerSetSame = useCallback((lineIndex: number) => {
-    setSpeakerAssignments(prev => {
-      if (lineIndex <= 0 || lineIndex >= prev.length) return prev
-      const prevA = prev[lineIndex - 1]
-      if (!prevA?.speakerId) return prev
-      const next = prev.map((a, i) =>
-        i === lineIndex
-          ? { speakerId: prevA.speakerId, state: 'confirmed' as SpeakerState, source: 'manual' as SpeakerSource }
-          : a
-      )
-      speakerAssignmentsRef.current = next
-      return next
-    })
-  }, [])
-
   const handleDeleteComment = useCallback(async (commentId: number, lineIndex: number) => {
     if (!ws.sessionId) return
     // Optimistic remove
@@ -1021,7 +990,6 @@ export default function WorkspacePage() {
   const isUnsupported = audioSource === 'display' && !('getDisplayMedia' in navigator.mediaDevices)
   const targetLangLabel = LANGUAGES.find(l => l.code === targetLang)
   const isActive = audio.state === 'active' && ws.state === 'connected'
-  const canAi = !!(aiFormatted)
 
   const statusColor = ws.state === 'error' || audio.state === 'error' ? 'var(--red)'
     : ws.state === 'reconnecting' ? 'var(--orange)'

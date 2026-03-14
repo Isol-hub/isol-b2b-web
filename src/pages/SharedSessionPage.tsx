@@ -229,7 +229,6 @@ export default function SharedSessionPage() {
   }
 
   const totalLineComments = comments.filter(c => c.line_index !== null).length
-  const generalComments = comments.filter(c => c.line_index === null)
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--bg)' }}>

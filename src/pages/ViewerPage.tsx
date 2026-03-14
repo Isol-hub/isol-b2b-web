@@ -16,7 +16,7 @@ export default function ViewerPage() {
   const { workspaceSlug, sessionId } = useParams<{ workspaceSlug: string; sessionId: string }>()
 
   const [targetLang, setTargetLang] = useState('en')
-  const [currentLine, setCurrentLine] = useState('')
+  const [, setCurrentLine] = useState('')
   const [transcript, setTranscript] = useState<TranscriptLine[]>([])
   const [translatedLines, setTranslatedLines] = useState<Map<number, string>>(new Map())
   const [viewerBanner, setViewerBanner] = useState<{ current: string; previous: string }>({ current: '', previous: '' })
