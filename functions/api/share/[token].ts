@@ -1,5 +1,6 @@
 import { verifyJwt } from '../../lib/jwt'
 import { corsHeaders } from '../../lib/cors'
+import { logAudit } from '../../lib/audit'
 
 interface Env {
   DB: D1Database
@@ -70,6 +71,7 @@ export const onRequestDelete: PagesFunction<Env> = async ({ request, env, params
       'UPDATE sessions SET share_token = NULL, share_expires_at = NULL WHERE id = ?'
     ).bind(session.id).run()
 
+    logAudit({ db: env.DB, actor: auth.email, workspace: auth.workspaceSlug, action: 'share.revoke', targetType: 'session', targetId: String(session.id) })
     return Response.json({ ok: true }, { headers: CORS })
   } catch (err) {
     console.error('share revoke error', err)

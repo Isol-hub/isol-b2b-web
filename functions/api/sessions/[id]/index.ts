@@ -1,4 +1,5 @@
 import { verifyJwt } from '../../../lib/jwt'
+import { logAudit } from '../../../lib/audit'
 import { assertMaxLen, isValidationError } from '../../../lib/validate'
 import { corsHeaders } from '../../../lib/cors'
 
@@ -152,6 +153,7 @@ export const onRequestDelete: PagesFunction<Env> = async ({ request, env, params
       env.DB.prepare('DELETE FROM sessions WHERE id = ?').bind(sessionId),
     ])
 
+    logAudit({ db: env.DB, actor: auth.email, workspace: auth.workspaceSlug, action: 'session.delete', targetType: 'session', targetId: String(sessionId) })
     return Response.json({ ok: true }, { headers: CORS })
   } catch (err) {
     console.error('session delete error', err)

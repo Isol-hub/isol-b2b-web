@@ -1,6 +1,7 @@
 import { verifyJwt } from '../../lib/jwt'
 import { getEffectivePlan } from '../../lib/plan'
 import { corsHeaders } from '../../lib/cors'
+import { logAudit } from '../../lib/audit'
 
 interface Env {
   DB: D1Database
@@ -108,6 +109,7 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env }) => {
       `UPDATE workspaces SET ${fields.join(', ')} WHERE slug = ?`
     ).bind(...values).run()
 
+    logAudit({ db: env.DB, actor: auth.email, workspace: auth.workspaceSlug, action: 'workspace.update', meta: { fields } })
     return Response.json({ ok: true }, { headers: CORS })
   } catch (err) {
     console.error('workspace patch error', err)
@@ -140,6 +142,7 @@ export const onRequestDelete: PagesFunction<Env> = async ({ request, env }) => {
       env.DB.prepare('DELETE FROM ai_usage WHERE workspace_slug = ?').bind(workspaceSlug),
       env.DB.prepare('DELETE FROM workspaces WHERE slug = ?').bind(workspaceSlug),
     ])
+    logAudit({ db: env.DB, actor: auth.email, workspace: workspaceSlug, action: 'workspace.delete', targetType: 'workspace', targetId: workspaceSlug })
     return Response.json({ ok: true }, { headers: CORS })
   } catch (err) {
     console.error('workspace delete error', err)

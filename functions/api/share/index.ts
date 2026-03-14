@@ -1,5 +1,6 @@
 import { verifyJwt } from '../../lib/jwt'
 import { corsHeaders } from '../../lib/cors'
+import { logAudit } from '../../lib/audit'
 
 interface Env {
   DB: D1Database
@@ -57,6 +58,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       'UPDATE sessions SET share_token = ?, share_expires_at = ? WHERE id = ?'
     ).bind(token, expiresAt, sessionId).run()
 
+    logAudit({ db: env.DB, actor: auth.email, workspace: auth.workspaceSlug, action: 'share.create', targetType: 'session', targetId: String(sessionId), meta: { expires_at: expiresAt } })
     return Response.json({ token, share_expires_at: expiresAt }, { status: 200, headers: CORS })
   } catch (err) {
     console.error('share generate error', err)

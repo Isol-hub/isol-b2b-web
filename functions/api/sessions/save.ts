@@ -2,6 +2,7 @@ import { verifyJwt } from '../../lib/jwt'
 import { assertMaxLen, isValidationError } from '../../lib/validate'
 import { getEffectivePlan } from '../../lib/plan'
 import { corsHeaders } from '../../lib/cors'
+import { logAudit } from '../../lib/audit'
 
 interface Env {
   DB: D1Database
@@ -178,6 +179,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       await env.DB.batch(hlStmts)
     }
 
+    logAudit({ db: env.DB, actor: auth.email, workspace: workspace_slug, action: 'session.save', targetType: 'session', targetId: String(sessionId) })
     return Response.json({ session_id: sessionId }, { status: 200, headers: CORS })
   } catch (err) {
     console.error('session save error', err)

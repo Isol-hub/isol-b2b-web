@@ -1,5 +1,6 @@
 import { verifyJwt } from '../../lib/jwt'
 import { corsHeaders } from '../../lib/cors'
+import { logAudit } from '../../lib/audit'
 
 interface Env { DB: D1Database; RESEND_API_KEY: string }
 
@@ -83,6 +84,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     }),
   })
 
+  logAudit({ db: env.DB, actor: auth.email, workspace: auth.workspaceSlug, action: 'member.invite', targetType: 'member', targetId: emailLower })
   return Response.json({ ok: true }, { headers: CORS })
 }
 

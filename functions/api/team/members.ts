@@ -1,5 +1,6 @@
 import { verifyJwt } from '../../lib/jwt'
 import { corsHeaders } from '../../lib/cors'
+import { logAudit } from '../../lib/audit'
 
 interface Env { DB: D1Database }
 
@@ -45,6 +46,7 @@ export const onRequestDelete: PagesFunction<Env> = async ({ request, env }) => {
     'DELETE FROM workspace_members WHERE workspace_slug = ? AND member_email = ?'
   ).bind(auth.workspaceSlug, member_email).run()
 
+  logAudit({ db: env.DB, actor: auth.email, workspace: auth.workspaceSlug, action: 'member.remove', targetType: 'member', targetId: member_email })
   return Response.json({ ok: true }, { headers: CORS })
 }
 
