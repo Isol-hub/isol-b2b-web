@@ -31,7 +31,7 @@
 
 - [x] **C1** — CSP + CORS headers — nessun file `_headers` Cloudflare Pages; CORS è `*` su tutti gli endpoint
 - [x] **C2** — Audit log — nessun log immutabile per delete workspace, delete session, cambio piano
-- [ ] **C3** — Data Export UI — sezione "Coming soon" in SettingsPage; librerie jsPDF e docx già installate
+- [x] **C3** — Data Export UI — sezione "Coming soon" in SettingsPage; librerie jsPDF e docx già installate
 - [ ] **C4** — TypeScript strict — `noUnusedLocals: false`, `noUnusedParameters: false` in tsconfig.app.json
 - [ ] **C5** — Magic strings → constants file — `'pending'`, `'active'`, `'otp_req:'`, `'isol_session'`, `'b2b'` sparsi in 15+ file
 - [ ] **C6** — PiP fallback browser — `documentPictureInPicture` non supportato su Firefox/Safari; `isSupported` flag esiste ma UI non gestisce il fallback
@@ -55,3 +55,4 @@
 | 2026-03-14 | B7 | 87409ff | @sentry/react in main.tsx (disabled when VITE_SENTRY_DSN unset); structured console.error in jwt.ts + ratelimit.ts |
 | 2026-03-14 | C1 | 1af18c9 | corsHeaders() in lib/cors.ts (isol.studio only); 28 endpoints migrati; public/_headers con CSP + X-Frame-Options |
 | 2026-03-14 | C2 | 837e971 | audit_log table + logAudit() fire-and-forget; 8 endpoint strumentati (save/delete session, workspace, share, member) |
+| 2026-03-14 | C3 | — | export.ts GET endpoint (chunked batch); SettingsPage: Export JSON/PDF/Word buttons via jsPDF + docx |

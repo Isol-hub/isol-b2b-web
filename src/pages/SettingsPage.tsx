@@ -6,6 +6,8 @@ import LanguageSelector from '../components/LanguageSelector'
 import ConfirmModal from '../components/ConfirmModal'
 import PricingModal from '../components/PricingModal'
 import { LANGUAGES } from '../lib/languages'
+import jsPDF from 'jspdf'
+import { Document, Packer, Paragraph, TextRun, HeadingLevel } from 'docx'
 
 interface WorkspaceData {
   slug: string
@@ -167,6 +169,121 @@ export default function SettingsPage() {
   const [notifPrefs, setNotifPrefs] = useState<NotifPrefs>({ session_summary: true, product_updates: true, billing: true })
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
+
+  const [exportingJson, setExportingJson] = useState(false)
+  const [exportingPdf, setExportingPdf] = useState(false)
+  const [exportingDocx, setExportingDocx] = useState(false)
+
+  async function fetchExportData() {
+    const token = getToken()
+    const res = await sentryFetch(`/api/workspace/export?workspace_slug=${workspaceSlug}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    if (!res.ok) throw new Error('Export failed')
+    return res.json() as Promise<{ workspace: Record<string, unknown>; sessions: Array<Record<string, unknown>> }>
+  }
+
+  async function handleExportJson() {
+    setExportingJson(true)
+    try {
+      const data = await fetchExportData()
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${workspaceSlug}-export.json`
+      a.click()
+      URL.revokeObjectURL(url)
+    } finally {
+      setExportingJson(false)
+    }
+  }
+
+  async function handleExportPdf() {
+    setExportingPdf(true)
+    try {
+      const data = await fetchExportData()
+      const doc = new jsPDF({ unit: 'mm', format: 'a4' })
+      const pageH = doc.internal.pageSize.getHeight()
+      const margin = 20
+      const lineH = 7
+      let y = margin
+
+      function addLine(text: string, size = 11, bold = false) {
+        doc.setFontSize(size)
+        doc.setFont('helvetica', bold ? 'bold' : 'normal')
+        const lines = doc.splitTextToSize(text, 170)
+        for (const line of lines) {
+          if (y + lineH > pageH - margin) { doc.addPage(); y = margin }
+          doc.text(line, margin, y)
+          y += lineH
+        }
+      }
+
+      addLine(`ISOL Export — ${workspaceSlug}`, 16, true)
+      y += 4
+
+      for (const session of data.sessions as Array<{
+        title?: string; started_at?: number; target_lang?: string;
+        ai_formatted_text?: string; lines?: Array<{ text: string }>
+      }>) {
+        if (y + 20 > pageH - margin) { doc.addPage(); y = margin }
+        const date = session.started_at ? new Date(session.started_at).toLocaleString() : ''
+        addLine(`${session.title ?? 'Untitled'} · ${date}`, 13, true)
+        if (session.target_lang) addLine(`Language: ${session.target_lang}`, 9)
+        y += 2
+        const body = session.ai_formatted_text
+          ?? (session.lines ?? []).map(l => l.text).join(' ')
+        if (body) addLine(body, 10)
+        y += 6
+      }
+
+      doc.save(`${workspaceSlug}-export.pdf`)
+    } finally {
+      setExportingPdf(false)
+    }
+  }
+
+  async function handleExportDocx() {
+    setExportingDocx(true)
+    try {
+      const data = await fetchExportData()
+
+      const children: Paragraph[] = [
+        new Paragraph({ text: `ISOL Export — ${workspaceSlug}`, heading: HeadingLevel.TITLE }),
+        new Paragraph({ text: '' }),
+      ]
+
+      for (const session of data.sessions as Array<{
+        title?: string; started_at?: number; target_lang?: string;
+        ai_formatted_text?: string; lines?: Array<{ text: string }>
+      }>) {
+        const date = session.started_at ? new Date(session.started_at).toLocaleString() : ''
+        children.push(new Paragraph({
+          heading: HeadingLevel.HEADING_2,
+          children: [new TextRun({ text: `${session.title ?? 'Untitled'} · ${date}`, bold: true })],
+        }))
+        if (session.target_lang) {
+          children.push(new Paragraph({ children: [new TextRun({ text: `Language: ${session.target_lang}`, italics: true })] }))
+        }
+        const body = session.ai_formatted_text
+          ?? (session.lines ?? []).map((l: { text: string }) => l.text).join(' ')
+        if (body) children.push(new Paragraph({ text: body }))
+        children.push(new Paragraph({ text: '' }))
+      }
+
+      const docFile = new Document({ sections: [{ children }] })
+      const blob = await Packer.toBlob(docFile)
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${workspaceSlug}-export.docx`
+      a.click()
+      URL.revokeObjectURL(url)
+    } finally {
+      setExportingDocx(false)
+    }
+  }
 
   const [searchParams] = useSearchParams()
   const billingSuccess = searchParams.get('billing') === 'success'
@@ -630,20 +747,46 @@ export default function SettingsPage() {
 
             {/* ── Data & Export ────────────────────────────────── */}
             <Block label="Data & Export">
-              <Row
-                label="Export all data"
-                hint="Download all sessions and transcripts as JSON"
-                last
-              >
+              <Row label="Export JSON" hint="All sessions, transcripts and highlights as JSON">
                 <button
-                  disabled
+                  onClick={handleExportJson}
+                  disabled={exportingJson}
                   style={{
                     fontSize: 12, fontWeight: 600, padding: '6px 14px',
                     borderRadius: 7, border: '1px solid var(--divider)',
-                    background: 'transparent', color: 'var(--text-muted)', cursor: 'not-allowed',
+                    background: 'transparent', color: 'var(--text)', cursor: exportingJson ? 'default' : 'pointer',
+                    opacity: exportingJson ? 0.5 : 1,
                   }}
                 >
-                  Coming soon
+                  {exportingJson ? 'Exporting…' : 'Export JSON'}
+                </button>
+              </Row>
+              <Row label="Export PDF" hint="One page per session with AI-formatted text">
+                <button
+                  onClick={handleExportPdf}
+                  disabled={exportingPdf}
+                  style={{
+                    fontSize: 12, fontWeight: 600, padding: '6px 14px',
+                    borderRadius: 7, border: '1px solid var(--divider)',
+                    background: 'transparent', color: 'var(--text)', cursor: exportingPdf ? 'default' : 'pointer',
+                    opacity: exportingPdf ? 0.5 : 1,
+                  }}
+                >
+                  {exportingPdf ? 'Exporting…' : 'Export PDF'}
+                </button>
+              </Row>
+              <Row label="Export Word" hint="One section per session, formatted document" last>
+                <button
+                  onClick={handleExportDocx}
+                  disabled={exportingDocx}
+                  style={{
+                    fontSize: 12, fontWeight: 600, padding: '6px 14px',
+                    borderRadius: 7, border: '1px solid var(--divider)',
+                    background: 'transparent', color: 'var(--text)', cursor: exportingDocx ? 'default' : 'pointer',
+                    opacity: exportingDocx ? 0.5 : 1,
+                  }}
+                >
+                  {exportingDocx ? 'Exporting…' : 'Export Word'}
                 </button>
               </Row>
             </Block>
