@@ -51,9 +51,13 @@ export async function checkRateLimit(
   let plan = 'free'
   if (workspaceSlug) {
     const row = await env.DB.prepare(
-      'SELECT plan FROM workspaces WHERE slug = ?'
-    ).bind(workspaceSlug).first<{ plan: string }>()
+      'SELECT plan, plan_expires_at FROM workspaces WHERE slug = ?'
+    ).bind(workspaceSlug).first<{ plan: string; plan_expires_at: number | null }>()
     plan = row?.plan ?? 'free'
+    // B4: enforce expiry in case cancellation webhook was missed
+    if (plan !== 'free' && row?.plan_expires_at && row.plan_expires_at < Math.floor(Date.now() / 1000)) {
+      plan = 'free'
+    }
   }
 
   const limit = LIMITS[plan]?.[endpoint] ?? LIMITS.free[endpoint] ?? 100

@@ -75,6 +75,9 @@ export default function WorkspacePage() {
   const [showPricing, setShowPricing] = useState(false)
   const [showTeam, setShowTeam] = useState(false)
   const [billingSuccess, setBillingSuccess] = useState(() => searchParams.get('billing') === 'success')
+  const [showUpgradeNudge, setShowUpgradeNudge] = useState(false)
+  const [nudgeLineCount, setNudgeLineCount] = useState(0)
+  const nudgeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [currentLine, setCurrentLine] = useState('')
   const [error, setError] = useState('')
   const pip = usePip()
@@ -767,6 +770,13 @@ export default function WorkspacePage() {
         setSaveStatus('saved')
         if (saveStatusTimerRef.current) clearTimeout(saveStatusTimerRef.current)
         saveStatusTimerRef.current = setTimeout(() => setSaveStatus('idle'), 1800)
+        // Post-save upgrade nudge for free plan users
+        if (workspacePlan === 'free') {
+          setNudgeLineCount(lines.length)
+          setShowUpgradeNudge(true)
+          if (nudgeTimerRef.current) clearTimeout(nudgeTimerRef.current)
+          nudgeTimerRef.current = setTimeout(() => setShowUpgradeNudge(false), 9000)
+        }
       } else {
         const errData = await res.json().catch(() => ({} as { code?: string }))
         if (errData.code === 'FREE_LIMIT') {
@@ -1512,6 +1522,14 @@ export default function WorkspacePage() {
             </button>
 
             <div className="toolbar-sep" />
+            {workspacePlan === 'free' && (
+              <span style={{
+                fontSize: 11, color: 'var(--text-muted)',
+                whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums',
+              }}>
+                {Math.min(sessions.length, 3)}/3
+              </span>
+            )}
             <button
               onClick={() => workspacePlan === 'team' ? setShowTeam(true) : setShowPricing(true)}
               style={{
@@ -1900,6 +1918,52 @@ export default function WorkspacePage() {
           workspaceSlug={workspaceSlug}
           onClose={() => setShowTeam(false)}
         />
+      )}
+
+      {showUpgradeNudge && workspacePlan === 'free' && (
+        <div style={{
+          position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)',
+          zIndex: 200,
+          background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)',
+          border: '1px solid rgba(99,102,241,0.35)',
+          color: '#fff',
+          padding: '14px 20px', borderRadius: 14,
+          fontWeight: 500, fontSize: 14,
+          boxShadow: '0 8px 32px rgba(99,102,241,0.40)',
+          display: 'flex', alignItems: 'center', gap: 14,
+          animation: 'lineReveal 0.3s ease-out',
+          maxWidth: 420, width: 'calc(100vw - 48px)',
+        }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontWeight: 700, marginBottom: 3, color: '#c7d2fe' }}>
+              Session saved — {nudgeLineCount} lines captured
+            </div>
+            <div style={{ fontSize: 12, color: 'rgba(199,210,254,0.70)', lineHeight: 1.5 }}>
+              You have {Math.max(0, 3 - sessions.length)} free session{Math.max(0, 3 - sessions.length) !== 1 ? 's' : ''} left.
+              Go unlimited from €19/mo.
+            </div>
+          </div>
+          <button
+            onClick={() => { setShowUpgradeNudge(false); setShowPricing(true) }}
+            style={{
+              flexShrink: 0, background: '#6366F1', color: '#fff',
+              border: 'none', borderRadius: 8, padding: '7px 14px',
+              fontSize: 12, fontWeight: 700, cursor: 'pointer',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            Upgrade ✦
+          </button>
+          <button
+            onClick={() => setShowUpgradeNudge(false)}
+            style={{
+              flexShrink: 0, background: 'transparent', border: 'none',
+              color: 'rgba(199,210,254,0.45)', cursor: 'pointer',
+              fontSize: 16, padding: '0 2px', lineHeight: 1,
+            }}
+            aria-label="Dismiss"
+          >×</button>
+        </div>
       )}
 
       {billingSuccess && (

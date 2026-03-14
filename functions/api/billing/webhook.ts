@@ -73,6 +73,9 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
 
         const VALID_PLANS = ['pro', 'studio', 'team']
         const rawPlan = sub.metadata?.plan
+        if (!rawPlan || !VALID_PLANS.includes(rawPlan)) {
+          console.error('webhook: missing/invalid plan metadata — defaulting to pro', { subId: sub.id, rawPlan, workspaceSlug })
+        }
         const resolvedPlan = rawPlan && VALID_PLANS.includes(rawPlan) ? rawPlan : 'pro'
         const plan = sub.status === 'active' || sub.status === 'trialing' ? resolvedPlan : 'free'
         await env.DB.prepare(

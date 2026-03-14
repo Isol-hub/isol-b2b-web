@@ -570,6 +570,29 @@ export default function ViewerPage() {
         )}
       </div>
 
+      {/* ━━ POWERED BY ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+      <a
+        href="https://isol.live"
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{
+          position: 'fixed', bottom: 10, right: 14, zIndex: 50,
+          display: 'inline-flex', alignItems: 'center', gap: 5,
+          fontSize: 10, fontWeight: 600, letterSpacing: '0.04em',
+          color: 'rgba(255,255,255,0.22)',
+          textDecoration: 'none',
+          transition: 'color 0.2s',
+          userSelect: 'none',
+        }}
+        onMouseEnter={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.55)')}
+        onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.22)')}
+      >
+        <div className="logo-mark" style={{ width: 14, height: 14, opacity: 0.6 }}>
+          <span style={{ color: '#fff', fontWeight: 800, fontSize: 7 }}>i</span>
+        </div>
+        Powered by ISOL
+      </a>
+
       {/* ━━ MODALS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
       {showModal && (
         <TranscriptModal

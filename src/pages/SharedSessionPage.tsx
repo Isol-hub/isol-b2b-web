@@ -540,13 +540,21 @@ export default function SharedSessionPage() {
                 />
               )}
 
-              <div style={{ borderTop: '1px solid var(--divider)', marginTop: 48, paddingTop: 24 }} />
+              <div style={{ borderTop: '1px solid var(--divider)', marginTop: 48, paddingTop: 28 }} />
 
               {/* Footer CTA */}
-              <p style={{ fontSize: 13, color: 'var(--text-muted)', textAlign: 'center' }}>
-                Transcript captured with ISOL Studio ·{' '}
-                <Link to="/" style={{ color: 'var(--accent)' }}>Try it free →</Link>
-              </p>
+              <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                  <div className="logo-mark" style={{ width: 20, height: 20 }}>
+                    <span style={{ color: '#fff', fontWeight: 800, fontSize: 10 }}>i</span>
+                  </div>
+                  <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: '-0.01em', color: 'var(--text-dim)' }}>ISOL Studio</span>
+                </div>
+                <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: 0 }}>
+                  Real-time transcription &amp; translation for live events.{' '}
+                  <Link to="/" style={{ color: 'var(--accent)', fontWeight: 600 }}>Try it free →</Link>
+                </p>
+              </div>
             </>
           )}
 

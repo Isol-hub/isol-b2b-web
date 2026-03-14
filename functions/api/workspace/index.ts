@@ -59,6 +59,12 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
       }, { headers: CORS })
     }
 
+    // B4: enforce plan_expires_at — defense against missed Stripe cancellation webhooks
+    const ws = workspace as { plan: string; plan_expires_at: number | null }
+    if (ws.plan !== 'free' && ws.plan_expires_at && ws.plan_expires_at < Math.floor(Date.now() / 1000)) {
+      ws.plan = 'free'
+    }
+
     const statsRow = statsResult.results[0] as { sessions_total: number; total_seconds: number } | undefined
     const topLangRow = topLangResult.results[0] as { target_lang: string } | undefined
 

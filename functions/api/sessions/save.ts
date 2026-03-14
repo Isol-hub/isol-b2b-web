@@ -86,11 +86,16 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     const monthStartMs = monthStart.getTime()
 
     const [planRow, countRow, monthCountRow] = await env.DB.batch([
-      env.DB.prepare('SELECT plan FROM workspaces WHERE slug = ?').bind(workspace_slug),
+      env.DB.prepare('SELECT plan, plan_expires_at FROM workspaces WHERE slug = ?').bind(workspace_slug),
       env.DB.prepare('SELECT COUNT(*) as cnt FROM sessions WHERE workspace_slug = ?').bind(workspace_slug),
       env.DB.prepare('SELECT COUNT(*) as cnt FROM sessions WHERE workspace_slug = ? AND started_at >= ?').bind(workspace_slug, monthStartMs),
     ])
-    const plan = (planRow.results[0] as { plan: string } | undefined)?.plan ?? 'free'
+    const planData = planRow.results[0] as { plan: string; plan_expires_at: number | null } | undefined
+    let plan = planData?.plan ?? 'free'
+    // B4: enforce expiry in case cancellation webhook was missed
+    if (plan !== 'free' && planData?.plan_expires_at && planData.plan_expires_at < Math.floor(Date.now() / 1000)) {
+      plan = 'free'
+    }
 
     if (plan === 'free') {
       const cnt = (countRow.results[0] as { cnt: number } | undefined)?.cnt ?? 0
