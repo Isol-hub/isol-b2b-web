@@ -1,4 +1,5 @@
 import { verifyJwt } from '../../lib/jwt'
+import { assertMaxLen, isValidationError } from '../../lib/validate'
 
 interface Env {
   DB: D1Database
@@ -59,6 +60,19 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
 
     if (!workspace_slug || !target_lang || !started_at || !ended_at) {
       return Response.json({ error: 'Missing required fields' }, { status: 400, headers: CORS })
+    }
+
+    try {
+      assertMaxLen(ai_formatted_text, 'ai_formatted_text', 200_000)
+      assertMaxLen(ai_notes_text, 'ai_notes_text', 200_000)
+      for (const line of transcript_lines) {
+        assertMaxLen(line.text, 'transcript_lines[].text', 2_000)
+      }
+    } catch (err) {
+      if (isValidationError(err)) {
+        return Response.json({ error: 'Input too long', field: err.field, max: err.max }, { status: 400, headers: CORS })
+      }
+      throw err
     }
 
     if (auth.workspaceSlug !== workspace_slug) {

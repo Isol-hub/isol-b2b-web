@@ -1,4 +1,5 @@
 import { verifyJwt } from '../../../lib/jwt'
+import { assertMaxLen, isValidationError } from '../../../lib/validate'
 
 interface Env {
   DB: D1Database
@@ -99,6 +100,15 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params 
 
     const body = await request.json<{ title?: string }>()
     const title = body.title?.trim() ?? null
+
+    try {
+      assertMaxLen(title, 'title', 200)
+    } catch (err) {
+      if (isValidationError(err)) {
+        return Response.json({ error: 'Input too long', field: err.field, max: err.max }, { status: 400, headers: CORS })
+      }
+      throw err
+    }
 
     await env.DB.prepare(
       'UPDATE sessions SET title = ? WHERE id = ?'

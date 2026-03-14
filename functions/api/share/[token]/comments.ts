@@ -1,4 +1,5 @@
 import { verifyJwt } from '../../../lib/jwt'
+import { assertMaxLen, isValidationError } from '../../../lib/validate'
 
 interface Env {
   DB: D1Database
@@ -59,9 +60,19 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, params }
     return Response.json({ error: 'Missing body' }, { status: 400, headers: CORS })
   }
 
+  try {
+    assertMaxLen(commentBody, 'body', 2_000)
+    assertMaxLen(body.author, 'author_name', 100)
+  } catch (err) {
+    if (isValidationError(err)) {
+      return Response.json({ error: 'Input too long', field: err.field, max: err.max }, { status: 400, headers: CORS })
+    }
+    throw err
+  }
+
   // If a valid JWT is present, use its email as the author (cannot be spoofed)
   const jwtAuth = await verifyJwt(request)
-  const author = (jwtAuth?.email ?? (body.author?.trim() || 'Anonymous')).slice(0, 50)
+  const author = jwtAuth?.email ?? (body.author?.trim() || 'Anonymous')
   const lineIndex = typeof body.line_index === 'number' ? body.line_index : null
 
   try {
@@ -79,7 +90,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, params }
     const createdAt = Date.now()
     const result = await env.DB.prepare(
       'INSERT INTO share_comments (session_id, line_index, author, body, created_at) VALUES (?, ?, ?, ?, ?)'
-    ).bind(session.id, lineIndex, author, commentBody.slice(0, 1000), createdAt).run()
+    ).bind(session.id, lineIndex, author, commentBody, createdAt).run()
 
     // Fire-and-forget email notification — throttled to 1 email per session per hour
     if (env.RESEND_API_KEY && session.owner_email) {
@@ -130,7 +141,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, params }
       id: result.meta.last_row_id,
       line_index: lineIndex,
       author,
-      body: commentBody.slice(0, 1000),
+      body: commentBody,
       created_at: createdAt,
     }, { status: 201, headers: CORS })
   } catch (err) {

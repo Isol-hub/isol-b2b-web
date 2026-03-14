@@ -1,4 +1,5 @@
 import { verifyJwt } from '../../lib/jwt'
+import { assertMaxLen, isValidationError } from '../../lib/validate'
 
 interface Env {
   DB: D1Database
@@ -46,6 +47,16 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   }
 
   try {
+    assertMaxLen(term, 'term', 200)
+    assertMaxLen(note ?? undefined, 'note', 1_000)
+  } catch (err) {
+    if (isValidationError(err)) {
+      return Response.json({ error: 'Input too long', field: err.field, max: err.max }, { status: 400, headers: CORS })
+    }
+    throw err
+  }
+
+  try {
     await env.DB.prepare(
       `INSERT INTO glossary_terms (workspace_slug, term, note, added_at) VALUES (?, ?, ?, ?)
        ON CONFLICT(workspace_slug, term) DO UPDATE SET note = excluded.note, added_at = excluded.added_at`
@@ -69,6 +80,16 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env }) => {
   if (!term?.trim()) return Response.json({ error: 'term required' }, { status: 400, headers: CORS })
   if (workspace_slug !== auth.workspaceSlug) {
     return Response.json({ error: 'Forbidden' }, { status: 403, headers: CORS })
+  }
+
+  try {
+    assertMaxLen(term, 'term', 200)
+    assertMaxLen(note ?? undefined, 'note', 1_000)
+  } catch (err) {
+    if (isValidationError(err)) {
+      return Response.json({ error: 'Input too long', field: err.field, max: err.max }, { status: 400, headers: CORS })
+    }
+    throw err
   }
 
   try {
