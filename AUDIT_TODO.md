@@ -19,7 +19,7 @@
 - [x] **B1** — JWKS cache senza TTL — se le chiavi di lsol-auth vengono ruotate, i Worker instance esistenti rifiutano token validi fino al cold-start
 - [x] **B2** — Nessuna validazione lunghezza input — `transcript_lines.text`, `comments.text`, `glossary_terms.note` accettano payload illimitati
 - [x] **B3** — Studio/Team: limite seat non applicato — `team/invite.ts` non conta i membri esistenti prima di invitare
-- [x] **B4** — Scadenza piano non applicata — `plan_expires_at` esiste in DB ma nessun codice fa downgrade automatico se il webhook Stripe è mancato
+- [x] **B4** — Scadenza piano non applicata — `plan_expires_at` esiste in DB ma nessun codice fa downgrade automatico se il webhook Stripe è mancato *(centralised in lib/plan.ts)*
 - [ ] **B5** — Paginazione sessioni mancante — `sessions/index.ts` ha `LIMIT 200` hardcoded, senza cursore o offset
 - [ ] **B6** — FTS5 non backfillato — sessioni create prima della migration 0008 non sono ricercabili
 - [ ] **B7** — Error monitoring mancante — zero visibilità sugli errori in produzione (Sentry o equivalente)
@@ -48,5 +48,5 @@
 | 2026-03-13 | A4 | a0f892d | sessions/save.ts: batch SELECT plan+count → 403 FREE_LIMIT; WorkspacePage apre PricingModal |
 | 2026-03-14 | B1 | 697644f | jwt.ts: JWKS cache con TTL 1h + fallback stale cache su errore re-fetch |
 | 2026-03-14 | B2 | 45e1403 | validate.ts utility + assertMaxLen su 4 endpoint; 400 su payload oltre limite |
-| 2026-03-14 | B4 | — | plan_expires_at check in workspace/index.ts, ratelimit.ts, save.ts; console.error in webhook.ts per fallback studio→pro |
+| 2026-03-14 | B4 | 71fd6c9 | getEffectivePlan() utility in lib/plan.ts; replaces 3 inline checks; workspace GET exposes effective_plan |
 | 2026-03-14 | B3 | 907c8a8 | invite.ts: SEAT_LIMITS map (free/pro=1, studio=5, team=20); 403 SEAT_LIMIT response; TeamModal: dynamic seatLimit + upgrade nudge |
