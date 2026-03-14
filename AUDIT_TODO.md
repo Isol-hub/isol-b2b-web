@@ -22,7 +22,7 @@
 - [x] **B4** — Scadenza piano non applicata — `plan_expires_at` esiste in DB ma nessun codice fa downgrade automatico se il webhook Stripe è mancato *(centralised in lib/plan.ts)*
 - [x] **B5** — Paginazione sessioni mancante — `sessions/index.ts` ha `LIMIT 200` hardcoded, senza cursore o offset
 - [x] **B6** — FTS5 non backfillato — sessioni create prima della migration 0008 non sono ricercabili
-- [ ] **B7** — Error monitoring mancante — zero visibilità sugli errori in produzione (Sentry o equivalente)
+- [x] **B7** — Error monitoring mancante — zero visibilità sugli errori in produzione (Sentry o equivalente)
 
 ---
 
@@ -52,3 +52,4 @@
 | 2026-03-14 | B3 | 907c8a8 | invite.ts: SEAT_LIMITS map (free/pro=1, studio=5, team=20); 403 SEAT_LIMIT response; TeamModal: dynamic seatLimit + upgrade nudge |
 | 2026-03-14 | B5 | 7cfd5ac | sessions/index.ts: LIMIT 200→50, before_id cursor param, next_cursor in response; SessionsPage: Load more button |
 | 2026-03-14 | B6 | eb02b16 | 0016_fts_backfill.sql: idempotent INSERT WHERE id NOT IN sessions_fts; applied to remote D1 |
+| 2026-03-14 | B7 | 87409ff | @sentry/react in main.tsx (disabled when VITE_SENTRY_DSN unset); structured console.error in jwt.ts + ratelimit.ts |
