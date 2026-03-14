@@ -3,7 +3,9 @@ import { verifyJwt } from '../../lib/jwt'
 interface Env { DB: D1Database; RESEND_API_KEY: string }
 
 const CORS = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
-const MAX_MEMBERS = 4 // 4 members + 1 owner = 5 total
+
+// Total seats per plan (owner counts as 1)
+const SEAT_LIMITS: Record<string, number> = { free: 1, pro: 1, studio: 5, team: 20 }
 
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   const auth = await verifyJwt(request)
@@ -18,16 +20,22 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   ).bind(auth.workspaceSlug).first<{ plan: string; owner_email: string; display_name: string | null }>()
 
   if (!workspace) return Response.json({ error: 'Workspace not found' }, { status: 404, headers: CORS })
-  if (workspace.plan !== 'team') return Response.json({ error: 'Team plan required' }, { status: 403, headers: CORS })
   if (workspace.owner_email !== auth.email) return Response.json({ error: 'Only the owner can invite members' }, { status: 403, headers: CORS })
   if (emailLower === auth.email) return Response.json({ error: 'Cannot invite yourself' }, { status: 400, headers: CORS })
+
+  const seatLimit = SEAT_LIMITS[workspace.plan] ?? 1
+  const maxMembers = seatLimit - 1 // owner occupies 1 seat and is not in workspace_members
+
+  if (maxMembers <= 0) {
+    return Response.json({ error: 'Seat limit reached', code: 'SEAT_LIMIT', limit: seatLimit }, { status: 403, headers: CORS })
+  }
 
   const countRow = await env.DB.prepare(
     "SELECT COUNT(*) as cnt FROM workspace_members WHERE workspace_slug = ? AND status IN ('pending','active')"
   ).bind(auth.workspaceSlug).first<{ cnt: number }>()
 
-  if ((countRow?.cnt ?? 0) >= MAX_MEMBERS) {
-    return Response.json({ error: 'Maximum 5 members reached' }, { status: 400, headers: CORS })
+  if ((countRow?.cnt ?? 0) >= maxMembers) {
+    return Response.json({ error: 'Seat limit reached', code: 'SEAT_LIMIT', limit: seatLimit }, { status: 403, headers: CORS })
   }
 
   const joinToken = crypto.randomUUID()

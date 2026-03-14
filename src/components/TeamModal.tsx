@@ -39,6 +39,7 @@ export default function TeamModal({ workspaceSlug, onClose }: Props) {
   const [members, setMembers] = useState<TeamMember[]>([])
   const [apiKey, setApiKey] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [seatLimit, setSeatLimit] = useState(5)
 
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteLoading, setInviteLoading] = useState(false)
@@ -62,6 +63,8 @@ export default function TeamModal({ workspaceSlug, onClose }: Props) {
       if (ws?.workspace) {
         setOwnerEmail(ws.workspace.owner_email ?? null)
         setApiKey(ws.workspace.api_key ?? null)
+        const planLimits: Record<string, number> = { free: 1, pro: 1, studio: 5, team: 20 }
+        setSeatLimit(planLimits[ws.workspace.plan as string] ?? 1)
       }
       if (tm?.members) setMembers(tm.members)
     }).catch(() => {}).finally(() => setLoading(false))
@@ -83,7 +86,7 @@ export default function TeamModal({ workspaceSlug, onClose }: Props) {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ email: inviteEmail.trim() }),
       })
-      const data = await res.json() as { ok?: boolean; error?: string }
+      const data = await res.json() as { ok?: boolean; error?: string; code?: string; limit?: number }
       if (res.ok && data.ok) {
         const email = inviteEmail.trim().toLowerCase()
         setMembers(prev => [...prev.filter(m => m.member_email !== email), {
@@ -93,6 +96,8 @@ export default function TeamModal({ workspaceSlug, onClose }: Props) {
         setInviteSent(email)
         setInviteEmail('')
         setTimeout(() => setInviteSent(null), 3500)
+      } else if (data.code === 'SEAT_LIMIT') {
+        setInviteError(`Seat limit reached (${data.limit ?? seatLimit} seats). Upgrade your plan to add more members.`)
       } else {
         setInviteError(data.error ?? 'Failed to send invite')
       }
@@ -183,7 +188,7 @@ export default function TeamModal({ workspaceSlug, onClose }: Props) {
                   border: '1px solid rgba(245,158,11,0.22)',
                   padding: '2px 8px', borderRadius: 999,
                 }}>
-                  {activeCount} / 5
+                  {activeCount} / {seatLimit}
                 </span>
               )}
             </div>
@@ -304,7 +309,7 @@ export default function TeamModal({ workspaceSlug, onClose }: Props) {
                   ))}
 
                   {/* Invite input */}
-                  {isOwner && totalCount <= 5 && (
+                  {isOwner && totalCount <= seatLimit && (
                     <div style={{
                       display: 'flex', gap: 8, padding: '12px 16px',
                       borderTop: (members.length > 0 || ownerEmail) ? '1px solid var(--divider)' : 'none',
