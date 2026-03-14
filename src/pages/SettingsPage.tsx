@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link, useSearchParams, useNavigate } from 'react-router-dom'
 import { getSession, getToken, clearSession } from '../lib/auth'
+import { sentryFetch } from '../lib/sentryFetch'
 import LanguageSelector from '../components/LanguageSelector'
 import ConfirmModal from '../components/ConfirmModal'
 import PricingModal from '../components/PricingModal'
@@ -199,7 +200,7 @@ export default function SettingsPage() {
     if (!token || !workspaceSlug) return
     setSaving(true)
     try {
-      const res = await fetch('/api/workspace', {
+      const res = await sentryFetch('/api/workspace', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ display_name: displayName || null, default_lang: defaultLang }),
@@ -224,7 +225,7 @@ export default function SettingsPage() {
     if (!token) return
     setBillingLoading(true)
     try {
-      const res = await fetch('/api/billing/portal', {
+      const res = await sentryFetch('/api/billing/portal', {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       })
@@ -241,7 +242,7 @@ export default function SettingsPage() {
     if (!token || !workspaceSlug) return
     setDeleting(true)
     try {
-      const res = await fetch(`/api/workspace?workspace_slug=${workspaceSlug}`, {
+      const res = await sentryFetch(`/api/workspace?workspace_slug=${workspaceSlug}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       })

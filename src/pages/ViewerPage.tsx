@@ -8,6 +8,7 @@ import TranscriptModal from '../components/TranscriptModal'
 import GlossaryPanel from '../components/GlossaryPanel'
 import LanguageSelector from '../components/LanguageSelector'
 import { LANGUAGES } from '../lib/languages'
+import { sentryFetch } from '../lib/sentryFetch'
 
 interface TranscriptLine { text: string; time: Date }
 
@@ -331,7 +332,7 @@ export default function ViewerPage() {
     })
     setCommentSubmitting(true)
     try {
-      const res = await fetch(`/api/viewer/${sessionId}/comments`, {
+      const res = await sentryFetch(`/api/viewer/${sessionId}/comments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ author: name, body: body.trim(), line_index: lineIndex }),

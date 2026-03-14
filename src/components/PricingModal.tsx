@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { getToken } from '../lib/auth'
+import { sentryFetch } from '../lib/sentryFetch'
 
 interface Props {
   currentPlan: 'free' | 'pro' | 'studio' | 'team'
@@ -86,7 +87,7 @@ export default function PricingModal({ currentPlan, workspaceSlug: _workspaceSlu
     setLoadingPlan(planId)
     try {
       const token = getToken()
-      const res = await fetch('/api/billing/checkout', {
+      const res = await sentryFetch('/api/billing/checkout', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -23,6 +23,7 @@ import StickyNote from '../components/StickyNote'
 import RecoveryBanner from '../components/RecoveryBanner'
 import OnboardingModal from '../components/OnboardingModal'
 import { LANGUAGES } from '../lib/languages'
+import { sentryFetch } from '../lib/sentryFetch'
 
 // ── Speaker diarization ──────────────────────────────────────────────────────
 type SpeakerState = 'confirmed' | 'tentative' | 'overlap' | 'uncertain'
@@ -437,7 +438,7 @@ export default function WorkspacePage() {
     const token = getToken()
     if (!token) return
     try {
-      const res = await fetch(`/api/sessions?workspace_slug=${workspaceSlug}`, {
+      const res = await sentryFetch(`/api/sessions?workspace_slug=${workspaceSlug}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       if (!res.ok) return
@@ -453,7 +454,7 @@ export default function WorkspacePage() {
     const token = getToken()
     if (!token) return
     try {
-      const res = await fetch(`/api/glossary?workspace_slug=${workspaceSlug}`, {
+      const res = await sentryFetch(`/api/glossary?workspace_slug=${workspaceSlug}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       if (!res.ok) return
@@ -587,7 +588,7 @@ export default function WorkspacePage() {
     const token = getToken()
     if (!token || !workspaceSlug) return
     try {
-      await fetch('/api/glossary', {
+      await sentryFetch('/api/glossary', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ workspace_slug: workspaceSlug, term: word, note: note ?? null }),
@@ -600,7 +601,7 @@ export default function WorkspacePage() {
     const token = getToken()
     if (!token || !workspaceSlug) return
     try {
-      await fetch('/api/glossary', {
+      await sentryFetch('/api/glossary', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ workspace_slug: workspaceSlug, term, note: null }),
@@ -615,7 +616,7 @@ export default function WorkspacePage() {
     // Optimistic update
     setGlossaryItems(prev => prev.map(i => i.term === term ? { ...i, note } : i))
     try {
-      await fetch('/api/glossary', {
+      await sentryFetch('/api/glossary', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ workspace_slug: workspaceSlug, term, note }),
@@ -627,7 +628,7 @@ export default function WorkspacePage() {
     const token = getToken()
     if (!token || !workspaceSlug) return
     try {
-      await fetch(`/api/glossary/${encodeURIComponent(term)}?workspace_slug=${workspaceSlug}`, {
+      await sentryFetch(`/api/glossary/${encodeURIComponent(term)}?workspace_slug=${workspaceSlug}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       })
@@ -640,7 +641,7 @@ export default function WorkspacePage() {
     if (!token) return
     setSessionDetailLoading(true)
     try {
-      const res = await fetch(`/api/sessions/${id}`, {
+      const res = await sentryFetch(`/api/sessions/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       if (!res.ok) return
@@ -657,7 +658,7 @@ export default function WorkspacePage() {
     if (!token) return
     const trimmed = title.trim()
     try {
-      await fetch(`/api/sessions/${id}`, {
+      await sentryFetch(`/api/sessions/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ title: trimmed || null }),
@@ -672,7 +673,7 @@ export default function WorkspacePage() {
   const generateShareLink = useCallback(async (sessionId: number, expiresInHours?: number | null) => {
     const token = getToken()
     if (!token) return
-    const res = await fetch('/api/share', {
+    const res = await sentryFetch('/api/share', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({ session_id: sessionId, ...(expiresInHours != null ? { expires_in_hours: expiresInHours } : {}) }),
@@ -701,7 +702,7 @@ export default function WorkspacePage() {
     const token = getToken()
     if (!token) { setSaveStatus('idle'); return }
     try {
-      const res = await fetch('/api/sessions/save', {
+      const res = await sentryFetch('/api/sessions/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
@@ -750,7 +751,7 @@ export default function WorkspacePage() {
         const { session_id } = await res.json() as { session_id: number }
         // Generate AI title from first 10 lines, then patch session
         try {
-          const titleRes = await fetch('/api/ai/title', {
+          const titleRes = await sentryFetch('/api/ai/title', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
             body: JSON.stringify({ lines: lines.slice(0, 10).map(l => l.text), lang: targetLang }),
@@ -758,7 +759,7 @@ export default function WorkspacePage() {
           if (titleRes.ok) {
             const { title } = await titleRes.json() as { title: string }
             if (title) {
-              await fetch(`/api/sessions/${session_id}`, {
+              await sentryFetch(`/api/sessions/${session_id}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
                 body: JSON.stringify({ title }),
@@ -878,7 +879,7 @@ export default function WorkspacePage() {
       return next
     })
     try {
-      await fetch(`/api/viewer/${ws.sessionId}/comments/${commentId}`, { method: 'DELETE' })
+      await sentryFetch(`/api/viewer/${ws.sessionId}/comments/${commentId}`, { method: 'DELETE' })
     } catch { /* silent — already removed from UI */ }
   }, [ws.sessionId])
 
@@ -892,7 +893,7 @@ export default function WorkspacePage() {
       return next
     })
     try {
-      await fetch(`/api/viewer/${ws.sessionId}/comments/${commentId}`, {
+      await sentryFetch(`/api/viewer/${ws.sessionId}/comments/${commentId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ body: newBody.trim() }),
@@ -907,7 +908,7 @@ export default function WorkspacePage() {
     localStorage.setItem('isol_commenter_name', name)
     setCommentAuthor(name)
     try {
-      const res = await fetch(`/api/viewer/${ws.sessionId}/comments`, {
+      const res = await sentryFetch(`/api/viewer/${ws.sessionId}/comments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ author: name, body: body.trim(), line_index: lineIndex }),

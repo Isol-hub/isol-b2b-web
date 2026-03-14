@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { getSession, getToken } from '../lib/auth'
+import { sentryFetch } from '../lib/sentryFetch'
 import { LANGUAGES } from '../lib/languages'
 import ConfirmModal from '../components/ConfirmModal'
 
@@ -124,7 +125,7 @@ export default function SessionsPage() {
     setDetailLoading(true)
     setDetail(null)
     try {
-      const res = await fetch(`/api/sessions/${id}`, { headers: { Authorization: `Bearer ${token}` } })
+      const res = await sentryFetch(`/api/sessions/${id}`, { headers: { Authorization: `Bearer ${token}` } })
       if (res.ok) setDetail(await res.json() as SessionDetail)
     } catch { /* silent */ }
     finally { setDetailLoading(false) }
@@ -135,7 +136,7 @@ export default function SessionsPage() {
     if (!token) return
     const trimmed = title.trim()
     try {
-      await fetch(`/api/sessions/${id}`, {
+      await sentryFetch(`/api/sessions/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ title: trimmed || null }),
@@ -186,7 +187,7 @@ export default function SessionsPage() {
       undefined
 
     try {
-      const res = await fetch('/api/share', {
+      const res = await sentryFetch('/api/share', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
@@ -211,7 +212,7 @@ export default function SessionsPage() {
     const token = getToken()
     if (!token || !s.share_token) return
     try {
-      const res = await fetch(`/api/share/${s.share_token}`, {
+      const res = await sentryFetch(`/api/share/${s.share_token}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       })
@@ -229,7 +230,7 @@ export default function SessionsPage() {
     const token = getToken()
     if (!token) return
     try {
-      const res = await fetch(`/api/sessions/${s.id}`, {
+      const res = await sentryFetch(`/api/sessions/${s.id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       })
@@ -247,7 +248,7 @@ export default function SessionsPage() {
     if (!token || !workspaceSlug) return
     setLoadingMore(true)
     try {
-      const res = await fetch(
+      const res = await sentryFetch(
         `/api/sessions?workspace_slug=${workspaceSlug}&before_id=${nextCursor}`,
         { headers: { Authorization: `Bearer ${token}` } }
       )

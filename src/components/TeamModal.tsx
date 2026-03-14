@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { getToken, getSession } from '../lib/auth'
+import { sentryFetch } from '../lib/sentryFetch'
 
 interface TeamMember {
   member_email: string
@@ -81,7 +82,7 @@ export default function TeamModal({ workspaceSlug, onClose }: Props) {
     setInviteLoading(true)
     setInviteError(null)
     try {
-      const res = await fetch('/api/team/invite', {
+      const res = await sentryFetch('/api/team/invite', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ email: inviteEmail.trim() }),
@@ -110,7 +111,7 @@ export default function TeamModal({ workspaceSlug, onClose }: Props) {
     if (!token) return
     setRemovingMember(memberEmail)
     try {
-      const res = await fetch('/api/team/members', {
+      const res = await sentryFetch('/api/team/members', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ member_email: memberEmail }),
@@ -126,7 +127,7 @@ export default function TeamModal({ workspaceSlug, onClose }: Props) {
     setApiKeyLoading(true)
     setApiKeyError(null)
     try {
-      const res = await fetch('/api/workspace/apikey', {
+      const res = await sentryFetch('/api/workspace/apikey', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ action }),

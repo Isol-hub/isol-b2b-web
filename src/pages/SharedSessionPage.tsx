@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { LANGUAGES } from '../lib/languages'
 import { getSession, getToken } from '../lib/auth'
+import { sentryFetch } from '../lib/sentryFetch'
 import CommentThread, { type CommentItem } from '../components/CommentThread'
 
 // Minimal markdown renderer for AI-formatted text (##, ###, **, >, -)
@@ -142,7 +143,7 @@ export default function SharedSessionPage() {
     setSubmitting(true)
     try {
       const jwt = getToken()
-      const res = await fetch(`/api/share/${token}/comments`, {
+      const res = await sentryFetch(`/api/share/${token}/comments`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -169,7 +170,7 @@ export default function SharedSessionPage() {
     setComments(prev => prev.map(x => x.id === id ? { ...x, failed: false, pending: true } : x))
     try {
       const jwt = getToken()
-      const res = await fetch(`/api/share/${token}/comments`, {
+      const res = await sentryFetch(`/api/share/${token}/comments`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

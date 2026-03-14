@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { saveToken, getSession } from '../lib/auth'
+import { sentryFetch } from '../lib/sentryFetch'
 
 type Step = 'email' | 'otp'
 
@@ -142,7 +143,7 @@ export default function LoginPage() {
     e.preventDefault()
     setLoading(true); setError('')
     try {
-      const res = await fetch('/api/auth/request-otp', {
+      const res = await sentryFetch('/api/auth/request-otp', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email.trim().toLowerCase() }),
       })
@@ -157,7 +158,7 @@ export default function LoginPage() {
     e.preventDefault()
     setLoading(true); setError('')
     try {
-      const res = await fetch('/api/auth/verify-otp', {
+      const res = await sentryFetch('/api/auth/verify-otp', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email.trim().toLowerCase(), otp: otp.trim() }),
       })
