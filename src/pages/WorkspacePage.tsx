@@ -1315,7 +1315,7 @@ export default function WorkspacePage() {
           {/* Compact mode toggle */}
           {sessionActive && (
             <button
-              onClick={() => pip.isOpen ? pip.close() : pip.open(520, 130)}
+              onClick={() => pip.isOpen ? pip.close() : pip.open(520, 140)}
               className="btn-icon"
               style={{ width: '100%', justifyContent: 'center', fontSize: 11 }}
               title={pip.isSupported ? undefined : 'Requires Chrome 116+'}
