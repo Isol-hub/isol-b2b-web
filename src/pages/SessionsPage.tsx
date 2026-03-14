@@ -46,6 +46,8 @@ export default function SessionsPage() {
   const [sessions, setSessions] = useState<SessionMeta[]>([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(false)
+  const [nextCursor, setNextCursor] = useState<number | null>(null)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [search, setSearch] = useState('')
   const [sort, setSort] = useState<SortKey>('date_desc')
 
@@ -82,7 +84,10 @@ export default function SessionsPage() {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(r => r.ok ? r.json() : Promise.reject(r.status))
-      .then((d: { sessions: SessionMeta[] }) => setSessions(d.sessions))
+      .then((d: { sessions: SessionMeta[]; next_cursor: number | null }) => {
+        setSessions(d.sessions)
+        setNextCursor(d.next_cursor)
+      })
       .catch(() => setLoadError(true))
       .finally(() => setLoading(false))
   }, [workspaceSlug, auth, navigate])
@@ -235,6 +240,25 @@ export default function SessionsPage() {
       }
     } catch { /* silent */ }
   }, [detail])
+
+  const handleLoadMore = useCallback(async () => {
+    if (!nextCursor || loadingMore) return
+    const token = getToken()
+    if (!token || !workspaceSlug) return
+    setLoadingMore(true)
+    try {
+      const res = await fetch(
+        `/api/sessions?workspace_slug=${workspaceSlug}&before_id=${nextCursor}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      )
+      if (res.ok) {
+        const d = await res.json() as { sessions: SessionMeta[]; next_cursor: number | null }
+        setSessions(prev => [...prev, ...d.sessions])
+        setNextCursor(d.next_cursor)
+      }
+    } catch { /* silent */ }
+    finally { setLoadingMore(false) }
+  }, [nextCursor, loadingMore, workspaceSlug])
 
   const shareModalSession = shareModalId !== null ? sessions.find(s => s.id === shareModalId) ?? null : null
 
@@ -432,6 +456,20 @@ export default function SessionsPage() {
               )
             })}
           </div>
+
+          {/* Load more */}
+          {nextCursor !== null && !ftsResults && (
+            <div style={{ textAlign: 'center', marginTop: 16 }}>
+              <button
+                onClick={handleLoadMore}
+                disabled={loadingMore}
+                className="btn-icon"
+                style={{ fontSize: 13, padding: '8px 20px', opacity: loadingMore ? 0.6 : 1 }}
+              >
+                {loadingMore ? 'Loading…' : 'Load more'}
+              </button>
+            </div>
+          )}
         )}
       </div>
 

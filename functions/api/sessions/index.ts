@@ -9,6 +9,8 @@ const CORS = {
   'Access-Control-Allow-Origin': '*',
 }
 
+const PAGE_SIZE = 50
+
 export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
   const auth = await verifyJwt(request)
   if (!auth) {
@@ -22,16 +24,33 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
     return Response.json({ error: 'Forbidden' }, { status: 403, headers: CORS })
   }
 
-  try {
-    const result = await env.DB.prepare(
-      `SELECT id, started_at, ended_at, target_lang, line_count, title, share_token, share_expires_at
-       FROM sessions
-       WHERE workspace_slug = ?
-       ORDER BY started_at DESC
-       LIMIT 200`
-    ).bind(workspaceSlug).all()
+  const beforeIdParam = url.searchParams.get('before_id')
+  const beforeId = beforeIdParam ? parseInt(beforeIdParam, 10) : null
 
-    return Response.json({ sessions: result.results }, { status: 200, headers: CORS })
+  try {
+    const stmt = beforeId
+      ? env.DB.prepare(
+          `SELECT id, started_at, ended_at, target_lang, line_count, title, share_token, share_expires_at
+           FROM sessions
+           WHERE workspace_slug = ? AND id < ?
+           ORDER BY started_at DESC
+           LIMIT ${PAGE_SIZE}`
+        ).bind(workspaceSlug, beforeId)
+      : env.DB.prepare(
+          `SELECT id, started_at, ended_at, target_lang, line_count, title, share_token, share_expires_at
+           FROM sessions
+           WHERE workspace_slug = ?
+           ORDER BY started_at DESC
+           LIMIT ${PAGE_SIZE}`
+        ).bind(workspaceSlug)
+
+    const result = await stmt.all()
+    const sessions = result.results
+    const next_cursor = sessions.length === PAGE_SIZE
+      ? (sessions[sessions.length - 1] as { id: number }).id
+      : null
+
+    return Response.json({ sessions, next_cursor }, { status: 200, headers: CORS })
   } catch (err) {
     console.error('session list error', err)
     return Response.json({ error: 'Server error' }, { status: 500, headers: CORS })
