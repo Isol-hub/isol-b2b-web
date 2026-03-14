@@ -19,9 +19,10 @@ async function getJwks() {
     const res = await fetch(JWKS_URL)
     const keys = await res.json() as { keys: unknown[] }
     jwksCache = { keys, fetchedAt: Date.now() }
-  } catch {
+  } catch (err) {
     // On fetch error, fall back to stale cache to avoid blocking users
     // during temporary lsol-auth downtime
+    console.error(JSON.stringify({ error: (err as Error).message, context: 'jwks_fetch', ts: Date.now() }))
     if (!jwksCache) throw new Error('JWKS fetch failed and no cache available')
   }
 
@@ -52,7 +53,12 @@ export async function verifyJwt(
     if (typeof sub !== 'string' || typeof wsp !== 'string') return null
     if (payload['token_use'] !== 'access') return null
     return { email: sub, workspaceSlug: wsp }
-  } catch {
+  } catch (err) {
+    // JWTExpired / JWSSignatureVerificationFailed are routine — only log unexpected errors
+    const name = (err as { code?: string }).code ?? (err as Error).name ?? ''
+    if (!name.startsWith('JWT') && !name.startsWith('JWS') && !name.startsWith('JOSEAlg')) {
+      console.error(JSON.stringify({ error: (err as Error).message, context: 'verify_jwt', ts: Date.now() }))
+    }
     return null
   }
 }

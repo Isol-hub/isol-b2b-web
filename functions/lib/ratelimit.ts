@@ -67,7 +67,9 @@ export async function checkRateLimit(
       env.DB.prepare(
         `INSERT INTO ai_usage (workspace_slug, month, endpoint, count) VALUES (?, ?, ?, 1)
          ON CONFLICT(workspace_slug, month, endpoint) DO UPDATE SET count = count + 1`
-      ).bind(workspaceSlug, monthUTC(), endpoint).run().catch(() => {})
+      ).bind(workspaceSlug, monthUTC(), endpoint).run().catch((err: unknown) => {
+        console.error(JSON.stringify({ error: (err as Error).message, context: 'ai_usage_tracking', ts: Date.now() }))
+      })
     }
     return { allowed: true, remaining: -1, resetAt: 0 }
   }
@@ -86,7 +88,9 @@ export async function checkRateLimit(
     env.DB.prepare(
       `INSERT INTO ai_usage (workspace_slug, month, endpoint, count) VALUES (?, ?, ?, 1)
        ON CONFLICT(workspace_slug, month, endpoint) DO UPDATE SET count = count + 1`
-    ).bind(workspaceSlug, monthUTC(), endpoint).run().catch(() => {})
+    ).bind(workspaceSlug, monthUTC(), endpoint).run().catch((err: unknown) => {
+        console.error(JSON.stringify({ error: (err as Error).message, context: 'ai_usage_tracking', ts: Date.now() }))
+      })
   }
 
   if (count >= limit) {
