@@ -388,6 +388,7 @@ export default function SessionsPage() {
             )}
           </div>
         ) : (
+          <>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {filtered.map(s => {
               const lang = LANGUAGES.find(l => l.code === s.target_lang)
@@ -470,6 +471,7 @@ export default function SessionsPage() {
               </button>
             </div>
           )}
+          </>
         )}
       </div>
 
