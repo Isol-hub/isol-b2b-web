@@ -1,5 +1,6 @@
 import { verifyJwt } from '../../lib/jwt'
 import { assertMaxLen, isValidationError } from '../../lib/validate'
+import { getEffectivePlan } from '../../lib/plan'
 
 interface Env {
   DB: D1Database
@@ -91,11 +92,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       env.DB.prepare('SELECT COUNT(*) as cnt FROM sessions WHERE workspace_slug = ? AND started_at >= ?').bind(workspace_slug, monthStartMs),
     ])
     const planData = planRow.results[0] as { plan: string; plan_expires_at: number | null } | undefined
-    let plan = planData?.plan ?? 'free'
-    // B4: enforce expiry in case cancellation webhook was missed
-    if (plan !== 'free' && planData?.plan_expires_at && planData.plan_expires_at < Math.floor(Date.now() / 1000)) {
-      plan = 'free'
-    }
+    const plan = getEffectivePlan(planData?.plan ?? 'free', planData?.plan_expires_at ?? null)
 
     if (plan === 'free') {
       const cnt = (countRow.results[0] as { cnt: number } | undefined)?.cnt ?? 0

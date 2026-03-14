@@ -1,4 +1,5 @@
 import { verifyJwt } from '../../lib/jwt'
+import { getEffectivePlan } from '../../lib/plan'
 
 interface Env {
   DB: D1Database
@@ -52,24 +53,22 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
         return Response.json({ error: 'Not found' }, { status: 404, headers: CORS })
       }
 
+      const wsNew = workspace as { plan: string; plan_expires_at: number | null }
       return Response.json({
-        workspace,
+        workspace: { ...wsNew, effective_plan: getEffectivePlan(wsNew.plan, wsNew.plan_expires_at) },
         stats: { sessions_total: 0, minutes_total: 0, top_lang: null },
         usage: [],
       }, { headers: CORS })
     }
 
-    // B4: enforce plan_expires_at — defense against missed Stripe cancellation webhooks
     const ws = workspace as { plan: string; plan_expires_at: number | null }
-    if (ws.plan !== 'free' && ws.plan_expires_at && ws.plan_expires_at < Math.floor(Date.now() / 1000)) {
-      ws.plan = 'free'
-    }
+    const effectivePlan = getEffectivePlan(ws.plan, ws.plan_expires_at)
 
     const statsRow = statsResult.results[0] as { sessions_total: number; total_seconds: number } | undefined
     const topLangRow = topLangResult.results[0] as { target_lang: string } | undefined
 
     return Response.json({
-      workspace,
+      workspace: { ...ws, effective_plan: effectivePlan },
       stats: {
         sessions_total: statsRow?.sessions_total ?? 0,
         minutes_total: Math.round((statsRow?.total_seconds ?? 0) / 60000),

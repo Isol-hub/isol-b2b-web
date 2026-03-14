@@ -1,3 +1,5 @@
+import { getEffectivePlan } from './plan'
+
 export interface RateLimitEnv {
   CF_KV_RL: KVNamespace
   DB: D1Database
@@ -53,11 +55,7 @@ export async function checkRateLimit(
     const row = await env.DB.prepare(
       'SELECT plan, plan_expires_at FROM workspaces WHERE slug = ?'
     ).bind(workspaceSlug).first<{ plan: string; plan_expires_at: number | null }>()
-    plan = row?.plan ?? 'free'
-    // B4: enforce expiry in case cancellation webhook was missed
-    if (plan !== 'free' && row?.plan_expires_at && row.plan_expires_at < Math.floor(Date.now() / 1000)) {
-      plan = 'free'
-    }
+    plan = getEffectivePlan(row?.plan ?? 'free', row?.plan_expires_at ?? null)
   }
 
   const limit = LIMITS[plan]?.[endpoint] ?? LIMITS.free[endpoint] ?? 100
