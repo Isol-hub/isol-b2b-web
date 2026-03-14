@@ -1,4 +1,5 @@
 import { verifyJwt } from '../../lib/jwt'
+import { corsHeaders } from '../../lib/cors'
 
 interface Env { DB: D1Database }
 
@@ -10,9 +11,8 @@ interface Member {
   joined_at: number | null
 }
 
-const CORS = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
-
 export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
+  const CORS = corsHeaders(request)
   const auth = await verifyJwt(request)
   if (!auth) return Response.json({ error: 'Unauthorized' }, { status: 401, headers: CORS })
 
@@ -24,6 +24,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
 }
 
 export const onRequestDelete: PagesFunction<Env> = async ({ request, env }) => {
+  const CORS = corsHeaders(request)
   const auth = await verifyJwt(request)
   if (!auth) return Response.json({ error: 'Unauthorized' }, { status: 401, headers: CORS })
 
@@ -47,12 +48,5 @@ export const onRequestDelete: PagesFunction<Env> = async ({ request, env }) => {
   return Response.json({ ok: true }, { headers: CORS })
 }
 
-export const onRequestOptions: PagesFunction = async () =>
-  new Response(null, {
-    status: 204,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    },
-  })
+export const onRequestOptions: PagesFunction = async ({ request }) =>
+  new Response(null, { status: 204, headers: corsHeaders(request) })

@@ -5,10 +5,12 @@ interface Env {
   DB: D1Database
 }
 
+import { corsHeaders } from '../../lib/cors'
+
 const LSOL_AUTH_URL = 'https://api.isol.live/auth/b2b/token'
 
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
-  const headers = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+  const headers = corsHeaders(request)
   try {
     const { email, otp } = await request.json<{ email: string; otp: string }>()
     if (!email || !otp) return Response.json({ error: 'Missing fields' }, { status: 400, headers })
@@ -67,12 +69,5 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   }
 }
 
-export const onRequestOptions: PagesFunction = async () =>
-  new Response(null, {
-    status: 204,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
-    },
-  })
+export const onRequestOptions: PagesFunction = async ({ request }) =>
+  new Response(null, { status: 204, headers: corsHeaders(request) })

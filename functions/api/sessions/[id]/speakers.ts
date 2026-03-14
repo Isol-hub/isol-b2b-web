@@ -1,12 +1,8 @@
 import { verifyJwt } from '../../../lib/jwt'
+import { corsHeaders } from '../../../lib/cors'
 
 interface Env {
   DB: D1Database
-}
-
-const CORS = {
-  'Content-Type': 'application/json',
-  'Access-Control-Allow-Origin': '*',
 }
 
 async function authedSession(request: Request, env: Env, sessionId: number) {
@@ -24,6 +20,7 @@ async function authedSession(request: Request, env: Env, sessionId: number) {
 // Sets is_user_edited = 1, source = 'manual'.
 // Also confirms all lines attributed to this speaker.
 export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params }) => {
+  const CORS = corsHeaders(request)
   const sessionId = Number(params.id)
   if (!sessionId) return Response.json({ error: 'Invalid id' }, { status: 400, headers: CORS })
   const auth = await authedSession(request, env, sessionId)
@@ -62,6 +59,7 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params 
 
 // GET /api/sessions/:id/speakers — returns all speakers for a session
 export const onRequestGet: PagesFunction<Env> = async ({ request, env, params }) => {
+  const CORS = corsHeaders(request)
   const sessionId = Number(params.id)
   if (!sessionId) return Response.json({ error: 'Invalid id' }, { status: 400, headers: CORS })
   const auth = await authedSession(request, env, sessionId)
@@ -74,12 +72,5 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env, params })
   return Response.json({ speakers: result.results }, { headers: CORS })
 }
 
-export const onRequestOptions: PagesFunction = async () =>
-  new Response(null, {
-    status: 204,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, PATCH, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    },
-  })
+export const onRequestOptions: PagesFunction = async ({ request }) =>
+  new Response(null, { status: 204, headers: corsHeaders(request) })

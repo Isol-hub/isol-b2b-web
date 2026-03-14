@@ -1,6 +1,7 @@
 import { verifyJwt } from '../../lib/jwt'
 import { checkRateLimit, type RateLimitEnv } from '../../lib/ratelimit'
 import { callAnthropic } from '../../lib/anthropic'
+import { corsHeaders } from '../../lib/cors'
 
 interface Env extends RateLimitEnv { ANTHROPIC_API_KEY: string }
 
@@ -17,9 +18,8 @@ const LANG_NAMES: Record<string, string> = {
   sw: 'Swahili',    am: 'Amharic',     si: 'Sinhala',
 }
 
-const CORS = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
-
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
+  const CORS = corsHeaders(request)
   const auth = await verifyJwt(request).catch(() => null)
   const ip = request.headers.get('CF-Connecting-IP') ?? 'unknown'
   const rlKey = auth?.workspaceSlug ?? `ip:${ip}`
@@ -89,12 +89,5 @@ ${rawText}`,
   }
 }
 
-export const onRequestOptions: PagesFunction = async () =>
-  new Response(null, {
-    status: 204,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    },
-  })
+export const onRequestOptions: PagesFunction = async ({ request }) =>
+  new Response(null, { status: 204, headers: corsHeaders(request) })

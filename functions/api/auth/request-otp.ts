@@ -16,6 +16,8 @@ function slugFromEmail(email: string): string {
   return email.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '')
 }
 
+import { corsHeaders } from '../../lib/cors'
+
 function isEmailAllowed(email: string, allowed?: string): boolean {
   if (!allowed || allowed === '*') return true
   const domain = email.split('@')[1] ?? ''
@@ -23,10 +25,7 @@ function isEmailAllowed(email: string, allowed?: string): boolean {
 }
 
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
-  const headers = {
-    'Content-Type': 'application/json',
-    'Access-Control-Allow-Origin': '*',
-  }
+  const headers = corsHeaders(request)
   try {
     const { email } = await request.json<{ email: string }>()
     if (!email || !email.includes('@')) {
@@ -98,12 +97,5 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   }
 }
 
-export const onRequestOptions: PagesFunction = async () =>
-  new Response(null, {
-    status: 204,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
-    },
-  })
+export const onRequestOptions: PagesFunction = async ({ request }) =>
+  new Response(null, { status: 204, headers: corsHeaders(request) })

@@ -1,14 +1,10 @@
 import { verifyJwt } from '../../lib/jwt'
 import { checkRateLimit, type RateLimitEnv } from '../../lib/ratelimit'
 import { callAnthropic } from '../../lib/anthropic'
+import { corsHeaders } from '../../lib/cors'
 
 interface Env extends RateLimitEnv {
   ANTHROPIC_API_KEY: string
-}
-
-const CORS = {
-  'Content-Type': 'application/json',
-  'Access-Control-Allow-Origin': '*',
 }
 
 // ISO 639-1 → full language name for clearer Claude prompt
@@ -36,6 +32,7 @@ interface TranslateBody {
 }
 
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
+  const CORS = corsHeaders(request)
   // Auth is optional for translate (ViewerPage calls it without JWT)
   const auth = await verifyJwt(request).catch(() => null)
   const ip = request.headers.get('CF-Connecting-IP') ?? 'unknown'
@@ -82,12 +79,5 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   }
 }
 
-export const onRequestOptions: PagesFunction = async () =>
-  new Response(null, {
-    status: 204,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    },
-  })
+export const onRequestOptions: PagesFunction = async ({ request }) =>
+  new Response(null, { status: 204, headers: corsHeaders(request) })

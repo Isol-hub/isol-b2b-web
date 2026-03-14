@@ -1,8 +1,7 @@
 import { verifyJwt } from '../../lib/jwt'
+import { corsHeaders } from '../../lib/cors'
 
 interface Env { DB: D1Database }
-
-const CORS = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
 
 function generateApiKey(): string {
   const bytes = new Uint8Array(24)
@@ -13,6 +12,7 @@ function generateApiKey(): string {
 }
 
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
+  const CORS = corsHeaders(request)
   const auth = await verifyJwt(request)
   if (!auth) return Response.json({ error: 'Unauthorized' }, { status: 401, headers: CORS })
 
@@ -38,12 +38,5 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   return Response.json({ api_key: apiKey }, { headers: CORS })
 }
 
-export const onRequestOptions: PagesFunction = async () =>
-  new Response(null, {
-    status: 204,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    },
-  })
+export const onRequestOptions: PagesFunction = async ({ request }) =>
+  new Response(null, { status: 204, headers: corsHeaders(request) })

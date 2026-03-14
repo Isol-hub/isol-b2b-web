@@ -1,5 +1,6 @@
 import { verifyJwt } from '../../../lib/jwt'
 import { assertMaxLen, isValidationError } from '../../../lib/validate'
+import { corsHeaders } from '../../../lib/cors'
 
 interface Env {
   DB: D1Database
@@ -7,12 +8,8 @@ interface Env {
   CF_KV_OTP: KVNamespace
 }
 
-const CORS = {
-  'Content-Type': 'application/json',
-  'Access-Control-Allow-Origin': '*',
-}
-
-export const onRequestGet: PagesFunction<Env> = async ({ env, params }) => {
+export const onRequestGet: PagesFunction<Env> = async ({ request, env, params }) => {
+  const CORS = corsHeaders(request)
   const token = params.token as string
 
   try {
@@ -46,6 +43,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ env, params }) => {
 }
 
 export const onRequestPost: PagesFunction<Env> = async ({ request, env, params }) => {
+  const CORS = corsHeaders(request)
   const token = params.token as string
 
   let body: { line_index?: number | null; author?: string; body?: string }
@@ -150,12 +148,5 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, params }
   }
 }
 
-export const onRequestOptions: PagesFunction = async () =>
-  new Response(null, {
-    status: 204,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    },
-  })
+export const onRequestOptions: PagesFunction = async ({ request }) =>
+  new Response(null, { status: 204, headers: corsHeaders(request) })

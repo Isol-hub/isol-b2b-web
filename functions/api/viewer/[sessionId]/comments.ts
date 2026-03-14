@@ -1,8 +1,9 @@
+import { corsHeaders } from '../../../lib/cors'
+
 interface Env { DB: D1Database; CF_KV_RL: KVNamespace }
 
-const CORS = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
-
 export const onRequestGet: PagesFunction<Env> = async ({ request, env, params }) => {
+  const CORS = corsHeaders(request)
   const sessionId = params.sessionId as string
 
   // DB-03: Rate-limit unauthenticated GET by IP to prevent bulk enumeration
@@ -27,6 +28,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env, params })
 }
 
 export const onRequestPost: PagesFunction<Env> = async ({ request, env, params }) => {
+  const CORS = corsHeaders(request)
   const sessionId = params.sessionId as string
   let body: { author?: string; body?: string; line_index?: number | null }
   try { body = await request.json() } catch {
@@ -51,12 +53,5 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, params }
   }
 }
 
-export const onRequestOptions: PagesFunction = async () =>
-  new Response(null, {
-    status: 204,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
-    },
-  })
+export const onRequestOptions: PagesFunction = async ({ request }) =>
+  new Response(null, { status: 204, headers: corsHeaders(request) })
