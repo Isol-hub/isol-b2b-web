@@ -238,7 +238,15 @@ export default function SharedSessionPage() {
   const sessionTitle = session?.title ?? `Session — ${session ? formatDate(session.started_at) : ''}`
   const sessionDate = session ? formatDate(session.started_at) : ''
   const sessionLang = lang?.label ?? session?.target_lang ?? ''
-  const bodyText = session?.ai_formatted_text ?? lines.map(l => l.text).join('\n')
+
+  // Export what the user is currently viewing
+  const activeContent = (): { text: string; label: string } => {
+    if (activeTab === 'notes' && session?.ai_notes_text) return { text: session.ai_notes_text, label: 'Notes' }
+    if (activeTab === 'transcript') return { text: lines.map(l => l.text).join('\n'), label: 'Transcript' }
+    return { text: session?.ai_formatted_text ?? lines.map(l => l.text).join('\n'), label: 'AI Structured' }
+  }
+  const bodyText = activeContent().text
+  const contentLabel = activeContent().label
 
   async function handleExportPdf() {
     if (!session) return
@@ -496,7 +504,7 @@ export default function SharedSessionPage() {
                   }}
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                  {exportingPdf ? 'Generating…' : 'Download PDF'}
+                  {exportingPdf ? 'Generating…' : `Download PDF — ${contentLabel}`}
                 </button>
                 <button
                   onClick={handleExportDocx}
@@ -513,7 +521,7 @@ export default function SharedSessionPage() {
                   }}
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                  {exportingDocx ? 'Generating…' : 'Download Word'}
+                  {exportingDocx ? 'Generating…' : `Download Word — ${contentLabel}`}
                 </button>
               </div>
 
