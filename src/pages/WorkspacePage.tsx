@@ -83,6 +83,12 @@ export default function WorkspacePage() {
   const [currentLine, setCurrentLine] = useState('')
   const [error, setError] = useState('')
   const pip = usePip()
+  const [floatingCaption, setFloatingCaption] = useState(false)
+  const [floatingPos, setFloatingPos] = useState(() => ({
+    x: typeof window !== 'undefined' ? Math.max(0, window.innerWidth - 340) : 20,
+    y: typeof window !== 'undefined' ? Math.max(0, window.innerHeight - 200) : 20,
+  }))
+  const floatDragRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null)
   const [sessionActive, setSessionActive] = useState(false)
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const saveStatusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -964,6 +970,7 @@ export default function WorkspacePage() {
       }
       if (e.code === 'Escape') {
         if (pip.isOpen) pip.close()
+        if (floatingCaption) setFloatingCaption(false)
         if (glossaryWord) setGlossaryWord(null)
         if (showGlossaryList) setShowGlossaryList(false)
         return
@@ -984,7 +991,21 @@ export default function WorkspacePage() {
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [sessionActive, pip.isOpen, pip.close, transcript.length, handleStop, handleStart, glossaryWord, showGlossaryList])
+  }, [sessionActive, pip.isOpen, pip.close, floatingCaption, transcript.length, handleStop, handleStart, glossaryWord, showGlossaryList])
+
+  // Floating caption drag (fallback for browsers without documentPictureInPicture)
+  useEffect(() => {
+    function onMove(e: MouseEvent) {
+      if (!floatDragRef.current) return
+      const dx = e.clientX - floatDragRef.current.startX
+      const dy = e.clientY - floatDragRef.current.startY
+      setFloatingPos({ x: floatDragRef.current.origX + dx, y: floatDragRef.current.origY + dy })
+    }
+    function onUp() { floatDragRef.current = null }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
+  }, [])
 
   if (!session) { navigate('/login', { replace: true }); return null }
 
@@ -1285,12 +1306,19 @@ export default function WorkspacePage() {
           {/* Compact mode toggle */}
           {sessionActive && (
             <button
-              onClick={() => pip.isOpen ? pip.close() : pip.open(520, 140)}
+              onClick={() => {
+                if (pip.isSupported) {
+                  pip.isOpen ? pip.close() : pip.open(520, 140)
+                } else {
+                  setFloatingCaption(v => !v)
+                }
+              }}
               className="btn-icon"
               style={{ width: '100%', justifyContent: 'center', fontSize: 11 }}
-              title={pip.isSupported ? undefined : 'Requires Chrome 116+'}
             >
-              {pip.isOpen ? '⊞ Show document' : '⧉ Picture-in-Picture'}
+              {pip.isSupported
+                ? (pip.isOpen ? '⊞ Show document' : '⧉ Picture-in-Picture')
+                : (floatingCaption ? '⊞ Hide overlay' : '⧉ Float captions')}
             </button>
           )}
 
@@ -1574,6 +1602,34 @@ export default function WorkspacePage() {
           isActive={isActive}
         />,
         pip.pipWindow.document.body
+      )}
+
+      {!pip.isSupported && floatingCaption && sessionActive && (
+        <div
+          onMouseDown={(e) => {
+            floatDragRef.current = { startX: e.clientX, startY: e.clientY, origX: floatingPos.x, origY: floatingPos.y }
+            e.preventDefault()
+          }}
+          style={{
+            position: 'fixed',
+            left: floatingPos.x,
+            top: floatingPos.y,
+            zIndex: 9999,
+            width: 320,
+            height: 140,
+            borderRadius: 14,
+            overflow: 'hidden',
+            cursor: 'grab',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.45)',
+            userSelect: 'none',
+          }}
+        >
+          <PipCaption
+            current={currentLine}
+            previous={transcript[transcript.length - 1]?.text ?? ''}
+            isActive={isActive}
+          />
+        </div>
       )}
 
       {showModal && (

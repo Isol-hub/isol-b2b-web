@@ -34,7 +34,7 @@
 - [x] **C3** — Data Export UI — sezione "Coming soon" in SettingsPage; librerie jsPDF e docx già installate
 - [x] **C4** — TypeScript strict — `noUnusedLocals: false`, `noUnusedParameters: false` in tsconfig.app.json
 - [x] **C5** — Magic strings → constants file — `'pending'`, `'active'`, `'otp_req:'`, `'isol_session'`, `'b2b'` sparsi in 15+ file
-- [ ] **C6** — PiP fallback browser — `documentPictureInPicture` non supportato su Firefox/Safari; `isSupported` flag esiste ma UI non gestisce il fallback
+- [x] **C6** — PiP fallback browser — `documentPictureInPicture` non supportato su Firefox/Safari; `isSupported` flag esiste ma UI non gestisce il fallback
 
 ---
 
@@ -58,3 +58,4 @@
 | 2026-03-14 | C3 | — | export.ts GET endpoint (chunked batch); SettingsPage: Export JSON/PDF/Word buttons via jsPDF + docx |
 | 2026-03-14 | C4 | 83a8775 | tsconfig.app.json: noUnusedLocals + noUnusedParameters → true; zero errori |
 | 2026-03-15 | C5 | 5fc5e29 | constants.ts backend+frontend; all magic strings replaced |
+| 2026-03-15 | C6 | — | WorkspacePage: floating caption overlay (draggable, fixed) for Firefox/Safari; system PiP su Chrome |
