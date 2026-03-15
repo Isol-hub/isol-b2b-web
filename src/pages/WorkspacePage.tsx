@@ -15,6 +15,7 @@ import PricingModal from '../components/PricingModal'
 import TeamModal from '../components/TeamModal'
 import { usePip } from '../hooks/usePip'
 import TranscriptModal from '../components/TranscriptModal'
+import SessionDetailModal from '../components/SessionDetailModal'
 import GlossaryPanel from '../components/GlossaryPanel'
 import GlossaryListPanel, { type GlossaryItem } from '../components/GlossaryListPanel'
 import LanguageSelector from '../components/LanguageSelector'
@@ -106,7 +107,6 @@ export default function WorkspacePage() {
   const [glossaryWord, setGlossaryWord] = useState<{ word: string; sentence: string } | null>(null)
   const [showGlossaryList, setShowGlossaryList] = useState(false)
   const [showHighlights, setShowHighlights] = useState(false)
-  const [titleSaved, setTitleSaved] = useState(false)
 
   const [aiFormatted, setAiFormatted] = useState<string | undefined>()
   const [aiFormattedAt, setAiFormattedAt] = useState<number | undefined>()
@@ -155,16 +155,8 @@ export default function WorkspacePage() {
 
   // Session history
   interface SessionMeta { id: number; started_at: number; target_lang: string; line_count: number; title?: string; share_token?: string }
-  interface SessionDetail {
-    session: Record<string, unknown>
-    lines: Array<{ line_index: number; text: string; speaker_id?: string | null; speaker_state?: string }>
-    highlights: HighlightItem[]
-    speakers: Array<{ speaker_id: string; label: string; color: string }>
-    comments: Array<CommentItem & { line_index: number | null }>
-  }
   const [sessions, setSessions] = useState<SessionMeta[]>([])
-  const [viewingSession, setViewingSession] = useState<SessionDetail | null>(null)
-  const [sessionDetailLoading, setSessionDetailLoading] = useState(false)
+  const [viewingSessionId, setViewingSessionId] = useState<number | null>(null)
   const [highlights, setHighlights] = useState<HighlightItem[]>([])
 
   // Speaker diarization state (live session)
@@ -180,19 +172,8 @@ export default function WorkspacePage() {
   // on every partial of the NEXT segment, causing the same text to be added multiple times.
   const lastLineFinalRef = useRef<string>('')
 
-  const [editingTitle, setEditingTitle] = useState('')
-  const [shareCopied, setShareCopied] = useState(false)
-  const [sharePending, setSharePending] = useState(false)
-  const [, setShareDurationHours] = useState<number | null>(null)
-
   // Inline annotations (live session only)
   const [lineComments, setLineComments] = useState<Map<number, CommentItem[]>>(new Map())
-  // Archived session comments — separate so live lineComments are never overwritten
-  const [archivedComments, setArchivedComments] = useState<Map<number, CommentItem[]>>(new Map())
-  const [archivedViewMode, setArchivedViewMode] = useState<'raw' | 'ai' | 'notes'>('raw')
-  const [archivedTab, setArchivedTab] = useState<'doc' | 'highlights' | 'notes'>('doc')
-  const [archivedHighlights, setArchivedHighlights] = useState<HighlightItem[]>([])
-  const [hostNotes, setHostNotes] = useState('')
   const [openCommentLine, setOpenCommentLine] = useState<number | null>(null)
   const [commentAuthor, setCommentAuthor] = useState(
     () => localStorage.getItem('isol_commenter_name') || ''
@@ -201,12 +182,6 @@ export default function WorkspacePage() {
   const commentPollRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const lastWssSessionIdRef = useRef<string>('')
 
-  // Sync title input when session detail opens
-  useEffect(() => {
-    if (viewingSession) {
-      setEditingTitle((viewingSession.session.title as string) ?? '')
-    }
-  }, [viewingSession])
 
   // Workspace glossary
   const [glossaryItems, setGlossaryItems] = useState<GlossaryItem[]>([])
@@ -644,105 +619,6 @@ export default function WorkspacePage() {
     } catch { /* silent */ }
   }, [workspaceSlug])
 
-  const openSession = useCallback(async (id: number) => {
-    const token = getToken()
-    if (!token) return
-    setSessionDetailLoading(true)
-    try {
-      const res = await sentryFetch(`/api/sessions/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      if (!res.ok) return
-      const data = await res.json() as SessionDetail
-      setViewingSession(data)
-      setArchivedComments(buildCommentMap(data.comments ?? []))
-      setArchivedHighlights(data.highlights ?? [])
-      setHostNotes((data.session.host_notes_text as string) ?? '')
-      setArchivedViewMode(data.session.ai_formatted_text ? 'ai' : 'raw')
-    } catch { /* silent */ }
-    finally { setSessionDetailLoading(false) }
-  }, [])
-
-  const patchSessionTitle = useCallback(async (id: number, title: string) => {
-    const token = getToken()
-    if (!token) return
-    const trimmed = title.trim()
-    try {
-      await sentryFetch(`/api/sessions/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ title: trimmed || null }),
-      })
-      setSessions(prev => prev.map(s => s.id === id ? { ...s, title: trimmed || undefined } : s))
-      setViewingSession(prev => prev ? { ...prev, session: { ...prev.session, title: trimmed || null } } : prev)
-      setTitleSaved(true)
-      setTimeout(() => setTitleSaved(false), 1800)
-    } catch { /* silent */ }
-  }, [])
-
-  const patchHostNotes = useCallback(async (id: number, text: string) => {
-    const token = getToken()
-    if (!token) return
-    try {
-      await sentryFetch(`/api/sessions/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ host_notes_text: text || null }),
-      })
-    } catch { /* silent */ }
-  }, [])
-
-  const addArchivedHighlight = useCallback(async (text: string, lineIndex: number | null, category: HighlightCategory | null) => {
-    if (!viewingSession) return
-    const sessionId = viewingSession.session.id as number
-    const token = getToken()
-    if (!token) return
-    try {
-      const res = await sentryFetch(`/api/sessions/${sessionId}/highlights`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ text, line_index: lineIndex, category }),
-      })
-      if (res.ok) {
-        const { id } = await res.json() as { id: number }
-        setArchivedHighlights(prev => [...prev, { id, text, line_index: lineIndex, category }])
-      }
-    } catch { /* silent */ }
-  }, [viewingSession])
-
-  const removeArchivedHighlight = useCallback(async (id: number) => {
-    if (!viewingSession) return
-    const sessionId = viewingSession.session.id as number
-    const token = getToken()
-    if (!token) return
-    setArchivedHighlights(prev => prev.filter(h => h.id !== id))
-    try {
-      await sentryFetch(`/api/sessions/${sessionId}/highlights?highlight_id=${id}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      })
-    } catch { /* silent */ }
-  }, [viewingSession])
-
-  const generateShareLink = useCallback(async (sessionId: number, expiresInHours?: number | null) => {
-    const token = getToken()
-    if (!token) return
-    const res = await sentryFetch('/api/share', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ session_id: sessionId, ...(expiresInHours != null ? { expires_in_hours: expiresInHours } : {}) }),
-    })
-    if (!res.ok) return
-    const data = await res.json() as { token: string }
-    setViewingSession(prev => prev ? { ...prev, session: { ...prev.session, share_token: data.token } } : prev)
-    setSessions(prev => prev.map(s => s.id === sessionId ? { ...s, share_token: data.token } : s))
-    setSharePending(false)
-  }, [])
-
-  const handleCopyShareUrl = useCallback((token: string) => {
-    navigator.clipboard.writeText(`${window.location.origin}/share/${token}`)
-      .then(() => { setShareCopied(true); setTimeout(() => setShareCopied(false), 2400) })
-  }, [])
 
   const saveSession = useCallback(async (
     lines: { text: string; time: Date }[],
@@ -1383,7 +1259,7 @@ export default function WorkspacePage() {
                     return (
                       <button
                         key={s.id}
-                        onClick={() => openSession(s.id)}
+                        onClick={() => setViewingSessionId(s.id)}
                         style={{
                           background: 'transparent',
                           border: '1px solid var(--border)',
@@ -1668,247 +1544,13 @@ export default function WorkspacePage() {
         />
       )}
 
-      {/* Session detail modal */}
-      {(viewingSession || sessionDetailLoading) && (
-        <div
-          style={{
-            position: 'fixed', inset: 0, zIndex: 10000,
-            background: 'rgba(0,0,0,0.50)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            padding: 24,
-          }}
-          onClick={e => { if (e.target === e.currentTarget) { setViewingSession(null); setArchivedComments(new Map()); setArchivedHighlights([]); setHostNotes(''); setSharePending(false); setArchivedViewMode('raw'); setArchivedTab('doc') } }}
-        >
-          <div style={{
-            width: '100%', maxWidth: 700,
-            background: 'var(--canvas)',
-            border: '1px solid var(--border)',
-            borderRadius: 'var(--radius-xl)',
-            boxShadow: 'var(--shadow-lg)',
-            display: 'flex', flexDirection: 'column',
-            maxHeight: '85vh', overflow: 'hidden',
-          }}>
-            {/* Modal header */}
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: 12,
-              padding: '18px 24px',
-              borderBottom: '1px solid var(--divider)',
-              flexShrink: 0,
-            }}>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                {/* Editable session title */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
-                  <input
-                    value={editingTitle}
-                    onChange={e => setEditingTitle(e.target.value)}
-                    onFocus={e => (e.target.style.borderBottomColor = 'var(--border-accent)')}
-                    onBlur={e => {
-                      e.target.style.borderBottomColor = 'transparent'
-                      if (viewingSession) patchSessionTitle(viewingSession.session.id as number, editingTitle)
-                    }}
-                    onKeyDown={e => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
-                    placeholder="Add a title…"
-                    style={{
-                      fontSize: 15, fontWeight: 700,
-                      background: 'none', border: 'none',
-                      borderBottom: '1px solid transparent',
-                      padding: '1px 0',
-                      color: 'var(--text)', fontFamily: 'inherit',
-                      flex: 1, cursor: 'text',
-                      transition: 'border-color 0.15s',
-                      outline: 'none',
-                    }}
-                  />
-                  {titleSaved && (
-                    <span style={{ fontSize: 11, color: 'var(--live)', fontWeight: 600, flexShrink: 0 }}>✓ Saved</span>
-                  )}
-                </div>
-                {viewingSession && (
-                  <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                    {new Date(viewingSession.session.started_at as number).toLocaleString()} ·{' '}
-                    {viewingSession.lines.length} lines
-                  </p>
-                )}
-              </div>
-              <button
-                onClick={() => { setViewingSession(null); setArchivedComments(new Map()); setArchivedHighlights([]); setHostNotes(''); setSharePending(false); setArchivedViewMode('raw'); setArchivedTab('doc') }}
-                style={{ background: 'none', color: 'var(--text-muted)', fontSize: 20, padding: '2px 8px', borderRadius: 4, flexShrink: 0 }}
-              >×</button>
-            </div>
-            {/* Tab bar */}
-            {viewingSession && !sessionDetailLoading && (
-              <div style={{
-                display: 'flex', gap: 2,
-                padding: '0 24px',
-                borderBottom: '1px solid var(--divider)',
-                flexShrink: 0,
-              }}>
-                {([
-                  { id: 'doc', label: 'Transcript' },
-                  { id: 'highlights', label: `Highlights${archivedHighlights.length > 0 ? ` (${archivedHighlights.length})` : ''}` },
-                  { id: 'notes', label: 'Notes' },
-                ] as const).map(tab => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setArchivedTab(tab.id)}
-                    style={{
-                      background: 'none', border: 'none', cursor: 'pointer',
-                      padding: '10px 14px',
-                      fontSize: 12, fontWeight: 600,
-                      color: archivedTab === tab.id ? 'var(--text)' : 'var(--text-muted)',
-                      borderBottom: archivedTab === tab.id ? '2px solid var(--accent)' : '2px solid transparent',
-                      marginBottom: -1,
-                      transition: 'color 0.15s',
-                    }}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {/* Content */}
-            <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
-              {sessionDetailLoading ? (
-                <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)', fontSize: 14 }}>
-                  Loading…
-                </div>
-              ) : viewingSession && archivedTab === 'highlights' ? (
-                <HighlightsSection highlights={archivedHighlights} />
-              ) : viewingSession && archivedTab === 'notes' ? (
-                <div>
-                  <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.09em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 10 }}>
-                    Host Notes
-                  </p>
-                  <textarea
-                    value={hostNotes}
-                    onChange={e => setHostNotes(e.target.value)}
-                    onBlur={() => patchHostNotes(viewingSession.session.id as number, hostNotes)}
-                    placeholder="Add your notes about this session…"
-                    rows={14}
-                    style={{
-                      width: '100%', resize: 'vertical',
-                      background: 'var(--surface-1)', border: '1px solid var(--border)',
-                      borderRadius: 8, padding: '12px 14px',
-                      fontSize: 14, color: 'var(--text)', lineHeight: 1.65,
-                      fontFamily: 'inherit', outline: 'none',
-                      transition: 'border-color 0.15s',
-                      boxSizing: 'border-box',
-                    }}
-                    onFocus={e => (e.target.style.borderColor = 'var(--border-accent)')}
-                  />
-                  <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>
-                    Saved automatically when you click away.
-                  </p>
-                </div>
-              ) : viewingSession ? (
-                <DocumentView
-                  transcript={viewingSession.lines.map(l => ({ text: l.text, time: new Date(viewingSession.session.started_at as number) }))}
-                  currentLine=""
-                  isActive={false}
-                  targetLang={viewingSession.session.target_lang as string}
-                  hideBanner={true}
-                  aiFormatted={viewingSession.session.ai_formatted_text as string | undefined}
-                  aiFormattedAt={undefined}
-                  aiLoading={false}
-                  aiNotes={viewingSession.session.ai_notes_text as string | undefined}
-                  aiNotesLoading={false}
-                  viewMode={archivedViewMode}
-                  onViewModeChange={setArchivedViewMode}
-                  isEditable={false}
-                  lineComments={archivedComments}
-                  openCommentLine={null}
-                  onOpenCommentLine={() => {}}
-                  commentAuthor={commentAuthor}
-                  onCommentAuthorChange={() => {}}
-                  onAddComment={async () => {}}
-                  commentSubmitting={false}
-                  isHost={false}
-                  highlights={archivedHighlights}
-                  onAddHighlight={addArchivedHighlight}
-                  onRemoveHighlight={removeArchivedHighlight}
-                />
-              ) : null}
-            </div>
-
-            {/* Share footer */}
-            {viewingSession && (
-              <div style={{
-                borderTop: '1px solid var(--divider)',
-                padding: '14px 24px',
-                flexShrink: 0,
-              }}>
-                <p style={{
-                  fontSize: 10, fontWeight: 700, letterSpacing: '0.09em',
-                  textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 10,
-                }}>Share</p>
-                {viewingSession.session.share_token ? (
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                    <input
-                      className="input-field"
-                      readOnly
-                      value={`${window.location.origin}/share/${viewingSession.session.share_token as string}`}
-                      onFocus={e => e.target.select()}
-                      style={{ fontSize: 12, flex: 1 }}
-                    />
-                    <button
-                      onClick={() => handleCopyShareUrl(viewingSession.session.share_token as string)}
-                      className="btn-icon"
-                      style={{
-                        fontSize: 12, flexShrink: 0,
-                        color: shareCopied ? 'var(--live)' : undefined,
-                      }}
-                    >
-                      {shareCopied ? '✓ Copied' : 'Copy'}
-                    </button>
-                  </div>
-                ) : sharePending ? (
-                  <div>
-                    <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 7 }}>
-                      Link expires in:
-                    </p>
-                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-                      {([
-                        { label: 'Never', hours: null },
-                        { label: '24 h', hours: 24 },
-                        { label: '7 days', hours: 168 },
-                        { label: '30 days', hours: 720 },
-                      ] as { label: string; hours: number | null }[]).map(opt => (
-                        <button
-                          key={opt.label}
-                          onClick={() => generateShareLink(viewingSession.session.id as number, opt.hours)}
-                          className="btn-icon"
-                          style={{ fontSize: 11, padding: '4px 10px' }}
-                        >
-                          {opt.label}
-                        </button>
-                      ))}
-                      <button
-                        onClick={() => setSharePending(false)}
-                        style={{
-                          background: 'none', border: 'none', cursor: 'pointer',
-                          fontSize: 12, color: 'var(--text-muted)', padding: '4px 2px',
-                          fontFamily: 'inherit', marginLeft: 2,
-                        }}
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => { setShareDurationHours(null); setSharePending(true) }}
-                    className="btn-icon"
-                    style={{ fontSize: 12 }}
-                  >
-                    ↗ Create share link
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+      <SessionDetailModal
+        sessionId={viewingSessionId}
+        onClose={() => setViewingSessionId(null)}
+        onTitleChange={(id, title) => setSessions(prev => prev.map(s => s.id === id ? { ...s, title: title ?? undefined } : s))}
+        onDeleted={(id) => setSessions(prev => prev.filter(s => s.id !== id))}
+        onShareChange={(id, token) => setSessions(prev => prev.map(s => s.id === id ? { ...s, share_token: token ?? undefined } : s))}
+      />
 
       {/* Glossary drawer — word lookup */}
       {glossaryWord && (

@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import { getSession, getToken } from '../lib/auth'
 import { sentryFetch } from '../lib/sentryFetch'
 import { LANGUAGES } from '../lib/languages'
-import ConfirmModal from '../components/ConfirmModal'
+import SessionDetailModal from '../components/SessionDetailModal'
 
 interface SessionMeta {
   id: number
@@ -16,13 +16,7 @@ interface SessionMeta {
   share_expires_at?: number | null
 }
 
-interface SessionDetail {
-  session: Record<string, unknown>
-  lines: Array<{ line_index: number; text: string }>
-}
-
 type SortKey = 'date_desc' | 'date_asc' | 'title_asc' | 'title_desc'
-type ExpiryChoice = 'never' | '7d' | '30d'
 
 function fmtDuration(ms: number): string {
   const s = Math.round(ms / 1000)
@@ -53,22 +47,7 @@ export default function SessionsPage() {
   const [sort, setSort] = useState<SortKey>('date_desc')
 
   // Detail modal
-  const [detail, setDetail] = useState<SessionDetail | null>(null)
-  const [detailLoading, setDetailLoading] = useState(false)
-  const [editingTitle, setEditingTitle] = useState('')
-  const [titleSaved, setTitleSaved] = useState(false)
-
-  // Row actions
-  const [shareCopied, setShareCopied] = useState<number | null>(null)
-  const [shareLoading, setShareLoading] = useState<number | null>(null)
-
-  // Confirm modals
-  const [confirmDelete, setConfirmDelete] = useState<SessionMeta | null>(null)
-  const [confirmRevoke, setConfirmRevoke] = useState<SessionMeta | null>(null)
-
-  // Share modal
-  const [shareModalId, setShareModalId] = useState<number | null>(null)
-  const [shareExpiryChoice, setShareExpiryChoice] = useState<ExpiryChoice>('never')
+  const [viewingSessionId, setViewingSessionId] = useState<number | null>(null)
 
   // FTS search
   const [ftsResults, setFtsResults] = useState<Array<{ session_id: number; snippet: string }> | null>(null)
@@ -115,132 +94,7 @@ export default function SessionsPage() {
     return () => { if (ftsDebounceRef.current) clearTimeout(ftsDebounceRef.current) }
   }, [search, workspaceSlug])
 
-  useEffect(() => {
-    if (detail) setEditingTitle((detail.session.title as string) ?? '')
-  }, [detail])
 
-  const openDetail = useCallback(async (id: number) => {
-    const token = getToken()
-    if (!token) return
-    setDetailLoading(true)
-    setDetail(null)
-    try {
-      const res = await sentryFetch(`/api/sessions/${id}`, { headers: { Authorization: `Bearer ${token}` } })
-      if (res.ok) setDetail(await res.json() as SessionDetail)
-    } catch { /* silent */ }
-    finally { setDetailLoading(false) }
-  }, [])
-
-  const patchTitle = useCallback(async (id: number, title: string) => {
-    const token = getToken()
-    if (!token) return
-    const trimmed = title.trim()
-    try {
-      await sentryFetch(`/api/sessions/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ title: trimmed || null }),
-      })
-      setSessions(prev => prev.map(s => s.id === id ? { ...s, title: trimmed || undefined } : s))
-      setTitleSaved(true)
-      setTimeout(() => setTitleSaved(false), 1800)
-    } catch { /* silent */ }
-  }, [])
-
-  const openShareModal = useCallback((s: SessionMeta) => {
-    setShareModalId(s.id)
-    setShareExpiryChoice('never')
-  }, [])
-
-  const copyToClipboard = useCallback(async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text)
-    } catch {
-      // Fallback for Chrome when document is not focused (e.g. inside a modal overlay)
-      const ta = document.createElement('textarea')
-      ta.value = text
-      ta.style.position = 'fixed'
-      ta.style.opacity = '0'
-      document.body.appendChild(ta)
-      ta.focus()
-      ta.select()
-      document.execCommand('copy')
-      document.body.removeChild(ta)
-    }
-  }, [])
-
-  const handleGenerateOrCopy = useCallback(async (s: SessionMeta) => {
-    const token = getToken()
-    if (!token) return
-
-    if (s.share_token) {
-      await copyToClipboard(`${window.location.origin}/share/${s.share_token}`)
-      setShareCopied(s.id)
-      setTimeout(() => setShareCopied(null), 2400)
-      return
-    }
-
-    setShareLoading(s.id)
-    const expiresInHours =
-      shareExpiryChoice === '7d' ? 7 * 24 :
-      shareExpiryChoice === '30d' ? 30 * 24 :
-      undefined
-
-    try {
-      const res = await sentryFetch('/api/share', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          session_id: s.id,
-          ...(expiresInHours !== undefined ? { expires_in_hours: expiresInHours } : {}),
-        }),
-      })
-      if (res.ok) {
-        const data = await res.json() as { token: string; share_expires_at: number | null }
-        setSessions(prev => prev.map(x =>
-          x.id === s.id ? { ...x, share_token: data.token, share_expires_at: data.share_expires_at } : x
-        ))
-        await copyToClipboard(`${window.location.origin}/share/${data.token}`)
-        setShareCopied(s.id)
-        setTimeout(() => setShareCopied(null), 2400)
-      }
-    } catch { /* silent */ }
-    finally { setShareLoading(null) }
-  }, [shareExpiryChoice, copyToClipboard])
-
-  const handleRevoke = useCallback(async (s: SessionMeta) => {
-    const token = getToken()
-    if (!token || !s.share_token) return
-    try {
-      const res = await sentryFetch(`/api/share/${s.share_token}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      if (res.ok) {
-        setSessions(prev => prev.map(x =>
-          x.id === s.id ? { ...x, share_token: undefined, share_expires_at: undefined } : x
-        ))
-        setShareModalId(null)
-        setConfirmRevoke(null)
-      }
-    } catch { /* silent */ }
-  }, [])
-
-  const handleDelete = useCallback(async (s: SessionMeta) => {
-    const token = getToken()
-    if (!token) return
-    try {
-      const res = await sentryFetch(`/api/sessions/${s.id}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      if (res.ok) {
-        setSessions(prev => prev.filter(x => x.id !== s.id))
-        if (detail && (detail.session.id as number) === s.id) setDetail(null)
-        setConfirmDelete(null)
-      }
-    } catch { /* silent */ }
-  }, [detail])
 
   const handleLoadMore = useCallback(async () => {
     if (!nextCursor || loadingMore) return
@@ -260,8 +114,6 @@ export default function SessionsPage() {
     } catch { /* silent */ }
     finally { setLoadingMore(false) }
   }, [nextCursor, loadingMore, workspaceSlug])
-
-  const shareModalSession = shareModalId !== null ? sessions.find(s => s.id === shareModalId) ?? null : null
 
   const snippetMap = useMemo(
     () => ftsResults ? new Map(ftsResults.map(r => [r.session_id, r.snippet])) : new Map<number, string>(),
@@ -440,19 +292,14 @@ export default function SessionsPage() {
 
                   {/* Actions */}
                   <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-                    <button onClick={() => openDetail(s.id)} className="btn-icon" style={{ fontSize: 12 }}>Open</button>
+                    <button onClick={() => setViewingSessionId(s.id)} className="btn-icon" style={{ fontSize: 12 }}>Open</button>
                     <button
-                      onClick={() => openShareModal(s)}
+                      onClick={() => setViewingSessionId(s.id)}
                       className="btn-icon"
                       style={{ fontSize: 12, color: s.share_token ? 'var(--accent)' : undefined }}
                     >
                       {s.share_token ? '🔗 Shared' : '↗ Share'}
                     </button>
-                    <button
-                      onClick={() => setConfirmDelete(s)}
-                      className="btn-icon"
-                      style={{ fontSize: 12, color: 'var(--red)' }}
-                    >Delete</button>
                   </div>
                 </div>
               )
@@ -476,212 +323,12 @@ export default function SessionsPage() {
         )}
       </div>
 
-      {/* Share modal */}
-      {shareModalSession && (
-        <div
-          onClick={e => { if (e.target === e.currentTarget) setShareModalId(null) }}
-          style={{
-            position: 'fixed', inset: 0, zIndex: 10001,
-            background: 'rgba(0,0,0,0.50)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
-          }}
-        >
-          <div style={{
-            width: '100%', maxWidth: 440,
-            background: 'var(--canvas)',
-            border: '1px solid var(--border)',
-            borderRadius: 'var(--radius-xl)',
-            boxShadow: 'var(--shadow-lg)',
-            padding: '24px',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-              <div>
-                <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', margin: 0 }}>Share session</p>
-                <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '3px 0 0' }}>
-                  {shareModalSession.title ?? fmtDate(shareModalSession.started_at)}
-                </p>
-              </div>
-              <button onClick={() => setShareModalId(null)} className="btn-icon" style={{ fontSize: 16 }}>✕</button>
-            </div>
-
-            {shareModalSession.share_token ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                <div style={{
-                  background: 'var(--surface-2)', border: '1px solid var(--divider)',
-                  borderRadius: 8, padding: '10px 12px',
-                  fontSize: 12, color: 'var(--text-muted)', wordBreak: 'break-all',
-                }}>
-                  {window.location.origin}/share/{shareModalSession.share_token}
-                </div>
-                <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>
-                  {fmtExpiry(shareModalSession.share_expires_at)}
-                </p>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button
-                    onClick={() => handleGenerateOrCopy(shareModalSession)}
-                    style={{
-                      flex: 1, background: 'var(--accent)', color: '#fff', border: 'none',
-                      borderRadius: 8, fontSize: 13, fontWeight: 600, padding: '10px 16px', cursor: 'pointer',
-                    }}
-                  >
-                    {shareCopied === shareModalSession.id ? '✓ Copied!' : 'Copy link'}
-                  </button>
-                  <button
-                    onClick={() => setConfirmRevoke(shareModalSession)}
-                    style={{
-                      background: 'rgba(239,68,68,0.08)',
-                      border: '1px solid rgba(239,68,68,0.25)',
-                      color: 'var(--red)',
-                      borderRadius: 8, fontSize: 13, fontWeight: 600,
-                      padding: '10px 16px', cursor: 'pointer',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >Revoke</button>
-                </div>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                <div>
-                  <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.09em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 8 }}>Link expiry</p>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    {(['never', '7d', '30d'] as ExpiryChoice[]).map(choice => (
-                      <button
-                        key={choice}
-                        onClick={() => setShareExpiryChoice(choice)}
-                        style={{
-                          flex: 1, padding: '7px 0', borderRadius: 7, fontSize: 12, fontWeight: 600,
-                          cursor: 'pointer', transition: 'all 0.15s',
-                          background: shareExpiryChoice === choice ? 'var(--accent)' : 'var(--surface-2)',
-                          color: shareExpiryChoice === choice ? '#fff' : 'var(--text-muted)',
-                          border: shareExpiryChoice === choice ? '1px solid var(--accent)' : '1px solid var(--divider)',
-                        }}
-                      >
-                        {choice === 'never' ? 'No expiry' : choice === '7d' ? '7 days' : '30 days'}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <button
-                  onClick={() => handleGenerateOrCopy(shareModalSession)}
-                  disabled={shareLoading === shareModalSession.id}
-                  style={{
-                    background: 'var(--accent)', color: '#fff', border: 'none',
-                    borderRadius: 8, fontSize: 13, fontWeight: 600,
-                    padding: '10px 16px', cursor: 'pointer',
-                    opacity: shareLoading === shareModalSession.id ? 0.6 : 1,
-                  }}
-                >
-                  {shareLoading === shareModalSession.id ? 'Generating…' : 'Generate link'}
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Detail modal */}
-      {(detail || detailLoading) && (
-        <div
-          onClick={e => { if (e.target === e.currentTarget) { setDetail(null); setDetailLoading(false) } }}
-          style={{
-            position: 'fixed', inset: 0, zIndex: 10000,
-            background: 'rgba(0,0,0,0.50)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
-          }}
-        >
-          <div style={{
-            width: '100%', maxWidth: 700,
-            background: 'var(--canvas)',
-            border: '1px solid var(--border)',
-            borderRadius: 'var(--radius-xl)',
-            boxShadow: 'var(--shadow-lg)',
-            display: 'flex', flexDirection: 'column',
-            maxHeight: '85vh', overflow: 'hidden',
-          }}>
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: 12,
-              padding: '18px 24px', borderBottom: '1px solid var(--divider)', flexShrink: 0,
-            }}>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                {detail ? (
-                  <>
-                    <input
-                      value={editingTitle}
-                      onChange={e => setEditingTitle(e.target.value)}
-                      onFocus={e => (e.target.style.borderBottomColor = 'var(--border-accent)')}
-                      onBlur={e => {
-                        e.target.style.borderBottomColor = 'transparent'
-                        patchTitle(detail.session.id as number, editingTitle)
-                      }}
-                      onKeyDown={e => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
-                      placeholder="Add a title…"
-                      style={{
-                        background: 'transparent', border: 'none',
-                        borderBottom: '1px solid transparent',
-                        outline: 'none', fontSize: 16, fontWeight: 600,
-                        color: 'var(--text)', width: '100%',
-                        padding: '0 0 2px', transition: 'border-color 0.15s',
-                      }}
-                    />
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
-                      <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>
-                        {fmtDate(detail.session.started_at as number)} · {detail.lines.length} lines
-                      </p>
-                      {titleSaved && (
-                        <span style={{ fontSize: 11, color: 'var(--live)', fontWeight: 600 }}>✓ Saved</span>
-                      )}
-                    </div>
-                  </>
-                ) : (
-                  <p style={{ fontSize: 14, color: 'var(--text-muted)', margin: 0 }}>Loading…</p>
-                )}
-              </div>
-              <button onClick={() => { setDetail(null); setDetailLoading(false) }} className="btn-icon" style={{ fontSize: 16 }}>✕</button>
-            </div>
-
-            <div style={{ flex: 1, overflowY: 'auto', padding: '24px' }}>
-              {detailLoading ? (
-                <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)', fontSize: 14 }}>Loading…</div>
-              ) : detail ? (
-                detail.session.ai_formatted_text ? (
-                  <>
-                    <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.09em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 16 }}>AI structured</p>
-                    <div style={{ fontSize: 15, color: 'var(--text)', lineHeight: 1.78, whiteSpace: 'pre-wrap' }}>
-                      {detail.session.ai_formatted_text as string}
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.09em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 16 }}>Transcript</p>
-                    {detail.lines.map(l => (
-                      <p key={l.line_index} style={{ fontSize: 15, color: 'var(--text)', lineHeight: 1.78, marginBottom: 12 }}>{l.text}</p>
-                    ))}
-                  </>
-                )
-              ) : null}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Confirm modals */}
-      <ConfirmModal
-        isOpen={!!confirmDelete}
-        title="Delete session"
-        message={`Delete "${confirmDelete?.title ?? fmtDate(confirmDelete?.started_at ?? 0)}"? This cannot be undone.`}
-        confirmLabel="Delete"
-        dangerous
-        onConfirm={() => confirmDelete && handleDelete(confirmDelete)}
-        onCancel={() => setConfirmDelete(null)}
-      />
-      <ConfirmModal
-        isOpen={!!confirmRevoke}
-        title="Revoke share link"
-        message="Anyone with the current link will lose access. You can generate a new link later."
-        confirmLabel="Revoke"
-        dangerous
-        onConfirm={() => confirmRevoke && handleRevoke(confirmRevoke)}
-        onCancel={() => setConfirmRevoke(null)}
+      <SessionDetailModal
+        sessionId={viewingSessionId}
+        onClose={() => setViewingSessionId(null)}
+        onTitleChange={(id, title) => setSessions(prev => prev.map(s => s.id === id ? { ...s, title: title ?? undefined } : s))}
+        onDeleted={(id) => setSessions(prev => prev.filter(s => s.id !== id))}
+        onShareChange={(id, token) => setSessions(prev => prev.map(s => s.id === id ? { ...s, share_token: token ?? undefined } : s))}
       />
     </div>
   )
