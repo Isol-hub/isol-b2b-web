@@ -24,6 +24,7 @@ import RecoveryBanner from '../components/RecoveryBanner'
 import OnboardingModal from '../components/OnboardingModal'
 import { LANGUAGES } from '../lib/languages'
 import { sentryFetch } from '../lib/sentryFetch'
+import { PLANS, LS_ONBOARDED_PREFIX } from '../lib/constants'
 
 // ── Speaker diarization ──────────────────────────────────────────────────────
 type SpeakerState = 'confirmed' | 'tentative' | 'overlap' | 'uncertain'
@@ -71,7 +72,7 @@ export default function WorkspacePage() {
   const session = getSession()
 
   const [targetLang, setTargetLang] = useState('en')
-  const [workspacePlan, setWorkspacePlan] = useState<'free'|'pro'|'studio'|'team'>('free')
+  const [workspacePlan, setWorkspacePlan] = useState<'free'|'pro'|'studio'|'team'>(PLANS.FREE)
   const [workspaceDefaultLang, setWorkspaceDefaultLang] = useState('en')
   const [showPricing, setShowPricing] = useState(false)
   const [showTeam, setShowTeam] = useState(false)
@@ -206,7 +207,7 @@ export default function WorkspacePage() {
 
   // Onboarding
   const [showOnboarding, setShowOnboarding] = useState(() =>
-    !localStorage.getItem(`isol_onboarded_${workspaceSlug}`)
+    !localStorage.getItem(`${LS_ONBOARDED_PREFIX}${workspaceSlug}`)
   )
 
   // Draft recovery
@@ -478,7 +479,7 @@ export default function WorkspacePage() {
           setWorkspaceDefaultLang(d.workspace.default_lang)
         }
         if (d?.workspace?.plan) {
-          setWorkspacePlan((d.workspace.plan as 'free'|'pro'|'studio'|'team') || 'free')
+          setWorkspacePlan((d.workspace.plan as 'free'|'pro'|'studio'|'team') || PLANS.FREE)
         }
       })
       .catch(() => {})
@@ -561,7 +562,7 @@ export default function WorkspacePage() {
 
   // Free plan: 15-minute session duration limit
   useEffect(() => {
-    if (!sessionActive || workspacePlan !== 'free') return
+    if (!sessionActive || workspacePlan !== PLANS.FREE) return
     const t = setTimeout(() => {
       handleStop()
     }, 15 * 60 * 1000)
@@ -771,7 +772,7 @@ export default function WorkspacePage() {
         if (saveStatusTimerRef.current) clearTimeout(saveStatusTimerRef.current)
         saveStatusTimerRef.current = setTimeout(() => setSaveStatus('idle'), 1800)
         // Post-save upgrade nudge for free plan users
-        if (workspacePlan === 'free') {
+        if (workspacePlan === PLANS.FREE) {
           setNudgeLineCount(lines.length)
           setShowUpgradeNudge(true)
           if (nudgeTimerRef.current) clearTimeout(nudgeTimerRef.current)
@@ -896,7 +897,7 @@ export default function WorkspacePage() {
 
   const handleStart = useCallback(async () => {
     // Free plan: max 3 sessions total
-    if (workspacePlan === 'free' && sessions.length >= 3) {
+    if (workspacePlan === PLANS.FREE && sessions.length >= 3) {
       setShowPricing(true)
       return
     }
@@ -1191,7 +1192,7 @@ export default function WorkspacePage() {
           <div>
             <p className="rail-label">Language</p>
             <LanguageSelector value={targetLang} onChange={(lang) => {
-              if (workspacePlan === 'free' && lang !== workspaceDefaultLang) {
+              if (workspacePlan === PLANS.FREE && lang !== workspaceDefaultLang) {
                 setShowPricing(true)
                 return
               }
@@ -1491,7 +1492,7 @@ export default function WorkspacePage() {
             </button>
 
             <div className="toolbar-sep" />
-            {workspacePlan === 'free' && (
+            {workspacePlan === PLANS.FREE && (
               <span style={{
                 fontSize: 11, color: 'var(--text-muted)',
                 whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums',
@@ -1500,40 +1501,40 @@ export default function WorkspacePage() {
               </span>
             )}
             <button
-              onClick={() => workspacePlan === 'team' ? setShowTeam(true) : setShowPricing(true)}
+              onClick={() => workspacePlan === PLANS.TEAM ? setShowTeam(true) : setShowPricing(true)}
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: 6,
                 padding: '7px 16px',
                 borderRadius: 999,
-                fontSize: workspacePlan === 'team' ? 10 : 12,
+                fontSize: workspacePlan === PLANS.TEAM ? 10 : 12,
                 fontWeight: 700,
                 cursor: 'pointer',
-                border: workspacePlan === 'free' ? 'none'
-                  : workspacePlan === 'team' ? '1px solid rgba(13,148,136,0.40)'
+                border: workspacePlan === PLANS.FREE ? 'none'
+                  : workspacePlan === PLANS.TEAM ? '1px solid rgba(13,148,136,0.40)'
                   : '1px solid rgba(99,102,241,0.25)',
-                background: workspacePlan === 'free'
+                background: workspacePlan === PLANS.FREE
                   ? 'linear-gradient(135deg, #F59E0B 0%, #F97316 100%)'
-                  : workspacePlan === 'team'
+                  : workspacePlan === PLANS.TEAM
                   ? 'linear-gradient(135deg, #0f766e 0%, #0e7490 55%, #0369a1 100%)'
                   : 'rgba(99,102,241,0.10)',
-                color: workspacePlan === 'free' ? '#fff'
-                  : workspacePlan === 'team' ? '#fff'
+                color: workspacePlan === PLANS.FREE ? '#fff'
+                  : workspacePlan === PLANS.TEAM ? '#fff'
                   : 'var(--accent)',
                 letterSpacing: '0.04em',
-                textTransform: workspacePlan === 'team' ? 'uppercase' : 'none',
-                boxShadow: workspacePlan === 'free'
+                textTransform: workspacePlan === PLANS.TEAM ? 'uppercase' : 'none',
+                boxShadow: workspacePlan === PLANS.FREE
                   ? '0 2px 12px rgba(245,158,11,0.35)'
-                  : workspacePlan === 'team'
+                  : workspacePlan === PLANS.TEAM
                   ? '0 2px 16px rgba(13,148,136,0.45), inset 0 1px 0 rgba(255,255,255,0.15)'
                   : 'none',
                 transition: 'all 0.15s',
               }}
             >
-              {workspacePlan === 'free'
+              {workspacePlan === PLANS.FREE
                 ? <><span>✦</span> Upgrade</>
-                : workspacePlan === 'team'
+                : workspacePlan === PLANS.TEAM
                 ? <><span style={{ fontSize: 10, letterSpacing: 0 }}>⬡</span> Team</>
                 : <><span style={{ fontSize: 10 }}>●</span> {workspacePlan.charAt(0).toUpperCase() + workspacePlan.slice(1)}</>}
             </button>
@@ -1889,7 +1890,7 @@ export default function WorkspacePage() {
         />
       )}
 
-      {showUpgradeNudge && workspacePlan === 'free' && (
+      {showUpgradeNudge && workspacePlan === PLANS.FREE && (
         <div style={{
           position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)',
           zIndex: 200,

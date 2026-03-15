@@ -6,6 +6,7 @@ interface Env {
 }
 
 import { corsHeaders } from '../../lib/cors'
+import { KV_OTP_PREFIX, KV_OTP_FAIL_PREFIX } from '../../lib/constants'
 
 const LSOL_AUTH_URL = 'https://api.isol.live/auth/b2b/token'
 
@@ -18,14 +19,14 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     const emailLower = email.trim().toLowerCase()
 
     // AUTH-04: Rate limit OTP verification — max 10 failed attempts per email
-    const attemptsKey = `otp_fail:${emailLower}`
+    const attemptsKey = `${KV_OTP_FAIL_PREFIX}${emailLower}`
     const attemptsRaw = await env.CF_KV_RL.get(attemptsKey)
     const attempts = attemptsRaw ? parseInt(attemptsRaw, 10) : 0
     if (attempts >= 10) {
       return Response.json({ error: 'Too many attempts. Request a new code.' }, { status: 429, headers })
     }
 
-    const stored = await env.CF_KV_OTP.get(`otp:${emailLower}`)
+    const stored = await env.CF_KV_OTP.get(`${KV_OTP_PREFIX}${emailLower}`)
     // AUTH-04: Normalize error messages to prevent email enumeration
     if (!stored) {
       await env.CF_KV_RL.put(attemptsKey, String(attempts + 1), { expirationTtl: 600 })
@@ -55,7 +56,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     const { access_token } = await authRes.json<{ access_token: string }>()
 
     // Delete OTP only after successful token issuance
-    await env.CF_KV_OTP.delete(`otp:${emailLower}`)
+    await env.CF_KV_OTP.delete(`${KV_OTP_PREFIX}${emailLower}`)
 
     // Activate pending team invite if this login was for a team workspace
     await env.DB.prepare(

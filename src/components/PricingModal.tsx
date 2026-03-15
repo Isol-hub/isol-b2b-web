@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { getToken } from '../lib/auth'
 import { sentryFetch } from '../lib/sentryFetch'
+import { PLANS } from '../lib/constants'
 
 interface Props {
   currentPlan: 'free' | 'pro' | 'studio' | 'team'
@@ -8,7 +9,7 @@ interface Props {
   onClose: () => void
 }
 
-const PLAN_RANK: Record<string, number> = { free: 0, pro: 1, studio: 2, team: 3 }
+const PLAN_RANK: Record<string, number> = { [PLANS.FREE]: 0, [PLANS.PRO]: 1, [PLANS.STUDIO]: 2, [PLANS.TEAM]: 3 }
 
 interface PlanDef {
   id: 'free' | 'pro' | 'studio' | 'team'
@@ -19,9 +20,9 @@ interface PlanDef {
   bullets: string[]
 }
 
-const PLANS: PlanDef[] = [
+const PLAN_DEFS: PlanDef[] = [
   {
-    id: 'free',
+    id: PLANS.FREE,
     name: 'Free',
     tagline: 'Try ISOL with no commitment',
     monthlyPrice: 0,
@@ -35,7 +36,7 @@ const PLANS: PlanDef[] = [
     ],
   },
   {
-    id: 'pro',
+    id: PLANS.PRO,
     name: 'Pro',
     tagline: 'For professionals who work daily',
     monthlyPrice: 19,
@@ -49,7 +50,7 @@ const PLANS: PlanDef[] = [
     ],
   },
   {
-    id: 'studio',
+    id: PLANS.STUDIO,
     name: 'Studio',
     tagline: 'No caps. No interruptions. Just work.',
     monthlyPrice: 49,
@@ -63,7 +64,7 @@ const PLANS: PlanDef[] = [
     ],
   },
   {
-    id: 'team',
+    id: PLANS.TEAM,
     name: 'Team',
     tagline: 'For agencies and multilingual teams',
     monthlyPrice: 129,
@@ -213,10 +214,10 @@ export default function PricingModal({ currentPlan, workspaceSlug: _workspaceSlu
           padding: '0 24px 24px',
           alignItems: 'start',
         }}>
-          {PLANS.map(plan => {
-            const isFree = plan.id === 'free'
-            const isStudio = plan.id === 'studio'
-            const isTeam = plan.id === 'team'
+          {PLAN_DEFS.map(plan => {
+            const isFree = plan.id === PLANS.FREE
+            const isStudio = plan.id === PLANS.STUDIO
+            const isTeam = plan.id === PLANS.TEAM
             const isCurrent = currentPlan === plan.id
             const isUpgrade = PLAN_RANK[plan.id] > PLAN_RANK[currentPlan]
             const isLoading = loadingPlan === plan.id

@@ -1,4 +1,5 @@
 import { logAudit } from '../../lib/audit'
+import { PLANS } from '../../lib/constants'
 
 interface Env {
   DB: D1Database
@@ -20,7 +21,7 @@ interface WorkspaceRow {
   plan_expires_at: number | null
 }
 
-const VALID_PLANS = ['pro', 'studio', 'team'] as const
+const VALID_PLANS = [PLANS.PRO, PLANS.STUDIO, PLANS.TEAM] as const
 
 async function fetchSubscription(subId: string, secretKey: string): Promise<StripeSubscription | null | 'not_found'> {
   const res = await fetch(`https://api.stripe.com/v1/subscriptions/${subId}`, {

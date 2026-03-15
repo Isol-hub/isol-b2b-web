@@ -17,6 +17,7 @@ function slugFromEmail(email: string): string {
 }
 
 import { corsHeaders } from '../../lib/cors'
+import { KV_OTP_PREFIX, KV_OTP_REQ_PREFIX } from '../../lib/constants'
 
 function isEmailAllowed(email: string, allowed?: string): boolean {
   if (!allowed || allowed === '*') return true
@@ -37,7 +38,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     }
 
     // AUTH-01: Rate limit OTP requests — max 5 per email per 10 minutes
-    const rlKey = `otp_req:${emailLower}`
+    const rlKey = `${KV_OTP_REQ_PREFIX}${emailLower}`
     const rlRaw = await env.CF_KV_RL.get(rlKey)
     const rlCount = rlRaw ? parseInt(rlRaw, 10) : 0
     if (rlCount >= 5) {
@@ -56,7 +57,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
 
     // Store OTP in KV with 10-minute TTL
     await env.CF_KV_OTP.put(
-      `otp:${emailLower}`,
+      `${KV_OTP_PREFIX}${emailLower}`,
       JSON.stringify({ otp, workspace }),
       { expirationTtl: 600 }
     )

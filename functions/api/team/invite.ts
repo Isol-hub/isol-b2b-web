@@ -1,11 +1,12 @@
 import { verifyJwt } from '../../lib/jwt'
 import { corsHeaders } from '../../lib/cors'
 import { logAudit } from '../../lib/audit'
+import { PLANS, MEMBER_STATUS } from '../../lib/constants'
 
 interface Env { DB: D1Database; RESEND_API_KEY: string }
 
 // Total seats per plan (owner counts as 1)
-const SEAT_LIMITS: Record<string, number> = { free: 1, pro: 1, studio: 5, team: 20 }
+const SEAT_LIMITS: Record<string, number> = { [PLANS.FREE]: 1, [PLANS.PRO]: 1, [PLANS.STUDIO]: 5, [PLANS.TEAM]: 20 }
 
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   const CORS = corsHeaders(request)

@@ -2,6 +2,7 @@ import { verifyJwt } from '../../lib/jwt'
 import { getEffectivePlan } from '../../lib/plan'
 import { corsHeaders } from '../../lib/cors'
 import { logAudit } from '../../lib/audit'
+import { PLANS } from '../../lib/constants'
 
 interface Env {
   DB: D1Database

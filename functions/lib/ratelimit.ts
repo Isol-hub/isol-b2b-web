@@ -1,4 +1,5 @@
 import { getEffectivePlan } from './plan'
+import { KV_RL_PREFIX, PLANS } from './constants'
 
 export interface RateLimitEnv {
   CF_KV_RL: KVNamespace
@@ -13,11 +14,11 @@ export interface RateLimitResult {
 
 /** Daily limits per plan and endpoint. -1 = unlimited. */
 const LIMITS: Record<string, Record<string, number>> = {
-  free:   { translate: 5000, format: 500, notes: 200, define: 500, title: 300 },
-  b2b:    { translate: 5000, format: 500, notes: 200, define: 500, title: 300 },
-  pro:    { translate: -1,   format: -1,  notes: -1,  define: -1,  title: -1  },
-  studio: { translate: -1,   format: -1,  notes: -1,  define: -1,  title: -1  },
-  team:   { translate: -1,   format: -1,  notes: -1,  define: -1,  title: -1  },
+  [PLANS.FREE]:   { translate: 5000, format: 500, notes: 200, define: 500, title: 300 },
+  b2b:            { translate: 5000, format: 500, notes: 200, define: 500, title: 300 },
+  [PLANS.PRO]:    { translate: -1,   format: -1,  notes: -1,  define: -1,  title: -1  },
+  [PLANS.STUDIO]: { translate: -1,   format: -1,  notes: -1,  define: -1,  title: -1  },
+  [PLANS.TEAM]:   { translate: -1,   format: -1,  notes: -1,  define: -1,  title: -1  },
 }
 
 function todayUTC(): string {
@@ -50,12 +51,12 @@ export async function checkRateLimit(
   workspaceSlug?: string
 ): Promise<RateLimitResult> {
   // Look up plan if we have a workspace
-  let plan = 'free'
+  let plan = PLANS.FREE
   if (workspaceSlug) {
     const row = await env.DB.prepare(
       'SELECT plan, plan_expires_at FROM workspaces WHERE slug = ?'
     ).bind(workspaceSlug).first<{ plan: string; plan_expires_at: number | null }>()
-    plan = getEffectivePlan(row?.plan ?? 'free', row?.plan_expires_at ?? null)
+    plan = getEffectivePlan(row?.plan ?? PLANS.FREE, row?.plan_expires_at ?? null)
   }
 
   const limit = LIMITS[plan]?.[endpoint] ?? LIMITS.free[endpoint] ?? 100
@@ -74,7 +75,7 @@ export async function checkRateLimit(
     return { allowed: true, remaining: -1, resetAt: 0 }
   }
 
-  const kvKey = `rl:${rateLimitKey}:${todayUTC()}:${endpoint}`
+  const kvKey = `${KV_RL_PREFIX}${rateLimitKey}:${todayUTC()}:${endpoint}`
   const existing = await env.CF_KV_RL.get(kvKey)
   const count = existing ? parseInt(existing, 10) : 0
   const newCount = count + 1

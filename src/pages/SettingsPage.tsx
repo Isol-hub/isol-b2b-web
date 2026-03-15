@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link, useSearchParams, useNavigate } from 'react-router-dom'
 import { getSession, getToken, clearSession } from '../lib/auth'
+import { LS_NOTIF_PREFIX, PLANS } from '../lib/constants'
 import { sentryFetch } from '../lib/sentryFetch'
 import LanguageSelector from '../components/LanguageSelector'
 import ConfirmModal from '../components/ConfirmModal'
@@ -108,16 +109,16 @@ function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) =>
 // ─── plan config ─────────────────────────────────────────────────────────────
 
 const PLAN_COLORS: Record<string, { color: string; bg: string; border: string }> = {
-  free:   { color: 'var(--text-muted)', bg: 'rgba(0,0,0,0.05)', border: 'rgba(0,0,0,0.10)' },
-  pro:    { color: '#16a34a',           bg: 'rgba(34,197,94,0.08)',  border: 'rgba(34,197,94,0.20)'  },
-  studio: { color: 'var(--accent)',     bg: 'rgba(99,102,241,0.08)', border: 'rgba(99,102,241,0.20)' },
-  team:   { color: '#0f766e',           bg: 'rgba(13,148,136,0.08)', border: 'rgba(13,148,136,0.22)' },
+  [PLANS.FREE]:   { color: 'var(--text-muted)', bg: 'rgba(0,0,0,0.05)', border: 'rgba(0,0,0,0.10)' },
+  [PLANS.PRO]:    { color: '#16a34a',           bg: 'rgba(34,197,94,0.08)',  border: 'rgba(34,197,94,0.20)'  },
+  [PLANS.STUDIO]: { color: 'var(--accent)',     bg: 'rgba(99,102,241,0.08)', border: 'rgba(99,102,241,0.20)' },
+  [PLANS.TEAM]:   { color: '#0f766e',           bg: 'rgba(13,148,136,0.08)', border: 'rgba(13,148,136,0.22)' },
 }
 
 const PLAN_NEXT_FEATURES: Record<string, string[]> = {
-  free:   ['Unlimited sessions', '40+ languages', 'AI notes & docs', 'Share links', 'Priority processing'],
-  pro:    ['Unlimited sessions & duration', 'Priority processing', 'Unlimited share links'],
-  studio: ['API access', 'Up to 5 seats', 'Team management'],
+  [PLANS.FREE]:   ['Unlimited sessions', '40+ languages', 'AI notes & docs', 'Share links', 'Priority processing'],
+  [PLANS.PRO]:    ['Unlimited sessions & duration', 'Priority processing', 'Unlimited share links'],
+  [PLANS.STUDIO]: ['API access', 'Up to 5 seats', 'Team management'],
 }
 
 const ENDPOINT_LABELS: Record<string, string> = {
@@ -132,7 +133,7 @@ function formatMinutes(min: number): string {
   return m > 0 ? `${h}h ${m}m` : `${h}h`
 }
 
-const NOTIF_KEY = (slug: string) => `isol:notif:${slug}`
+const NOTIF_KEY = (slug: string) => `${LS_NOTIF_PREFIX}${slug}`
 
 function loadNotifPrefs(slug: string): NotifPrefs {
   try {
@@ -374,9 +375,9 @@ export default function SettingsPage() {
     return acc
   }, {})
 
-  const currentPlan = (workspace?.plan ?? 'free') as 'free' | 'pro' | 'studio' | 'team'
-  const planColors = PLAN_COLORS[currentPlan] ?? PLAN_COLORS.free
-  const isPaid = currentPlan !== 'free'
+  const currentPlan = (workspace?.plan ?? PLANS.FREE) as 'free' | 'pro' | 'studio' | 'team'
+  const planColors = PLAN_COLORS[currentPlan] ?? PLAN_COLORS[PLANS.FREE]
+  const isPaid = currentPlan !== PLANS.FREE
   const renewalDate = workspace?.plan_expires_at
     ? new Date(workspace.plan_expires_at * 1000).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
     : null
@@ -642,7 +643,7 @@ export default function SettingsPage() {
                   )}
 
                   {/* Next tier teaser */}
-                  {PLAN_NEXT_FEATURES[currentPlan] && currentPlan !== 'team' && (
+                  {PLAN_NEXT_FEATURES[currentPlan] && currentPlan !== PLANS.TEAM && (
                     <div style={{ marginBottom: 18 }}>
                       <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 8px' }}>
                         Unlock next tier
@@ -668,7 +669,7 @@ export default function SettingsPage() {
                     >
                       {billingLoading ? 'Opening…' : 'Manage billing →'}
                     </button>
-                    {currentPlan !== 'team' && (
+                    {currentPlan !== PLANS.TEAM && (
                       <button
                         onClick={() => setShowPricing(true)}
                         style={{

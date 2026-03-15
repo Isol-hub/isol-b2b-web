@@ -1,3 +1,5 @@
+import { PLANS } from '../../lib/constants'
+
 interface Env {
   DB: D1Database
   STRIPE_WEBHOOK_SECRET: string
@@ -71,13 +73,13 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
         const workspaceSlug = sub.metadata?.workspace_slug
         if (!workspaceSlug) break
 
-        const VALID_PLANS = ['pro', 'studio', 'team']
+        const VALID_PLANS = [PLANS.PRO, PLANS.STUDIO, PLANS.TEAM]
         const rawPlan = sub.metadata?.plan
         if (!rawPlan || !VALID_PLANS.includes(rawPlan)) {
           console.error('webhook: missing/invalid plan metadata — defaulting to pro', { subId: sub.id, rawPlan, workspaceSlug })
         }
-        const resolvedPlan = rawPlan && VALID_PLANS.includes(rawPlan) ? rawPlan : 'pro'
-        const plan = sub.status === 'active' || sub.status === 'trialing' ? resolvedPlan : 'free'
+        const resolvedPlan = rawPlan && VALID_PLANS.includes(rawPlan) ? rawPlan : PLANS.PRO
+        const plan = sub.status === 'active' || sub.status === 'trialing' ? resolvedPlan : PLANS.FREE
         await env.DB.prepare(
           `UPDATE workspaces SET
             plan = ?,
@@ -87,7 +89,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
         ).bind(
           plan,
           sub.id,
-          plan !== 'free' ? sub.current_period_end : null,
+          plan !== PLANS.FREE ? sub.current_period_end : null,
           workspaceSlug
         ).run()
         break

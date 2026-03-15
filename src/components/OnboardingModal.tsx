@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
+import { LS_ONBOARDED_PREFIX } from '../lib/constants'
 
 interface Props {
   workspaceSlug: string
@@ -177,7 +178,7 @@ export default function OnboardingModal({ workspaceSlug, onDone }: Props) {
   }
 
   const finish = () => {
-    localStorage.setItem(`isol_onboarded_${workspaceSlug}`, '1')
+    localStorage.setItem(`${LS_ONBOARDED_PREFIX}${workspaceSlug}`, '1')
     onDone()
   }
 

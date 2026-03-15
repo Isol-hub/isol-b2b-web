@@ -1,5 +1,6 @@
 import { verifyJwt } from '../../lib/jwt'
 import { corsHeaders } from '../../lib/cors'
+import { PLANS } from '../../lib/constants'
 
 interface Env {
   DB: D1Database
@@ -12,7 +13,7 @@ interface Env {
   STRIPE_PRICE_ID_TEAM_ANNUAL: string
 }
 
-const PLAN_RANK: Record<string, number> = { free: 0, pro: 1, studio: 2, team: 3 }
+const PLAN_RANK: Record<string, number> = { [PLANS.FREE]: 0, [PLANS.PRO]: 1, [PLANS.STUDIO]: 2, [PLANS.TEAM]: 3 }
 
 async function stripePost(path: string, params: Record<string, string>, secretKey: string) {
   const res = await fetch(`https://api.stripe.com/v1${path}`, {
@@ -34,12 +35,12 @@ async function stripeGet(path: string, secretKey: string) {
 }
 
 function getPriceId(plan: string, annual: boolean, env: Env): string | null {
-  if (plan === 'pro' && !annual) return env.STRIPE_PRICE_ID_PRO || null
-  if (plan === 'pro' && annual) return env.STRIPE_PRICE_ID_PRO_ANNUAL || null
-  if (plan === 'studio' && !annual) return env.STRIPE_PRICE_ID_STUDIO || null
-  if (plan === 'studio' && annual) return env.STRIPE_PRICE_ID_STUDIO_ANNUAL || null
-  if (plan === 'team' && !annual) return env.STRIPE_PRICE_ID_TEAM || null
-  if (plan === 'team' && annual) return env.STRIPE_PRICE_ID_TEAM_ANNUAL || null
+  if (plan === PLANS.PRO && !annual) return env.STRIPE_PRICE_ID_PRO || null
+  if (plan === PLANS.PRO && annual) return env.STRIPE_PRICE_ID_PRO_ANNUAL || null
+  if (plan === PLANS.STUDIO && !annual) return env.STRIPE_PRICE_ID_STUDIO || null
+  if (plan === PLANS.STUDIO && annual) return env.STRIPE_PRICE_ID_STUDIO_ANNUAL || null
+  if (plan === PLANS.TEAM && !annual) return env.STRIPE_PRICE_ID_TEAM || null
+  if (plan === PLANS.TEAM && annual) return env.STRIPE_PRICE_ID_TEAM_ANNUAL || null
   return null
 }
 
@@ -50,10 +51,10 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
 
   try {
     const body = await request.json() as { plan?: string; annual?: boolean }
-    const plan = body.plan ?? 'pro'
+    const plan = body.plan ?? PLANS.PRO
     const annual = body.annual ?? false
 
-    if (!['pro', 'studio', 'team'].includes(plan)) {
+    if (![PLANS.PRO, PLANS.STUDIO, PLANS.TEAM].includes(plan)) {
       return Response.json({ error: 'Invalid plan' }, { status: 400, headers: CORS })
     }
 

@@ -3,6 +3,7 @@ import { assertMaxLen, isValidationError } from '../../lib/validate'
 import { getEffectivePlan } from '../../lib/plan'
 import { corsHeaders } from '../../lib/cors'
 import { logAudit } from '../../lib/audit'
+import { PLANS } from '../../lib/constants'
 
 interface Env {
   DB: D1Database
@@ -90,9 +91,9 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       env.DB.prepare('SELECT COUNT(*) as cnt FROM sessions WHERE workspace_slug = ? AND started_at >= ?').bind(workspace_slug, monthStartMs),
     ])
     const planData = planRow.results[0] as { plan: string; plan_expires_at: number | null } | undefined
-    const plan = getEffectivePlan(planData?.plan ?? 'free', planData?.plan_expires_at ?? null)
+    const plan = getEffectivePlan(planData?.plan ?? PLANS.FREE, planData?.plan_expires_at ?? null)
 
-    if (plan === 'free') {
+    if (plan === PLANS.FREE) {
       const cnt = (countRow.results[0] as { cnt: number } | undefined)?.cnt ?? 0
       if (cnt >= 3) {
         return Response.json(
@@ -102,7 +103,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       }
     }
 
-    if (plan === 'pro') {
+    if (plan === PLANS.PRO) {
       const monthCnt = (monthCountRow.results[0] as { cnt: number } | undefined)?.cnt ?? 0
       if (monthCnt >= 30) {
         return Response.json(
