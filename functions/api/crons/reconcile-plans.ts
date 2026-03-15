@@ -1,4 +1,4 @@
-import { logAudit } from '../../../lib/audit'
+import { logAudit } from '../../lib/audit'
 
 interface Env {
   DB: D1Database
