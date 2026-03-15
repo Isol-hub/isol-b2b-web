@@ -15,7 +15,7 @@ jobs:
           response=$(curl -s -o /tmp/body.json -w "%{http_code}" -X POST \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
             -H "Content-Type: application/json" \
-            https://isol.studio/api/crons/reconcile-plans)
+            https://isolstudio.live/api/crons/reconcile-plans)
 
           echo "HTTP status: $response"
           echo "Response body:"
