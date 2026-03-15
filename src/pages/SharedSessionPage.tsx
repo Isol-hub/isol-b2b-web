@@ -4,6 +4,8 @@ import { LANGUAGES } from '../lib/languages'
 import { getSession, getToken } from '../lib/auth'
 import { sentryFetch } from '../lib/sentryFetch'
 import CommentThread, { type CommentItem } from '../components/CommentThread'
+import jsPDF from 'jspdf'
+import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, Footer, Header } from 'docx'
 
 // Minimal markdown renderer for AI-formatted text (##, ###, **, >, -)
 function AiMarkdown({ text }: { text: string }) {
@@ -230,6 +232,165 @@ export default function SharedSessionPage() {
 
   const totalLineComments = comments.filter(c => c.line_index !== null).length
 
+  const [exportingPdf, setExportingPdf] = useState(false)
+  const [exportingDocx, setExportingDocx] = useState(false)
+
+  const sessionTitle = session?.title ?? `Session — ${session ? formatDate(session.started_at) : ''}`
+  const sessionDate = session ? formatDate(session.started_at) : ''
+  const sessionLang = lang?.label ?? session?.target_lang ?? ''
+  const bodyText = session?.ai_formatted_text ?? lines.map(l => l.text).join('\n')
+
+  async function handleExportPdf() {
+    if (!session) return
+    setExportingPdf(true)
+    try {
+      const doc = new jsPDF({ unit: 'mm', format: 'a4' })
+      const pageW = doc.internal.pageSize.getWidth()
+      const pageH = doc.internal.pageSize.getHeight()
+      const margin = 22
+      const lineH = 7
+
+      function addText(text: string, size: number, bold = false, color: [number, number, number] = [20, 20, 30]) {
+        doc.setFontSize(size)
+        doc.setFont('helvetica', bold ? 'bold' : 'normal')
+        doc.setTextColor(...color)
+        const wrapped = doc.splitTextToSize(text, pageW - margin * 2)
+        for (const line of wrapped) {
+          if (yPos + lineH > pageH - margin) addPage()
+          doc.text(line, margin, yPos)
+          yPos += lineH
+        }
+      }
+
+      function addWatermark() {
+        doc.saveGraphicsState()
+        doc.setFontSize(52)
+        doc.setFont('helvetica', 'bold')
+        doc.setTextColor(99, 102, 241)
+        doc.setGState(new (doc as any).GState({ opacity: 0.06 }))
+        doc.text('ISOL', pageW / 2, pageH / 2, { align: 'center', angle: 45 })
+        doc.restoreGraphicsState()
+      }
+
+      function addHeader() {
+        doc.setFontSize(8)
+        doc.setFont('helvetica', 'normal')
+        doc.setTextColor(150, 150, 160)
+        doc.text('ISOL Studio · isolstudio.live', margin, 13)
+        doc.text(sessionDate, pageW - margin, 13, { align: 'right' })
+        doc.setDrawColor(220, 220, 230)
+        doc.setLineWidth(0.3)
+        doc.line(margin, 16, pageW - margin, 16)
+      }
+
+      function addFooter() {
+        doc.setFontSize(8)
+        doc.setFont('helvetica', 'normal')
+        doc.setTextColor(150, 150, 160)
+        doc.setDrawColor(220, 220, 230)
+        doc.setLineWidth(0.3)
+        doc.line(margin, pageH - 14, pageW - margin, pageH - 14)
+        doc.text('Shared via ISOL Studio · isolstudio.live', margin, pageH - 9)
+        doc.text(`Page ${doc.getCurrentPageInfo().pageNumber}`, pageW - margin, pageH - 9, { align: 'right' })
+      }
+
+      function addPage() {
+        addFooter()
+        doc.addPage()
+        addWatermark()
+        addHeader()
+        yPos = margin + 10
+      }
+
+      let yPos = margin + 10
+      addWatermark()
+      addHeader()
+
+      // Title
+      addText(sessionTitle, 20, true, [20, 20, 30])
+      yPos += 3
+      addText(`${sessionLang} · ${sessionDate}`, 10, false, [120, 120, 140])
+      yPos += 8
+
+      // Divider
+      doc.setDrawColor(200, 200, 215)
+      doc.setLineWidth(0.4)
+      doc.line(margin, yPos, pageW - margin, yPos)
+      yPos += 8
+
+      // Body
+      const paragraphs = bodyText.split('\n').filter(l => l.trim())
+      for (const para of paragraphs) {
+        if (para.startsWith('# ')) addText(para.slice(2), 16, true)
+        else if (para.startsWith('## ')) addText(para.slice(3), 13, true)
+        else if (para.startsWith('### ')) addText(para.slice(4), 10, true, [100, 100, 120])
+        else if (para.startsWith('- ') || para.startsWith('• ')) addText(`  ${para}`, 10)
+        else addText(para, 10)
+        yPos += 2
+      }
+
+      addFooter()
+      const filename = sessionTitle.replace(/[^a-z0-9]/gi, '-').toLowerCase().slice(0, 40)
+      doc.save(`${filename}-isol.pdf`)
+    } finally {
+      setExportingPdf(false)
+    }
+  }
+
+  async function handleExportDocx() {
+    if (!session) return
+    setExportingDocx(true)
+    try {
+      const headerText = new Header({
+        children: [new Paragraph({
+          alignment: AlignmentType.RIGHT,
+          children: [new TextRun({ text: 'ISOL Studio · isolstudio.live', size: 16, color: '9999AA' })],
+        })],
+      })
+      const footerText = new Footer({
+        children: [new Paragraph({
+          alignment: AlignmentType.CENTER,
+          children: [new TextRun({ text: 'Shared via ISOL Studio · isolstudio.live', size: 16, color: '9999AA' })],
+        })],
+      })
+
+      const children: Paragraph[] = [
+        new Paragraph({ heading: HeadingLevel.TITLE, children: [new TextRun({ text: sessionTitle, bold: true, color: '14141E' })] }),
+        new Paragraph({ children: [new TextRun({ text: `${sessionLang} · ${sessionDate}`, size: 18, color: '888899' })] }),
+        new Paragraph({ text: '' }),
+      ]
+
+      const paragraphs = bodyText.split('\n').filter(l => l.trim())
+      for (const para of paragraphs) {
+        if (para.startsWith('# ')) {
+          children.push(new Paragraph({ heading: HeadingLevel.HEADING_1, children: [new TextRun({ text: para.slice(2), bold: true })] }))
+        } else if (para.startsWith('## ')) {
+          children.push(new Paragraph({ heading: HeadingLevel.HEADING_2, children: [new TextRun({ text: para.slice(3), bold: true })] }))
+        } else if (para.startsWith('### ')) {
+          children.push(new Paragraph({ heading: HeadingLevel.HEADING_3, children: [new TextRun({ text: para.slice(4), bold: true, color: '666677' })] }))
+        } else if (para.startsWith('- ') || para.startsWith('• ')) {
+          children.push(new Paragraph({ bullet: { level: 0 }, children: [new TextRun({ text: para.slice(2) })] }))
+        } else {
+          children.push(new Paragraph({ children: [new TextRun({ text: para, size: 22 })] }))
+        }
+        children.push(new Paragraph({ text: '' }))
+      }
+
+      const docFile = new Document({
+        sections: [{ headers: { default: headerText }, footers: { default: footerText }, children }],
+      })
+      const blob = await Packer.toBlob(docFile)
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${sessionTitle.replace(/[^a-z0-9]/gi, '-').toLowerCase().slice(0, 40)}-isol.docx`
+      a.click()
+      URL.revokeObjectURL(url)
+    } finally {
+      setExportingDocx(false)
+    }
+  }
+
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--bg)' }}>
 
@@ -249,6 +410,40 @@ export default function SharedSessionPage() {
           <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: '-0.01em' }}>ISOL Studio</span>
         </div>
         <div style={{ flex: 1 }} />
+        {status === 'loaded' && session && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button
+              onClick={handleExportPdf}
+              disabled={exportingPdf}
+              style={{
+                fontSize: 11, fontWeight: 600, padding: '4px 11px',
+                borderRadius: 6, border: '1px solid var(--divider)',
+                background: 'transparent', color: 'var(--text)',
+                cursor: exportingPdf ? 'default' : 'pointer',
+                opacity: exportingPdf ? 0.5 : 1,
+                display: 'flex', alignItems: 'center', gap: 5,
+              }}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              {exportingPdf ? 'Exporting…' : 'PDF'}
+            </button>
+            <button
+              onClick={handleExportDocx}
+              disabled={exportingDocx}
+              style={{
+                fontSize: 11, fontWeight: 600, padding: '4px 11px',
+                borderRadius: 6, border: '1px solid var(--divider)',
+                background: 'transparent', color: 'var(--text)',
+                cursor: exportingDocx ? 'default' : 'pointer',
+                opacity: exportingDocx ? 0.5 : 1,
+                display: 'flex', alignItems: 'center', gap: 5,
+              }}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              {exportingDocx ? 'Exporting…' : 'Word'}
+            </button>
+          </div>
+        )}
         <span style={{
           fontSize: 11, fontWeight: 600,
           color: 'var(--accent)',
