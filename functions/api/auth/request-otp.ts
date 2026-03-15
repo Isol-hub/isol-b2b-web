@@ -51,7 +51,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     // If the email has a pending team invite, route them to the inviting workspace
     let workspace = slugFromEmail(emailLower)
     const invite = await env.DB.prepare(
-      "SELECT workspace_slug FROM workspace_members WHERE member_email = ? AND status = 'pending' LIMIT 1"
+      "SELECT workspace_slug FROM workspace_members WHERE member_email = ? AND status = 'pending' ORDER BY invited_at DESC LIMIT 1"
     ).bind(emailLower).first<{ workspace_slug: string }>().catch(() => null)
     if (invite) workspace = invite.workspace_slug
 

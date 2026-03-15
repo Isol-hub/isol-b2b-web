@@ -481,7 +481,7 @@ export default function SettingsPage() {
             </div>
 
             {/* ── Workspace ────────────────────────────────────── */}
-            <Block label="Workspace">
+            <Block label="Account">
               <Row label="Display name" hint="Shown in shared session links">
                 <input
                   className="input-field"
@@ -491,7 +491,7 @@ export default function SettingsPage() {
                   style={{ fontSize: 13, width: 220, textAlign: 'right' }}
                 />
               </Row>
-              <Row label="Workspace ID" hint="Used in your workspace URL">
+              <Row label="Account ID" hint="Used in your account URL">
                 <span style={{ fontSize: 13, color: 'var(--text-muted)', fontFamily: 'monospace' }}>{workspaceSlug}</span>
               </Row>
               <Row label="Default language" hint="Pre-selected when starting a session" last>
@@ -824,7 +824,7 @@ export default function SettingsPage() {
             {/* ── Danger Zone ──────────────────────────────────── */}
             <Block label="Danger Zone">
               <Row
-                label="Delete workspace"
+                label="Delete account"
                 hint="Permanently removes all sessions, glossary entries, and data. Cannot be undone."
                 danger
                 last
@@ -852,9 +852,9 @@ export default function SettingsPage() {
 
       <ConfirmModal
         isOpen={confirmDelete}
-        title="Delete workspace"
+        title="Delete account"
         message={`Delete "${workspaceSlug}" and all its data permanently? This cannot be undone.`}
-        confirmLabel={deleting ? 'Deleting…' : 'Delete workspace'}
+        confirmLabel={deleting ? 'Deleting…' : 'Delete account'}
         dangerous
         onConfirm={handleDeleteWorkspace}
         onCancel={() => setConfirmDelete(false)}

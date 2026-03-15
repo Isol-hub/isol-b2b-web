@@ -15,7 +15,7 @@ const TERMS: Section[] = [
   },
   {
     title: '2. Description of Service',
-    body: `${COMPANY} provides a real-time speech transcription, translation, and AI-assisted document formatting platform delivered via a web application. The Service processes audio captured directly on your device; no audio is transmitted to or stored on our servers. Transcripts and translated text are processed ephemerally and stored only in your workspace database upon explicit save action.`,
+    body: `${COMPANY} provides a real-time speech transcription, translation, and AI-assisted document formatting platform delivered via a web application. The Service processes audio captured directly on your device; no audio is transmitted to or stored on our servers. Transcripts and translated text are processed ephemerally and stored only in your account database upon explicit save action.`,
   },
   {
     title: '3. Account Registration',
@@ -43,7 +43,7 @@ const TERMS: Section[] = [
   },
   {
     title: '9. Termination',
-    body: `Either party may terminate the relationship at any time. You may delete your workspace at any time from Settings → Danger Zone, which permanently removes all associated data. We reserve the right to suspend or terminate accounts that violate these Terms, with or without notice. Upon termination, your access to the Service will cease immediately.`,
+    body: `Either party may terminate the relationship at any time. You may delete your account at any time from Settings → Danger Zone, which permanently removes all associated data. We reserve the right to suspend or terminate accounts that violate these Terms, with or without notice. Upon termination, your access to the Service will cease immediately.`,
   },
   {
     title: '10. Governing Law',
@@ -66,11 +66,11 @@ const PRIVACY: Section[] = [
   },
   {
     title: '2. Data We Collect',
-    body: `We collect only what is strictly necessary to provide the Service:\n\n• Email address — used solely for authentication (OTP delivery) and account identification.\n• Workspace content — transcripts and AI-formatted text you explicitly save to your workspace.\n• Usage metadata — aggregate counters for AI feature usage (endpoint name, monthly count) used for plan enforcement.\n• Billing data — payment details are processed directly by Stripe and are never stored on our servers.\n\nWe do NOT collect, transmit, or store audio. All audio processing occurs locally on your device.`,
+    body: `We collect only what is strictly necessary to provide the Service:\n\n• Email address — used solely for authentication (OTP delivery) and account identification.\n• Account content — transcripts and AI-formatted text you explicitly save to your account.\n• Usage metadata — aggregate counters for AI feature usage (endpoint name, monthly count) used for plan enforcement.\n• Billing data — payment details are processed directly by Stripe and are never stored on our servers.\n\nWe do NOT collect, transmit, or store audio. All audio processing occurs locally on your device.`,
   },
   {
     title: '3. How We Use Your Data',
-    body: `Your data is used for the following purposes:\n\n• Authentication: to verify your identity via OTP and issue an access token.\n• Service delivery: to store and retrieve your workspace sessions and transcripts.\n• Billing: to manage your subscription via Stripe.\n• Service improvement: aggregate, anonymised usage statistics to improve performance.\n\nWe do not sell, rent, or share your personal data with third parties for marketing purposes.`,
+    body: `Your data is used for the following purposes:\n\n• Authentication: to verify your identity via OTP and issue an access token.\n• Service delivery: to store and retrieve your account sessions and transcripts.\n• Billing: to manage your subscription via Stripe.\n• Service improvement: aggregate, anonymised usage statistics to improve performance.\n\nWe do not sell, rent, or share your personal data with third parties for marketing purposes.`,
   },
   {
     title: '4. Audio and Transcription',
@@ -78,15 +78,15 @@ const PRIVACY: Section[] = [
   },
   {
     title: '5. Legal Basis for Processing (GDPR)',
-    body: `We process your personal data under the following legal bases (Article 6 GDPR):\n\n• Contract performance (Art. 6(1)(b)): processing your email and workspace data to deliver the Service you requested.\n• Legitimate interests (Art. 6(1)(f)): aggregate usage analytics to maintain and improve the Service.\n• Legal obligation (Art. 6(1)(c)): where required by applicable law (e.g. tax and billing records).`,
+    body: `We process your personal data under the following legal bases (Article 6 GDPR):\n\n• Contract performance (Art. 6(1)(b)): processing your email and account data to deliver the Service you requested.\n• Legitimate interests (Art. 6(1)(f)): aggregate usage analytics to maintain and improve the Service.\n• Legal obligation (Art. 6(1)(c)): where required by applicable law (e.g. tax and billing records).`,
   },
   {
     title: '6. Data Retention',
-    body: `Your email address is retained for as long as your account exists. Workspace content (sessions, transcripts) is retained until you delete it or delete your workspace. Authentication OTP codes are automatically deleted after 10 minutes. Rate-limit counters are automatically deleted at midnight UTC daily. Upon workspace deletion, all associated personal data is permanently and irreversibly erased from our systems within 30 days.`,
+    body: `Your email address is retained for as long as your account exists. Account content (sessions, transcripts) is retained until you delete it or delete your account. Authentication OTP codes are automatically deleted after 10 minutes. Rate-limit counters are automatically deleted at midnight UTC daily. Upon workspace deletion, all associated personal data is permanently and irreversibly erased from our systems within 30 days.`,
   },
   {
     title: '7. Your Rights',
-    body: `Under GDPR, you have the following rights:\n\n• Right of access: request a copy of all personal data we hold about you.\n• Right to rectification: request correction of inaccurate data.\n• Right to erasure ("right to be forgotten"): delete your workspace from Settings → Danger Zone. This triggers immediate and permanent deletion of all associated data.\n• Right to data portability: export your workspace data in JSON format from Settings → Data & Export.\n• Right to object: object to processing based on legitimate interests.\n• Right to lodge a complaint: with the Italian Supervisory Authority (Garante per la Protezione dei Dati Personali, www.garanteprivacy.it).\n\nTo exercise any right, contact us at ${EMAIL}.`,
+    body: `Under GDPR, you have the following rights:\n\n• Right of access: request a copy of all personal data we hold about you.\n• Right to rectification: request correction of inaccurate data.\n• Right to erasure ("right to be forgotten"): delete your account from Settings → Danger Zone. This triggers immediate and permanent deletion of all associated data.\n• Right to data portability: export your account data in JSON format from Settings → Data & Export.\n• Right to object: object to processing based on legitimate interests.\n• Right to lodge a complaint: with the Italian Supervisory Authority (Garante per la Protezione dei Dati Personali, www.garanteprivacy.it).\n\nTo exercise any right, contact us at ${EMAIL}.`,
   },
   {
     title: '8. Third-Party Processors',
@@ -98,7 +98,7 @@ const PRIVACY: Section[] = [
   },
   {
     title: '10. Security',
-    body: `We implement appropriate technical and organisational measures to protect your personal data, including: encrypted data in transit (TLS 1.2+), authentication via cryptographically-signed JSON Web Tokens (RS256), rate limiting to prevent brute-force attacks, and access control ensuring each user can only access their own workspace data.`,
+    body: `We implement appropriate technical and organisational measures to protect your personal data, including: encrypted data in transit (TLS 1.2+), authentication via cryptographically-signed JSON Web Tokens (RS256), rate limiting to prevent brute-force attacks, and access control ensuring each user can only access their own account data.`,
   },
   {
     title: '11. Cookies',

@@ -301,7 +301,7 @@ export default function LandingPage() {
       ══════════════════════════════════════════════════ */}
       <section style={{ background: '#05050d', padding: 'clamp(72px,9vw,120px) clamp(20px,4vw,48px)', borderTop: '1px solid rgba(255,255,255,.05)' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.1em', color: 'rgba(255,255,255,.35)', marginBottom: 12 }}>YOUR WORKSPACE</p>
+          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.1em', color: 'rgba(255,255,255,.35)', marginBottom: 12 }}>YOUR ACCOUNT</p>
           <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 20, marginBottom: 32, flexWrap: 'wrap' }}>
             <h2 className="lp-section-h2" style={{ fontSize: 'clamp(30px,4.5vw,56px)', fontWeight: 700, letterSpacing: '-0.04em', lineHeight: 1.07, margin: 0, maxWidth: 560 }}>
               Everything you need,<br />in one screen.
@@ -474,7 +474,7 @@ export default function LandingPage() {
             {[
               { Icon: IconNoRec, title: 'Zero recording',  desc: 'Audio is never written to disk or any storage system.' },
               { Icon: IconClock,  title: 'Real-time only', desc: 'Deleted immediately after transcription. Not even temporarily stored.' },
-              { Icon: IconShield, title: 'GDPR compliant', desc: 'No audio data persists. Right to erasure via workspace deletion.' },
+              { Icon: IconShield, title: 'GDPR compliant', desc: 'No audio data persists. Right to erasure via account deletion.' },
             ].map(({ Icon, title, desc }) => (
               <div key={title} style={{ padding: '28px 22px', textAlign: 'center', background: 'rgba(255,255,255,.03)' }}>
                 <div style={{ color: '#10B981', display: 'flex', justifyContent: 'center', marginBottom: 12 }}><Icon /></div>
