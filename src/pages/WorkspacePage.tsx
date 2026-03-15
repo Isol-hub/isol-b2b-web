@@ -1476,71 +1476,7 @@ export default function WorkspacePage() {
           )}
 
           {/* Canvas content */}
-          <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
-
-            {/* ── FLOATING DOCUMENT ACTIONS — top-right overlay ── */}
-            <div style={{
-              position: 'absolute', top: 14, right: 18,
-              display: 'flex', flexDirection: 'column', gap: 7,
-              zIndex: 10, pointerEvents: 'none',
-            }}>
-              {/* Export — shown when transcript has content */}
-              {transcript.length > 0 && (
-                <button
-                  onClick={() => setShowModal(true)}
-                  title="Export transcript"
-                  style={{
-                    pointerEvents: 'all',
-                    width: 34, height: 34,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    borderRadius: 9,
-                    background: 'var(--canvas)',
-                    border: '1px solid var(--divider)',
-                    color: 'var(--text-muted)',
-                    cursor: 'pointer',
-                    boxShadow: '0 1px 6px rgba(0,0,0,0.10)',
-                    transition: 'color 0.15s, box-shadow 0.15s',
-                  }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 2px 10px rgba(0,0,0,0.14)' }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 1px 6px rgba(0,0,0,0.10)' }}
-                >
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
-                    <polyline points="7 10 12 15 17 10"/>
-                    <line x1="12" y1="15" x2="12" y2="3"/>
-                  </svg>
-                </button>
-              )}
-              {/* Share — shown only during live session */}
-              {sessionActive && ws.sessionId && (
-                <button
-                  onClick={handleCopyRoom}
-                  title={roomCopied ? 'Link copied!' : 'Copy join link'}
-                  style={{
-                    pointerEvents: 'all',
-                    width: 34, height: 34,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    borderRadius: 9,
-                    background: roomCopied ? 'rgba(34,197,94,0.10)' : 'var(--canvas)',
-                    border: roomCopied ? '1px solid rgba(34,197,94,0.30)' : '1px solid var(--divider)',
-                    color: roomCopied ? 'var(--live)' : 'var(--text-muted)',
-                    cursor: 'pointer',
-                    boxShadow: isActive && !roomCopied
-                      ? '0 0 0 2px rgba(34,197,94,0.18), 0 1px 6px rgba(0,0,0,0.10)'
-                      : '0 1px 6px rgba(0,0,0,0.10)',
-                    transition: 'all 0.2s',
-                  }}
-                  onMouseEnter={e => { if (!roomCopied) { (e.currentTarget as HTMLElement).style.color = 'var(--text)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 2px 10px rgba(0,0,0,0.14)' } }}
-                  onMouseLeave={e => { if (!roomCopied) { (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)'; (e.currentTarget as HTMLElement).style.boxShadow = isActive ? '0 0 0 2px rgba(34,197,94,0.18), 0 1px 6px rgba(0,0,0,0.10)' : '0 1px 6px rgba(0,0,0,0.10)' } }}
-                >
-                  {roomCopied
-                    ? <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                    : <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
-                  }
-                </button>
-              )}
-            </div>
-
+          <div style={{ flex: 1, overflow: 'hidden' }}>
               <DocumentView
                 transcript={transcript}
                 currentLine={currentLine}
