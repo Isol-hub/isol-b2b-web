@@ -188,7 +188,7 @@ export default function DocumentView({
   lineComments, openCommentLine, onOpenCommentLine: _onOpenCommentLine,
   commentAuthor: _commentAuthor, onCommentAuthorChange: _onCommentAuthorChange, onAddComment, commentSubmitting: _commentSubmitting,
   sessionStartMs, sessionEndMs,
-  highlights, onAddHighlight, onRemoveHighlight: _onRemoveHighlight,
+  highlights, onAddHighlight, onRemoveHighlight,
   isHost, onDeleteComment, onEditComment,
   bannerOverride,
 }: Props) {
@@ -591,13 +591,19 @@ export default function DocumentView({
                       {hasHighlights && lineHighlights.map(h => {
                         const meta = CATEGORY_META[h.category ?? '_']
                         return (
-                          <span key={h.id} style={{
-                            marginLeft: 7,
-                            fontSize: 13,
-                            opacity: 0.7,
-                            color: meta.color,
-                            userSelect: 'none',
-                          }}>
+                          <span
+                            key={h.id}
+                            title={onRemoveHighlight ? 'Remove highlight' : meta.label}
+                            onClick={onRemoveHighlight ? e => { e.stopPropagation(); onRemoveHighlight(h.id) } : undefined}
+                            style={{
+                              marginLeft: 7,
+                              fontSize: 13,
+                              opacity: 0.7,
+                              color: meta.color,
+                              userSelect: 'none',
+                              cursor: onRemoveHighlight ? 'pointer' : undefined,
+                            }}
+                          >
                             {meta.icon}
                           </span>
                         )

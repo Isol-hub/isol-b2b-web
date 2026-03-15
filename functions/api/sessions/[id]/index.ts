@@ -97,11 +97,14 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params 
       return Response.json({ error: 'Forbidden' }, { status: 403, headers: CORS })
     }
 
-    const body = await request.json<{ title?: string }>()
-    const title = body.title?.trim() ?? null
+    const body = await request.json<{ title?: string; host_notes_text?: string | null }>()
+
+    const title = body.title !== undefined ? (body.title?.trim() ?? null) : undefined
+    const hostNotes = body.host_notes_text !== undefined ? (body.host_notes_text?.trim() || null) : undefined
 
     try {
-      assertMaxLen(title, 'title', 200)
+      assertMaxLen(title ?? null, 'title', 200)
+      assertMaxLen(hostNotes ?? null, 'host_notes_text', 10000)
     } catch (err) {
       if (isValidationError(err)) {
         return Response.json({ error: 'Input too long', field: err.field, max: err.max }, { status: 400, headers: CORS })
@@ -109,9 +112,16 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params 
       throw err
     }
 
+    const sets: string[] = []
+    const bindings: (string | number | null)[] = []
+    if (title !== undefined) { sets.push('title = ?'); bindings.push(title) }
+    if (hostNotes !== undefined) { sets.push('host_notes_text = ?'); bindings.push(hostNotes) }
+    if (sets.length === 0) return Response.json({ ok: true }, { headers: CORS })
+    bindings.push(sessionId)
+
     await env.DB.prepare(
-      'UPDATE sessions SET title = ? WHERE id = ?'
-    ).bind(title, sessionId).run()
+      `UPDATE sessions SET ${sets.join(', ')} WHERE id = ?`
+    ).bind(...bindings).run()
 
     return Response.json({ ok: true }, { headers: CORS })
   } catch (err) {

@@ -190,7 +190,9 @@ export default function WorkspacePage() {
   // Archived session comments — separate so live lineComments are never overwritten
   const [archivedComments, setArchivedComments] = useState<Map<number, CommentItem[]>>(new Map())
   const [archivedViewMode, setArchivedViewMode] = useState<'raw' | 'ai' | 'notes'>('raw')
-  const [archivedTab, setArchivedTab] = useState<'doc' | 'highlights'>('doc')
+  const [archivedTab, setArchivedTab] = useState<'doc' | 'highlights' | 'notes'>('doc')
+  const [archivedHighlights, setArchivedHighlights] = useState<HighlightItem[]>([])
+  const [hostNotes, setHostNotes] = useState('')
   const [openCommentLine, setOpenCommentLine] = useState<number | null>(null)
   const [commentAuthor, setCommentAuthor] = useState(
     () => localStorage.getItem('isol_commenter_name') || ''
@@ -654,6 +656,8 @@ export default function WorkspacePage() {
       const data = await res.json() as SessionDetail
       setViewingSession(data)
       setArchivedComments(buildCommentMap(data.comments ?? []))
+      setArchivedHighlights(data.highlights ?? [])
+      setHostNotes((data.session.host_notes_text as string) ?? '')
       setArchivedViewMode(data.session.ai_formatted_text ? 'ai' : 'raw')
     } catch { /* silent */ }
     finally { setSessionDetailLoading(false) }
@@ -675,6 +679,50 @@ export default function WorkspacePage() {
       setTimeout(() => setTitleSaved(false), 1800)
     } catch { /* silent */ }
   }, [])
+
+  const patchHostNotes = useCallback(async (id: number, text: string) => {
+    const token = getToken()
+    if (!token) return
+    try {
+      await sentryFetch(`/api/sessions/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ host_notes_text: text || null }),
+      })
+    } catch { /* silent */ }
+  }, [])
+
+  const addArchivedHighlight = useCallback(async (text: string, lineIndex: number | null, category: HighlightCategory | null) => {
+    if (!viewingSession) return
+    const sessionId = viewingSession.session.id as number
+    const token = getToken()
+    if (!token) return
+    try {
+      const res = await sentryFetch(`/api/sessions/${sessionId}/highlights`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ text, line_index: lineIndex, category }),
+      })
+      if (res.ok) {
+        const { id } = await res.json() as { id: number }
+        setArchivedHighlights(prev => [...prev, { id, text, line_index: lineIndex, category }])
+      }
+    } catch { /* silent */ }
+  }, [viewingSession])
+
+  const removeArchivedHighlight = useCallback(async (id: number) => {
+    if (!viewingSession) return
+    const sessionId = viewingSession.session.id as number
+    const token = getToken()
+    if (!token) return
+    setArchivedHighlights(prev => prev.filter(h => h.id !== id))
+    try {
+      await sentryFetch(`/api/sessions/${sessionId}/highlights?highlight_id=${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+    } catch { /* silent */ }
+  }, [viewingSession])
 
   const generateShareLink = useCallback(async (sessionId: number, expiresInHours?: number | null) => {
     const token = getToken()
@@ -1650,7 +1698,7 @@ export default function WorkspacePage() {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             padding: 24,
           }}
-          onClick={e => { if (e.target === e.currentTarget) { setViewingSession(null); setArchivedComments(new Map()); setSharePending(false); setArchivedViewMode('raw'); setArchivedTab('doc') } }}
+          onClick={e => { if (e.target === e.currentTarget) { setViewingSession(null); setArchivedComments(new Map()); setArchivedHighlights([]); setHostNotes(''); setSharePending(false); setArchivedViewMode('raw'); setArchivedTab('doc') } }}
         >
           <div style={{
             width: '100%', maxWidth: 700,
@@ -1704,7 +1752,7 @@ export default function WorkspacePage() {
                 )}
               </div>
               <button
-                onClick={() => { setViewingSession(null); setArchivedComments(new Map()); setSharePending(false); setArchivedViewMode('raw'); setArchivedTab('doc') }}
+                onClick={() => { setViewingSession(null); setArchivedComments(new Map()); setArchivedHighlights([]); setHostNotes(''); setSharePending(false); setArchivedViewMode('raw'); setArchivedTab('doc') }}
                 style={{ background: 'none', color: 'var(--text-muted)', fontSize: 20, padding: '2px 8px', borderRadius: 4, flexShrink: 0 }}
               >×</button>
             </div>
@@ -1718,7 +1766,8 @@ export default function WorkspacePage() {
               }}>
                 {([
                   { id: 'doc', label: 'Transcript' },
-                  { id: 'highlights', label: `Highlights${(viewingSession.highlights ?? []).length > 0 ? ` (${(viewingSession.highlights ?? []).length})` : ''}` },
+                  { id: 'highlights', label: `Highlights${archivedHighlights.length > 0 ? ` (${archivedHighlights.length})` : ''}` },
+                  { id: 'notes', label: 'Notes' },
                 ] as const).map(tab => (
                   <button
                     key={tab.id}
@@ -1746,9 +1795,33 @@ export default function WorkspacePage() {
                   Loading…
                 </div>
               ) : viewingSession && archivedTab === 'highlights' ? (
-                <HighlightsSection
-                  highlights={viewingSession.highlights ?? []}
-                />
+                <HighlightsSection highlights={archivedHighlights} />
+              ) : viewingSession && archivedTab === 'notes' ? (
+                <div>
+                  <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.09em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 10 }}>
+                    Host Notes
+                  </p>
+                  <textarea
+                    value={hostNotes}
+                    onChange={e => setHostNotes(e.target.value)}
+                    onBlur={() => patchHostNotes(viewingSession.session.id as number, hostNotes)}
+                    placeholder="Add your notes about this session…"
+                    rows={14}
+                    style={{
+                      width: '100%', resize: 'vertical',
+                      background: 'var(--surface-1)', border: '1px solid var(--border)',
+                      borderRadius: 8, padding: '12px 14px',
+                      fontSize: 14, color: 'var(--text)', lineHeight: 1.65,
+                      fontFamily: 'inherit', outline: 'none',
+                      transition: 'border-color 0.15s',
+                      boxSizing: 'border-box',
+                    }}
+                    onFocus={e => (e.target.style.borderColor = 'var(--border-accent)')}
+                  />
+                  <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>
+                    Saved automatically when you click away.
+                  </p>
+                </div>
               ) : viewingSession ? (
                 <DocumentView
                   transcript={viewingSession.lines.map(l => ({ text: l.text, time: new Date(viewingSession.session.started_at as number) }))}
@@ -1772,7 +1845,9 @@ export default function WorkspacePage() {
                   onAddComment={async () => {}}
                   commentSubmitting={false}
                   isHost={false}
-                  highlights={viewingSession.highlights ?? []}
+                  highlights={archivedHighlights}
+                  onAddHighlight={addArchivedHighlight}
+                  onRemoveHighlight={removeArchivedHighlight}
                 />
               ) : null}
             </div>
