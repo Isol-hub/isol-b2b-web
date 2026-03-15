@@ -410,40 +410,6 @@ export default function SharedSessionPage() {
           <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: '-0.01em' }}>ISOL Studio</span>
         </div>
         <div style={{ flex: 1 }} />
-        {status === 'loaded' && session && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <button
-              onClick={handleExportPdf}
-              disabled={exportingPdf}
-              style={{
-                fontSize: 11, fontWeight: 600, padding: '4px 11px',
-                borderRadius: 6, border: '1px solid var(--divider)',
-                background: 'transparent', color: 'var(--text)',
-                cursor: exportingPdf ? 'default' : 'pointer',
-                opacity: exportingPdf ? 0.5 : 1,
-                display: 'flex', alignItems: 'center', gap: 5,
-              }}
-            >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-              {exportingPdf ? 'Exporting…' : 'PDF'}
-            </button>
-            <button
-              onClick={handleExportDocx}
-              disabled={exportingDocx}
-              style={{
-                fontSize: 11, fontWeight: 600, padding: '4px 11px',
-                borderRadius: 6, border: '1px solid var(--divider)',
-                background: 'transparent', color: 'var(--text)',
-                cursor: exportingDocx ? 'default' : 'pointer',
-                opacity: exportingDocx ? 0.5 : 1,
-                display: 'flex', alignItems: 'center', gap: 5,
-              }}
-            >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-              {exportingDocx ? 'Exporting…' : 'Word'}
-            </button>
-          </div>
-        )}
         <span style={{
           fontSize: 11, fontWeight: 600,
           color: 'var(--accent)',
@@ -512,6 +478,44 @@ export default function SharedSessionPage() {
                   </span>
                 )}
               </p>
+
+              {/* Export */}
+              <div style={{ display: 'flex', gap: 10, marginBottom: 28 }}>
+                <button
+                  onClick={handleExportPdf}
+                  disabled={exportingPdf}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 7,
+                    fontSize: 13, fontWeight: 600,
+                    padding: '8px 16px', borderRadius: 8,
+                    border: '1px solid var(--divider)',
+                    background: 'var(--canvas)', color: 'var(--text)',
+                    cursor: exportingPdf ? 'default' : 'pointer',
+                    opacity: exportingPdf ? 0.5 : 1,
+                    transition: 'opacity 0.15s',
+                  }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  {exportingPdf ? 'Generating…' : 'Download PDF'}
+                </button>
+                <button
+                  onClick={handleExportDocx}
+                  disabled={exportingDocx}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 7,
+                    fontSize: 13, fontWeight: 600,
+                    padding: '8px 16px', borderRadius: 8,
+                    border: '1px solid var(--divider)',
+                    background: 'var(--canvas)', color: 'var(--text)',
+                    cursor: exportingDocx ? 'default' : 'pointer',
+                    opacity: exportingDocx ? 0.5 : 1,
+                    transition: 'opacity 0.15s',
+                  }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  {exportingDocx ? 'Generating…' : 'Download Word'}
+                </button>
+              </div>
 
               <div style={{ borderTop: '1px solid var(--divider)', marginBottom: 28 }} />
 
