@@ -58,13 +58,13 @@ export default function HighlightsSection({ highlights, onRemove, onJumpTo }: Pr
               {/* Category pill */}
               <div style={{ marginBottom: 8 }}>
                 <span style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 5,
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
                   background: meta.bg,
-                  border: `1px solid ${meta.color}22`,
+                  border: `1px solid ${meta.border}`,
                   borderRadius: 99,
-                  padding: '3px 10px 3px 8px',
+                  padding: '3px 10px 3px 7px',
                 }}>
-                  <span style={{ fontSize: 12, lineHeight: 1, color: meta.color }}>{meta.icon}</span>
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: meta.color, flexShrink: 0 }} />
                   <span style={{
                     fontSize: 10, fontWeight: 700, letterSpacing: '0.07em',
                     textTransform: 'uppercase', color: meta.color,
@@ -92,7 +92,7 @@ export default function HighlightsSection({ highlights, onRemove, onJumpTo }: Pr
                     <p style={{
                       flex: 1, margin: 0,
                       fontSize: 13, color: 'var(--text)', lineHeight: 1.6,
-                      fontStyle: key === 'quote' ? 'italic' : 'normal',
+                      fontStyle: 'normal',
                     }}>
                       {h.text}
                       {h.line_index !== null && (

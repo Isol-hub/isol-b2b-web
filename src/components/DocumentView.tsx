@@ -50,11 +50,9 @@ interface Props {
   bannerOverride?: { current: string; previous: string }
 }
 
-interface MarginNoteItem {
-  lineIndex: number
-  lineText: string
-  comment: CommentItem
-}
+type MarginEntry =
+  | { kind: 'comment'; lineIndex: number; comment: CommentItem; _key: string }
+  | { kind: 'highlight'; lineIndex: number; highlight: HighlightItem; _key: string }
 
 function renderInline(
   text: string,
@@ -102,46 +100,79 @@ function timeAgoDoc(ts: number): string {
   return new Date(ts).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })
 }
 
-function CommentMarginalia({
-  items, onJumpTo, totalLines,
+function MarginPanel({
+  entries, onJumpTo, totalLines,
 }: {
-  items: MarginNoteItem[]
+  entries: MarginEntry[]
   onJumpTo?: (lineIndex: number) => void
   totalLines: number
 }) {
+  const sorted = [...entries].sort((a, b) => a.lineIndex - b.lineIndex)
   return (
     <div style={{ position: 'relative', height: '100%', minHeight: 60 }}>
-      {items.map(({ lineIndex, comment }, i) => {
-        const topPct = totalLines > 1 ? (lineIndex / (totalLines - 1)) * 100 : 0
+      {sorted.map((entry, i) => {
+        const topPct = totalLines > 1 ? (entry.lineIndex / (totalLines - 1)) * 100 : 0
         return (
           <div
-            key={comment.id}
+            key={entry._key}
             style={{ position: 'absolute', top: `${topPct}%`, left: 0, right: 0, transform: 'translateY(-50%)' }}
           >
-            <button
-              onClick={() => onJumpTo?.(lineIndex)}
-              style={{
-                display: 'flex', alignItems: 'flex-start', gap: 5,
-                background: 'transparent', border: 'none', padding: 0,
-                cursor: onJumpTo ? 'pointer' : 'default', textAlign: 'left',
-              }}
-            >
-              <svg width="26" height="16" viewBox="0 0 26 16" fill="none" style={{ flexShrink: 0, marginTop: 3, opacity: 0.85 }}>
-                <path d="M24 8 C17 8 10 3 2 8" stroke="#B91C1C" strokeWidth="1.3" strokeLinecap="round"/>
-                <path d="M2 8 L6 4 M2 8 L6 12" stroke="#B91C1C" strokeWidth="1.3" strokeLinecap="round"/>
-              </svg>
-              <span style={{
-                fontFamily: 'var(--font-note)',
-                fontSize: 15,
-                color: '#B91C1C',
-                fontStyle: 'italic',
-                lineHeight: 1.35,
-                display: 'inline-block',
-                transform: `rotate(${-0.6 - (i % 3) * 0.4}deg)`,
-              }}>
-                {comment.body}
-              </span>
-            </button>
+            {entry.kind === 'comment' ? (
+              <button
+                onClick={() => onJumpTo?.(entry.lineIndex)}
+                style={{
+                  display: 'flex', alignItems: 'flex-start', gap: 5,
+                  background: 'transparent', border: 'none', padding: 0,
+                  cursor: onJumpTo ? 'pointer' : 'default', textAlign: 'left',
+                }}
+              >
+                <svg width="26" height="16" viewBox="0 0 26 16" fill="none" style={{ flexShrink: 0, marginTop: 3, opacity: 0.85 }}>
+                  <path d="M24 8 C17 8 10 3 2 8" stroke="#B91C1C" strokeWidth="1.3" strokeLinecap="round"/>
+                  <path d="M2 8 L6 4 M2 8 L6 12" stroke="#B91C1C" strokeWidth="1.3" strokeLinecap="round"/>
+                </svg>
+                <span style={{
+                  fontFamily: 'var(--font-note)',
+                  fontSize: 15,
+                  color: '#B91C1C',
+                  fontStyle: 'italic',
+                  lineHeight: 1.35,
+                  display: 'inline-block',
+                  transform: `rotate(${-0.6 - (i % 3) * 0.4}deg)`,
+                }}>
+                  {entry.comment.body}
+                </span>
+              </button>
+            ) : (
+              (() => {
+                const meta = CATEGORY_META[entry.highlight.category ?? '_']
+                const preview = entry.highlight.text.length > 32
+                  ? entry.highlight.text.slice(0, 32) + '…'
+                  : entry.highlight.text
+                return (
+                  <button
+                    onClick={() => onJumpTo?.(entry.lineIndex)}
+                    style={{
+                      display: 'block', maxWidth: '100%',
+                      background: meta.bg,
+                      border: `1px solid ${meta.border}`,
+                      borderLeft: `3px solid ${meta.color}`,
+                      borderRadius: 5,
+                      padding: '3px 7px',
+                      cursor: onJumpTo ? 'pointer' : 'default',
+                      overflow: 'hidden',
+                    }}
+                  >
+                    <span style={{
+                      fontSize: 10, color: meta.color, lineHeight: 1.4,
+                      display: 'block', overflow: 'hidden',
+                      textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    }}>
+                      {preview}
+                    </span>
+                  </button>
+                )
+              })()
+            )}
           </div>
         )
       })}
@@ -185,7 +216,7 @@ export default function DocumentView({
   viewMode, onViewModeChange,
   onWordClick,
   isEditable, onLineEdit,
-  lineComments, openCommentLine, onOpenCommentLine: _onOpenCommentLine,
+  lineComments, openCommentLine: _openCommentLine, onOpenCommentLine: _onOpenCommentLine,
   commentAuthor: _commentAuthor, onCommentAuthorChange: _onCommentAuthorChange, onAddComment, commentSubmitting: _commentSubmitting,
   sessionStartMs, sessionEndMs,
   highlights, onAddHighlight, onRemoveHighlight,
@@ -205,31 +236,17 @@ export default function DocumentView({
   const [hoveredLine, setHoveredLine] = useState<number | null>(null)
   const [editingText, setEditingText] = useState('')
 
-  // Host comment card
-  const [openCard, setOpenCard] = useState<{ lineIndex: number; x: number; y: number } | null>(null)
+  // Inline comment state
+  const [inlineOpenLine, setInlineOpenLine] = useState<number | null>(null)
   const [editingCommentId, setEditingCommentId] = useState<number | null>(null)
   const [editingCard, setEditingCard] = useState('')
   const [addDraft, setAddDraft] = useState('')
   const [cardSubmitting, setCardSubmitting] = useState(false)
-  const cardRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    if (!openCard) return
-    const handler = (e: MouseEvent) => {
-      if (!cardRef.current?.contains(e.target as Node)) {
-        setOpenCard(null)
-        setEditingCommentId(null)
-        setAddDraft('')
-      }
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [openCard])
-
-  const openHostCard = useCallback((lineIndex: number, e: React.MouseEvent) => {
+  const toggleInlineComment = useCallback((lineIndex: number, e: React.MouseEvent) => {
     if (!isHost) return
     e.stopPropagation()
-    setOpenCard({ lineIndex, x: e.clientX, y: e.clientY })
+    setInlineOpenLine(prev => prev === lineIndex ? null : lineIndex)
     setEditingCommentId(null)
     setAddDraft('')
   }, [isHost])
@@ -251,12 +268,12 @@ export default function DocumentView({
   }
 
   useEffect(() => {
-    // Don't auto-scroll while a comment form is open (conflicts with autoFocus scroll)
-    if (openCommentLine !== null && openCommentLine !== undefined) return
+    // Don't auto-scroll while inline comment input is open (conflicts with autoFocus scroll)
+    if (inlineOpenLine !== null) return
     if (isNearBottom()) {
       bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
     }
-  }, [transcript.length, currentLine, openCommentLine])
+  }, [transcript.length, currentLine, inlineOpenLine])
 
   const prevViewMode = useRef(viewMode)
   useEffect(() => {
@@ -348,13 +365,17 @@ export default function DocumentView({
     return map
   }, [highlights])
 
-  // Flat list of annotations for read-only panel in AI/Notes views
-  const annotationsForPanel: MarginNoteItem[] = []
+  // Combined margin entries (comments + highlights) for AI/Notes views
+  const marginEntries: MarginEntry[] = []
   if (lineComments) {
-    lineComments.forEach((comments, lineIndex) => {
-      const lineText = lineIndex >= 0 && lineIndex < transcript.length ? transcript[lineIndex].text : ''
-      comments.forEach(c => annotationsForPanel.push({ lineIndex, lineText, comment: c }))
+    lineComments.forEach((cmts, lineIndex) => {
+      cmts.forEach(c => marginEntries.push({ kind: 'comment', lineIndex, comment: c, _key: `c${c.id}` }))
     })
+  }
+  if (highlights) {
+    highlights.filter(h => h.line_index != null).forEach(h =>
+      marginEntries.push({ kind: 'highlight', lineIndex: h.line_index!, highlight: h, _key: `h${h.id}` })
+    )
   }
 
   const commitEdit = () => {
@@ -462,7 +483,7 @@ export default function DocumentView({
             </div>
 
           ) : viewMode === 'ai' && aiFormatted ? (
-            <div style={{ display: 'grid', gridTemplateColumns: annotationsForPanel.length > 0 ? '1fr 110px' : '1fr', gap: 12, alignItems: 'stretch' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: marginEntries.length > 0 ? '1fr 110px' : '1fr', gap: 12, alignItems: 'stretch' }}>
               <div className="doc-ai-update" style={{ minWidth: 0 }}>
                 <AiContent text={aiFormatted} onWordClick={onWordClick} />
                 {(aiFormattedAt !== undefined ? transcript.slice(aiFormattedAt) : []).map((line, i) => (
@@ -472,19 +493,19 @@ export default function DocumentView({
                 ))}
                 {isActive && !currentLine && <span className="doc-cursor" />}
               </div>
-              {annotationsForPanel.length > 0 && (
-                <CommentMarginalia items={annotationsForPanel} onJumpTo={scrollToLine} totalLines={aiFormattedAt ?? transcript.length} />
+              {marginEntries.length > 0 && (
+                <MarginPanel entries={marginEntries} onJumpTo={scrollToLine} totalLines={aiFormattedAt ?? transcript.length} />
               )}
             </div>
 
           ) : viewMode === 'notes' && aiNotes ? (
-            <div style={{ display: 'grid', gridTemplateColumns: annotationsForPanel.length > 0 ? '1fr 110px' : '1fr', gap: 12, alignItems: 'stretch' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: marginEntries.length > 0 ? '1fr 110px' : '1fr', gap: 12, alignItems: 'stretch' }}>
               <div className="doc-ai-update" style={{ minWidth: 0 }}>
                 <AiContent text={aiNotes} onWordClick={onWordClick} />
                 {isActive && <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 16, fontStyle: 'italic' }}>Notes update as session progresses…</p>}
               </div>
-              {annotationsForPanel.length > 0 && (
-                <CommentMarginalia items={annotationsForPanel} onJumpTo={scrollToLine} totalLines={aiFormattedAt ?? transcript.length} />
+              {marginEntries.length > 0 && (
+                <MarginPanel entries={marginEntries} onJumpTo={scrollToLine} totalLines={aiFormattedAt ?? transcript.length} />
               )}
             </div>
 
@@ -531,19 +552,25 @@ export default function DocumentView({
                     data-line-index={i}
                     onMouseEnter={() => setHoveredLine(i)}
                     onMouseLeave={() => setHoveredLine(null)}
+                    onDoubleClick={(onAddHighlight || onRemoveHighlight) ? () => {
+                      if (hasHighlights && onRemoveHighlight) onRemoveHighlight(lineHighlights[0].id)
+                      else if (!hasHighlights && onAddHighlight) onAddHighlight(line.text, i, 'idea')
+                    } : undefined}
                     style={{
                       display: 'flex',
                       alignItems: 'flex-start',
                       marginBottom: 20,
                       opacity: lineOpacity,
-                      transition: 'opacity 0.3s ease',
+                      transition: 'opacity 0.3s ease, background 0.15s',
                       animation: isNewest ? 'lineEnter 0.35s ease-out, lineFlash 1.1s ease-out' : undefined,
+                      background: hasHighlights ? primaryHlMeta!.bg : 'transparent',
+                      borderRadius: hasHighlights ? 8 : 0,
                     }}
                   >
-                    {/* Left margin — comment affordance (host only) */}
+                    {/* Left margin — inline comment trigger (host only) */}
                     {isHost && (
                       <button
-                        onClick={e => { e.stopPropagation(); openHostCard(i, e) }}
+                        onClick={e => toggleInlineComment(i, e)}
                         aria-label="Add note"
                         style={{
                           flexShrink: 0,
@@ -554,33 +581,37 @@ export default function DocumentView({
                           border: 'none',
                           padding: 0,
                           cursor: 'pointer',
-                          fontSize: 17,
+                          fontSize: hasComments ? 11 : 17,
                           lineHeight: 1,
                           fontWeight: 300,
                           color: hasComments
-                            ? 'rgba(99,102,241,0.5)'
+                            ? '#B91C1C'
+                            : inlineOpenLine === i
+                            ? 'rgba(99,102,241,0.7)'
                             : hoveredLine === i
                             ? 'rgba(99,102,241,0.55)'
-                            : 'transparent',
+                            : 'rgba(0,0,0,0.18)',
                           transition: 'color 0.15s',
                           userSelect: 'none',
                         }}
                       >
-                        {hasComments ? '●' : '+'}
+                        {hasComments ? '●' : inlineOpenLine === i ? '×' : '+'}
                       </button>
                     )}
 
                     {/* Text + annotations */}
                     <div style={{
                       flex: 1,
-                      borderLeft: hasComments
+                      borderLeft: hasHighlights
+                        ? `3px solid ${primaryHlMeta!.border}`
+                        : hasComments
                         ? '2px solid rgba(99,102,241,0.22)'
                         : '2px solid transparent',
-                      paddingLeft: hasComments ? 12 : 0,
+                      paddingLeft: (hasHighlights || hasComments) ? 12 : 0,
                       borderRadius: 4,
                     }}>
                     <p
-                      style={{ margin: 0, fontSize: 18, color: hasHighlights ? primaryHlMeta!.color : 'var(--text)', lineHeight: 1.85, fontWeight: lineWeight, padding: '2px 0', cursor: isEditable && !isHost ? 'text' : undefined }}
+                      style={{ margin: 0, fontSize: 18, color: 'var(--text)', lineHeight: 1.85, fontWeight: lineWeight, padding: '2px 0', cursor: isEditable && !isHost ? 'text' : undefined }}
                       onClick={(e) => {
                         if (isEditable && !isHost) { e.stopPropagation(); setEditingIndex(i); setEditingText(line.text) }
                       }}
@@ -588,55 +619,128 @@ export default function DocumentView({
                       onMouseLeave={e => { if (isEditable && !isHost) (e.currentTarget as HTMLElement).style.background = 'transparent' }}
                     >
                       {renderInline(line.text, line.text, onWordClick)}
-                      {hasHighlights && lineHighlights.map(h => {
-                        const meta = CATEGORY_META[h.category ?? '_']
-                        return (
-                          <span
-                            key={h.id}
-                            title={onRemoveHighlight ? 'Remove highlight' : meta.label}
-                            onClick={onRemoveHighlight ? e => { e.stopPropagation(); onRemoveHighlight(h.id) } : undefined}
-                            style={{
-                              marginLeft: 7,
-                              fontSize: 13,
-                              opacity: 0.7,
-                              color: meta.color,
-                              userSelect: 'none',
-                              cursor: onRemoveHighlight ? 'pointer' : undefined,
-                            }}
-                          >
-                            {meta.icon}
-                          </span>
-                        )
-                      })}
                     </p>
 
-                    {/* Handwriting annotations — flow in document, spacing grows proportionally */}
+                    {/* Handwriting annotations */}
                     {lineC.length > 0 && (
                       <div style={{ paddingLeft: 6, paddingTop: 3, paddingBottom: 2 }}>
                         {lineC.map((comment, ci) => (
-                          <div
-                            key={comment.id}
-                            style={{
-                              color: '#B91C1C',
-                              fontFamily: 'var(--font-note)',
-                              fontSize: 16,
-                              fontStyle: 'italic',
-                              lineHeight: 1.35,
-                              transform: `rotate(${-0.7 - ci * 0.4}deg)`,
-                              marginTop: ci === 0 ? 0 : 5,
-                              wordBreak: 'break-word',
-                              userSelect: 'none',
-                              opacity: comment.pending ? 0.5 : 1,
-                              pointerEvents: 'none',
-                            }}
-                          >
-                            — {comment.body}
+                          <div key={comment.id} style={{ marginTop: ci === 0 ? 0 : 5 }}>
+                            {editingCommentId === comment.id ? (
+                              <div style={{ display: 'flex', gap: 5, alignItems: 'flex-start' }}>
+                                <textarea
+                                  autoFocus
+                                  value={editingCard}
+                                  onChange={e => setEditingCard(e.target.value)}
+                                  rows={2}
+                                  style={{
+                                    flex: 1, resize: 'none', boxSizing: 'border-box',
+                                    fontFamily: 'var(--font-note)', fontSize: 16, fontStyle: 'italic',
+                                    color: '#B91C1C', lineHeight: 1.4,
+                                    background: 'rgba(185,28,28,0.04)', border: '1px solid rgba(185,28,28,0.22)',
+                                    borderRadius: 6, padding: '5px 9px', outline: 'none',
+                                  }}
+                                  onKeyDown={e => {
+                                    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); onEditComment?.(comment.id, i, editingCard).then(() => setEditingCommentId(null)) }
+                                    if (e.key === 'Escape') setEditingCommentId(null)
+                                  }}
+                                />
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 3, flexShrink: 0 }}>
+                                  <button onClick={() => onEditComment?.(comment.id, i, editingCard).then(() => setEditingCommentId(null))} style={{ fontSize: 10, fontWeight: 600, height: 22, padding: '0 7px', background: 'var(--accent)', border: 'none', borderRadius: 4, cursor: 'pointer', color: '#fff' }}>Save</button>
+                                  <button onClick={() => setEditingCommentId(null)} style={{ fontSize: 10, fontWeight: 600, height: 22, padding: '0 7px', background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: 4, cursor: 'pointer', color: 'var(--text-dim)' }}>Cancel</button>
+                                </div>
+                              </div>
+                            ) : (
+                              <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                                <span
+                                  style={{
+                                    color: '#B91C1C', fontFamily: 'var(--font-note)',
+                                    fontSize: 16, fontStyle: 'italic', lineHeight: 1.35,
+                                    transform: `rotate(${-0.7 - ci * 0.4}deg)`, display: 'inline-block',
+                                    wordBreak: 'break-word', opacity: comment.pending ? 0.5 : 1,
+                                  }}
+                                >— {comment.body}</span>
+                                {isHost && inlineOpenLine === i && (
+                                  <span style={{ flexShrink: 0, display: 'inline-flex', gap: 4, opacity: 0.6 }}>
+                                    <button onClick={() => { setEditingCommentId(comment.id); setEditingCard(comment.body) }} style={{ fontSize: 10, color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: '1px 3px' }}>Edit</button>
+                                    <button onClick={() => onDeleteComment?.(comment.id, i)} style={{ fontSize: 10, color: '#DC2626', background: 'none', border: 'none', cursor: 'pointer', padding: '1px 3px' }}>×</button>
+                                  </span>
+                                )}
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>
                     )}
 
+                    {/* Inline comment input — opens on margin button click */}
+                    {inlineOpenLine === i && isHost && (
+                      <div style={{ display: 'flex', gap: 6, paddingTop: 8, paddingLeft: 6 }}>
+                        <textarea
+                          autoFocus
+                          value={addDraft}
+                          onChange={e => setAddDraft(e.target.value)}
+                          placeholder="Add a note…"
+                          rows={1}
+                          style={{
+                            flex: 1, resize: 'none', boxSizing: 'border-box',
+                            fontFamily: 'var(--font-note)', fontSize: 16, fontStyle: 'italic',
+                            color: '#B91C1C', lineHeight: 1.4,
+                            background: 'rgba(185,28,28,0.04)', border: '1px solid rgba(185,28,28,0.18)',
+                            borderRadius: 6, padding: '6px 10px', outline: 'none',
+                          }}
+                          onKeyDown={async e => {
+                            if (e.key === 'Enter' && !e.shiftKey && addDraft.trim()) {
+                              e.preventDefault()
+                              setCardSubmitting(true)
+                              await onAddComment?.(i, addDraft.trim())
+                              setAddDraft('')
+                              setInlineOpenLine(null)
+                              setCardSubmitting(false)
+                            }
+                            if (e.key === 'Escape') { setInlineOpenLine(null); setAddDraft('') }
+                          }}
+                        />
+                        <button
+                          disabled={cardSubmitting || !addDraft.trim()}
+                          onClick={async () => {
+                            if (!addDraft.trim()) return
+                            setCardSubmitting(true)
+                            await onAddComment?.(i, addDraft.trim())
+                            setAddDraft('')
+                            setInlineOpenLine(null)
+                            setCardSubmitting(false)
+                          }}
+                          style={{
+                            alignSelf: 'flex-end', height: 34, padding: '0 12px',
+                            background: 'var(--accent)', color: '#fff', border: 'none',
+                            borderRadius: 6, fontSize: 16, fontWeight: 700,
+                            cursor: cardSubmitting || !addDraft.trim() ? 'not-allowed' : 'pointer',
+                            opacity: cardSubmitting || !addDraft.trim() ? 0.35 : 1,
+                            transition: 'opacity 0.15s', flexShrink: 0,
+                          }}
+                        >↵</button>
+                      </div>
+                    )}
+
                     </div>{/* end text+annotations wrapper */}
+
+                    {/* Hover remove for highlighted lines */}
+                    {hasHighlights && onRemoveHighlight && hoveredLine === i && (
+                      <button
+                        onClick={e => { e.stopPropagation(); onRemoveHighlight(lineHighlights[0].id) }}
+                        title="Remove highlight"
+                        style={{
+                          alignSelf: 'center', marginLeft: 6, flexShrink: 0,
+                          background: 'none', border: 'none', padding: '2px 5px',
+                          color: primaryHlMeta!.color, fontSize: 14, opacity: 0.6,
+                          cursor: 'pointer', lineHeight: 1, borderRadius: 4,
+                          transition: 'opacity 0.12s',
+                        }}
+                        onMouseEnter={e => (e.currentTarget as HTMLElement).style.opacity = '1'}
+                        onMouseLeave={e => (e.currentTarget as HTMLElement).style.opacity = '0.6'}
+                      >×</button>
+                    )}
                   </div>
                 )
               })}
@@ -675,121 +779,6 @@ export default function DocumentView({
         />
       )}
 
-      {/* Host comment card — fixed, click-outside closes */}
-      {openCard && isHost && (() => {
-        const cardComments = lineComments?.get(openCard.lineIndex) ?? []
-        const cardX = Math.min(openCard.x + 14, window.innerWidth - 296)
-        const cardY = Math.min(openCard.y - 10, window.innerHeight - 320)
-        return (
-          <div
-            ref={cardRef}
-            onClick={e => e.stopPropagation()}
-            style={{
-              position: 'fixed',
-              left: cardX, top: cardY,
-              width: 280,
-              background: 'var(--canvas)',
-              border: '1px solid var(--border)',
-              borderRadius: 'var(--radius-lg)',
-              boxShadow: '0 8px 32px rgba(0,0,0,0.13)',
-              padding: '14px 16px',
-              zIndex: 1000,
-            }}
-          >
-            {/* Existing comments */}
-            {cardComments.map(c => (
-              <div key={c.id} style={{ marginBottom: 12 }}>
-                {editingCommentId === c.id ? (
-                  <>
-                    <textarea
-                      autoFocus
-                      value={editingCard}
-                      onChange={e => setEditingCard(e.target.value)}
-                      rows={2}
-                      style={{
-                        width: '100%', resize: 'none', boxSizing: 'border-box',
-                        fontFamily: 'var(--font-note)', fontSize: 17, fontStyle: 'italic',
-                        color: '#B91C1C', lineHeight: 1.4,
-                        background: 'rgba(185,28,28,0.04)', border: '1px solid rgba(185,28,28,0.22)',
-                        borderRadius: 6, padding: '6px 10px', outline: 'none', marginBottom: 6,
-                      }}
-                      onKeyDown={e => {
-                        if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); onEditComment?.(c.id, openCard.lineIndex, editingCard).then(() => setEditingCommentId(null)) }
-                        if (e.key === 'Escape') setEditingCommentId(null)
-                      }}
-                    />
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      <button onClick={() => onEditComment?.(c.id, openCard.lineIndex, editingCard).then(() => setEditingCommentId(null))} style={{ flex: 1, fontSize: 11, fontWeight: 600, height: 26, background: 'var(--accent)', border: 'none', borderRadius: 5, cursor: 'pointer', color: '#fff' }}>Save</button>
-                      <button onClick={() => setEditingCommentId(null)} style={{ flex: 1, fontSize: 11, fontWeight: 600, height: 26, background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: 5, cursor: 'pointer', color: 'var(--text-dim)' }}>Cancel</button>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <p style={{ fontFamily: 'var(--font-note)', fontSize: 17, fontStyle: 'italic', color: '#B91C1C', lineHeight: 1.35, margin: '0 0 4px' }}>
-                      — {c.body}
-                    </p>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: 11, color: 'var(--text-muted)', flex: 1 }}>{c.author} · {timeAgoDoc(c.created_at)}</span>
-                      <button onClick={() => { setEditingCommentId(c.id); setEditingCard(c.body) }} style={{ fontSize: 11, color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px' }}>Edit</button>
-                      <button onClick={() => onDeleteComment?.(c.id, openCard.lineIndex)} style={{ fontSize: 11, color: '#DC2626', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px' }}>Delete</button>
-                    </div>
-                  </>
-                )}
-                {cardComments.indexOf(c) < cardComments.length - 1 && (
-                  <div style={{ height: 1, background: 'var(--divider)', margin: '10px 0 0' }} />
-                )}
-              </div>
-            ))}
-
-            {/* Add new annotation */}
-            {cardComments.length > 0 && <div style={{ height: 1, background: 'var(--divider)', margin: '4px 0 10px' }} />}
-            <div style={{ display: 'flex', gap: 6 }}>
-              <textarea
-                value={addDraft}
-                onChange={e => setAddDraft(e.target.value)}
-                placeholder="Aggiungi nota…"
-                rows={2}
-                autoFocus={cardComments.length === 0}
-                style={{
-                  flex: 1, resize: 'none', boxSizing: 'border-box',
-                  fontFamily: 'var(--font-note)', fontSize: 16, fontStyle: 'italic',
-                  color: '#B91C1C', lineHeight: 1.4,
-                  background: 'rgba(185,28,28,0.04)', border: '1px solid rgba(185,28,28,0.18)',
-                  borderRadius: 6, padding: '6px 10px', outline: 'none',
-                }}
-                onKeyDown={async e => {
-                  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && addDraft.trim()) {
-                    e.preventDefault()
-                    setCardSubmitting(true)
-                    await onAddComment?.(openCard.lineIndex, addDraft.trim())
-                    setAddDraft('')
-                    setCardSubmitting(false)
-                  }
-                  if (e.key === 'Escape') setOpenCard(null)
-                }}
-              />
-              <button
-                disabled={cardSubmitting || !addDraft.trim()}
-                onClick={async () => {
-                  if (!addDraft.trim()) return
-                  setCardSubmitting(true)
-                  await onAddComment?.(openCard.lineIndex, addDraft.trim())
-                  setAddDraft('')
-                  setCardSubmitting(false)
-                }}
-                style={{
-                  alignSelf: 'flex-end', height: 34, padding: '0 12px',
-                  background: 'var(--accent)', color: '#fff', border: 'none',
-                  borderRadius: 6, fontSize: 16, fontWeight: 700,
-                  cursor: cardSubmitting || !addDraft.trim() ? 'not-allowed' : 'pointer',
-                  opacity: cardSubmitting || !addDraft.trim() ? 0.35 : 1,
-                  transition: 'opacity 0.15s', flexShrink: 0,
-                }}
-              >↵</button>
-            </div>
-          </div>
-        )
-      })()}
     </div>
   )
 }

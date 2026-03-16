@@ -7,6 +7,8 @@ import HighlightsSection from './HighlightsSection'
 import ConfirmModal from './ConfirmModal'
 import type { CommentItem } from './CommentThread'
 import type { HighlightItem, HighlightCategory } from './HighlightPopup'
+import jsPDF from 'jspdf'
+import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, Footer, Header } from 'docx'
 
 type ViewMode = 'raw' | 'ai' | 'notes'
 type Tab = 'doc' | 'highlights' | 'notes'
@@ -80,6 +82,8 @@ export default function SessionDetailModal({
   const [shareLoading, setShareLoading] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [confirmRevoke, setConfirmRevoke] = useState(false)
+  const [exportingPdf, setExportingPdf] = useState(false)
+  const [exportingDocx, setExportingDocx] = useState(false)
 
   useEffect(() => {
     if (!sessionId) return
@@ -244,6 +248,236 @@ export default function SessionDetailModal({
       }
     } catch { /* silent */ }
   }, [session, onDeleted, onClose])
+
+  // Smart body: prefer AI formatted, fallback to raw transcript
+  const getExportBody = useCallback((): { text: string; isRaw: boolean } => {
+    if (session?.ai_formatted_text) return { text: session.ai_formatted_text, isRaw: false }
+    return { text: lines.map(l => l.text).join('\n'), isRaw: true }
+  }, [session, lines])
+
+  // Flat comment list sorted by line index
+  const exportComments = useCallback((): Array<{ body: string; lineIndex: number | null }> => {
+    const out: Array<{ body: string; lineIndex: number | null }> = []
+    comments.forEach((cmts, lineIndex) => {
+      cmts.forEach(c => out.push({ body: c.body, lineIndex }))
+    })
+    return out.sort((a, b) => (a.lineIndex ?? -1) - (b.lineIndex ?? -1))
+  }, [comments])
+
+  const handleExportPdf = useCallback(async () => {
+    if (!session) return
+    setExportingPdf(true)
+    try {
+      const { text: bodyText, isRaw } = getExportBody()
+      const sessionTitle = session.title ?? fmtDate(session.started_at)
+      const sessionDate = fmtDate(session.started_at)
+      const sessionLang = LANGUAGES.find(l => l.code === session.target_lang)?.label ?? session.target_lang
+      const allHighlights = highlights.filter(h => h.text)
+      const allComments = exportComments()
+      const hostNotes = session.host_notes_text?.trim() ?? ''
+
+      const doc = new jsPDF({ unit: 'mm', format: 'a4' })
+      const pageW = doc.internal.pageSize.getWidth()
+      const pageH = doc.internal.pageSize.getHeight()
+      const margin = 22
+      const lineH = 7
+      let yPos = margin + 10
+
+      function addText(text: string, size: number, bold = false, color: [number, number, number] = [20, 20, 30]) {
+        doc.setFontSize(size)
+        doc.setFont('helvetica', bold ? 'bold' : 'normal')
+        doc.setTextColor(...color)
+        const wrapped = doc.splitTextToSize(text, pageW - margin * 2)
+        for (const line of wrapped) {
+          if (yPos + lineH > pageH - margin) addPage()
+          doc.text(line, margin, yPos)
+          yPos += lineH
+        }
+      }
+      function addSectionDivider(label: string) {
+        yPos += 6
+        doc.setDrawColor(220, 220, 230)
+        doc.setLineWidth(0.3)
+        doc.line(margin, yPos, pageW - margin, yPos)
+        yPos += 6
+        addText(label, 8, true, [140, 140, 160])
+        yPos += 4
+      }
+      function addWatermark() {
+        doc.saveGraphicsState()
+        doc.setFontSize(52)
+        doc.setFont('helvetica', 'bold')
+        doc.setTextColor(99, 102, 241)
+        doc.setGState(new (doc as any).GState({ opacity: 0.06 }))
+        doc.text('ISOL', pageW / 2, pageH / 2, { align: 'center', angle: 45 })
+        doc.restoreGraphicsState()
+      }
+      function addHeader() {
+        doc.setFontSize(8)
+        doc.setFont('helvetica', 'normal')
+        doc.setTextColor(150, 150, 160)
+        doc.text('ISOL Studio · isolstudio.live', margin, 13)
+        doc.text(sessionDate, pageW - margin, 13, { align: 'right' })
+        doc.setDrawColor(220, 220, 230)
+        doc.setLineWidth(0.3)
+        doc.line(margin, 16, pageW - margin, 16)
+      }
+      function addFooter() {
+        doc.setFontSize(8)
+        doc.setFont('helvetica', 'normal')
+        doc.setTextColor(150, 150, 160)
+        doc.setDrawColor(220, 220, 230)
+        doc.setLineWidth(0.3)
+        doc.line(margin, pageH - 14, pageW - margin, pageH - 14)
+        doc.text('ISOL Studio · isolstudio.live', margin, pageH - 9)
+        doc.text(`Page ${doc.getCurrentPageInfo().pageNumber}`, pageW - margin, pageH - 9, { align: 'right' })
+      }
+      function addPage() {
+        addFooter(); doc.addPage(); addWatermark(); addHeader(); yPos = margin + 10
+      }
+
+      addWatermark()
+      addHeader()
+      addText(sessionTitle, 20, true, [20, 20, 30])
+      yPos += 3
+      addText(`${sessionLang} · ${sessionDate}`, 10, false, [120, 120, 140])
+      if (isRaw) { yPos += 2; addText('(Raw transcript — AI formatting not available)', 8, false, [160, 120, 80]) }
+      yPos += 8
+      doc.setDrawColor(200, 200, 215); doc.setLineWidth(0.4)
+      doc.line(margin, yPos, pageW - margin, yPos)
+      yPos += 8
+
+      // Body
+      for (const para of bodyText.split('\n').filter(l => l.trim())) {
+        if (para.startsWith('# ')) addText(para.slice(2), 16, true)
+        else if (para.startsWith('## ')) addText(para.slice(3), 13, true)
+        else if (para.startsWith('### ')) addText(para.slice(4), 10, true, [100, 100, 120])
+        else if (para.startsWith('- ') || para.startsWith('• ')) addText(`  ${para}`, 10)
+        else addText(para, 10)
+        yPos += 2
+      }
+
+      // Highlights section
+      if (allHighlights.length > 0) {
+        addSectionDivider('HIGHLIGHTS')
+        for (const h of allHighlights) {
+          const prefix = h.line_index != null ? `[${h.line_index + 1}]  ` : '·  '
+          addText(`${prefix}${h.text}`, 10, false, [60, 60, 80])
+          yPos += 1
+        }
+      }
+
+      // Host notes section
+      if (hostNotes) {
+        addSectionDivider('HOST NOTES')
+        for (const para of hostNotes.split('\n')) {
+          addText(para || ' ', 10, false, [60, 60, 80])
+          yPos += 1
+        }
+      }
+
+      // Comments section
+      if (allComments.length > 0) {
+        addSectionDivider('COMMENTS')
+        for (const c of allComments) {
+          const prefix = c.lineIndex != null ? `[${c.lineIndex + 1}]  ` : '·  '
+          addText(`${prefix}${c.body}`, 10, false, [140, 40, 40])
+          yPos += 1
+        }
+      }
+
+      addFooter()
+      doc.save(`${sessionTitle.replace(/[^a-z0-9]/gi, '-').toLowerCase().slice(0, 40)}-isol.pdf`)
+    } finally {
+      setExportingPdf(false)
+    }
+  }, [session, getExportBody, highlights, exportComments])
+
+  const handleExportDocx = useCallback(async () => {
+    if (!session) return
+    setExportingDocx(true)
+    try {
+      const { text: bodyText, isRaw } = getExportBody()
+      const sessionTitle = session.title ?? fmtDate(session.started_at)
+      const sessionDate = fmtDate(session.started_at)
+      const sessionLang = LANGUAGES.find(l => l.code === session.target_lang)?.label ?? session.target_lang
+      const allHighlights = highlights.filter(h => h.text)
+      const allComments = exportComments()
+      const hostNotes = session.host_notes_text?.trim() ?? ''
+
+      const headerEl = new Header({
+        children: [new Paragraph({
+          alignment: AlignmentType.RIGHT,
+          children: [new TextRun({ text: 'ISOL Studio · isolstudio.live', size: 16, color: '9999AA' })],
+        })],
+      })
+      const footerEl = new Footer({
+        children: [new Paragraph({
+          alignment: AlignmentType.CENTER,
+          children: [new TextRun({ text: 'ISOL Studio · isolstudio.live', size: 16, color: '9999AA' })],
+        })],
+      })
+
+      const children: Paragraph[] = [
+        new Paragraph({ heading: HeadingLevel.TITLE, children: [new TextRun({ text: sessionTitle, bold: true, color: '14141E' })] }),
+        new Paragraph({ children: [new TextRun({ text: `${sessionLang} · ${sessionDate}`, size: 18, color: '888899' })] }),
+        ...(isRaw ? [new Paragraph({ children: [new TextRun({ text: '(Raw transcript — AI formatting not available)', size: 16, color: 'A07840', italics: true })] })] : []),
+        new Paragraph({ text: '' }),
+      ]
+
+      // Body
+      for (const para of bodyText.split('\n').filter(l => l.trim())) {
+        if (para.startsWith('# ')) children.push(new Paragraph({ heading: HeadingLevel.HEADING_1, children: [new TextRun({ text: para.slice(2), bold: true })] }))
+        else if (para.startsWith('## ')) children.push(new Paragraph({ heading: HeadingLevel.HEADING_2, children: [new TextRun({ text: para.slice(3), bold: true })] }))
+        else if (para.startsWith('### ')) children.push(new Paragraph({ heading: HeadingLevel.HEADING_3, children: [new TextRun({ text: para.slice(4), bold: true, color: '666677' })] }))
+        else if (para.startsWith('- ') || para.startsWith('• ')) children.push(new Paragraph({ bullet: { level: 0 }, children: [new TextRun({ text: para.slice(2) })] }))
+        else children.push(new Paragraph({ children: [new TextRun({ text: para, size: 22 })] }))
+        children.push(new Paragraph({ text: '' }))
+      }
+
+      // Highlights section
+      if (allHighlights.length > 0) {
+        children.push(new Paragraph({ heading: HeadingLevel.HEADING_2, children: [new TextRun({ text: 'Highlights', bold: true, color: '555566' })] }))
+        for (const h of allHighlights) {
+          const label = h.line_index != null ? `[${h.line_index + 1}]  ` : '·  '
+          children.push(new Paragraph({ bullet: { level: 0 }, children: [new TextRun({ text: `${label}${h.text}`, size: 20, color: '3C3C52' })] }))
+        }
+        children.push(new Paragraph({ text: '' }))
+      }
+
+      // Host notes section
+      if (hostNotes) {
+        children.push(new Paragraph({ heading: HeadingLevel.HEADING_2, children: [new TextRun({ text: 'Host Notes', bold: true, color: '555566' })] }))
+        for (const para of hostNotes.split('\n')) {
+          children.push(new Paragraph({ children: [new TextRun({ text: para || ' ', size: 20, italics: true, color: '404050' })] }))
+        }
+        children.push(new Paragraph({ text: '' }))
+      }
+
+      // Comments section
+      if (allComments.length > 0) {
+        children.push(new Paragraph({ heading: HeadingLevel.HEADING_2, children: [new TextRun({ text: 'Comments', bold: true, color: '555566' })] }))
+        for (const c of allComments) {
+          const label = c.lineIndex != null ? `[${c.lineIndex + 1}]  ` : '·  '
+          children.push(new Paragraph({ bullet: { level: 0 }, children: [new TextRun({ text: `${label}${c.body}`, size: 20, color: '8C1C1C', italics: true })] }))
+        }
+        children.push(new Paragraph({ text: '' }))
+      }
+
+      const docFile = new Document({
+        sections: [{ headers: { default: headerEl }, footers: { default: footerEl }, children }],
+      })
+      const blob = await Packer.toBlob(docFile)
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${sessionTitle.replace(/[^a-z0-9]/gi, '-').toLowerCase().slice(0, 40)}-isol.docx`
+      a.click()
+      URL.revokeObjectURL(url)
+    } finally {
+      setExportingDocx(false)
+    }
+  }, [session, getExportBody, highlights, exportComments])
 
   if (!sessionId) return null
 
@@ -486,8 +720,26 @@ export default function SessionDetailModal({
                 )}
               </div>
 
-              {/* Delete */}
-              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              {/* Export + Delete */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <button
+                    onClick={handleExportPdf}
+                    disabled={exportingPdf}
+                    className="btn-icon"
+                    style={{ fontSize: 12, opacity: exportingPdf ? 0.6 : 1 }}
+                  >
+                    {exportingPdf ? 'Exporting…' : '↓ PDF'}
+                  </button>
+                  <button
+                    onClick={handleExportDocx}
+                    disabled={exportingDocx}
+                    className="btn-icon"
+                    style={{ fontSize: 12, opacity: exportingDocx ? 0.6 : 1 }}
+                  >
+                    {exportingDocx ? 'Exporting…' : '↓ Word'}
+                  </button>
+                </div>
                 <button
                   onClick={() => setConfirmDelete(true)}
                   style={{
