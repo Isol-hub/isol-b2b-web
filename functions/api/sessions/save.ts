@@ -91,7 +91,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       env.DB.prepare('SELECT COUNT(*) as cnt FROM sessions WHERE workspace_slug = ? AND started_at >= ?').bind(workspace_slug, monthStartMs),
     ])
     const planData = planRow.results[0] as { plan: string; plan_expires_at: number | null } | undefined
-    const plan = getEffectivePlan(planData?.plan ?? PLANS.FREE, planData?.plan_expires_at ?? null)
+    const plan = getEffectivePlan(planData?.plan ?? PLANS.FREE, planData?.plan_expires_at ?? null, workspace_slug)
 
     if (plan === PLANS.FREE) {
       const cnt = (countRow.results[0] as { cnt: number } | undefined)?.cnt ?? 0

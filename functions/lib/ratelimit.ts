@@ -56,7 +56,7 @@ export async function checkRateLimit(
     const row = await env.DB.prepare(
       'SELECT plan, plan_expires_at FROM workspaces WHERE slug = ?'
     ).bind(workspaceSlug).first<{ plan: string; plan_expires_at: number | null }>()
-    plan = getEffectivePlan(row?.plan ?? PLANS.FREE, row?.plan_expires_at ?? null)
+    plan = getEffectivePlan(row?.plan ?? PLANS.FREE, row?.plan_expires_at ?? null, workspaceSlug)
   }
 
   const limit = LIMITS[plan]?.[endpoint] ?? LIMITS.free[endpoint] ?? 100

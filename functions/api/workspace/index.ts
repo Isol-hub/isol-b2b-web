@@ -54,14 +54,14 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
 
       const wsNew = workspace as { plan: string; plan_expires_at: number | null }
       return Response.json({
-        workspace: { ...wsNew, effective_plan: getEffectivePlan(wsNew.plan, wsNew.plan_expires_at) },
+        workspace: { ...wsNew, effective_plan: getEffectivePlan(wsNew.plan, wsNew.plan_expires_at, workspaceSlug) },
         stats: { sessions_total: 0, minutes_total: 0, top_lang: null },
         usage: [],
       }, { headers: CORS })
     }
 
     const ws = workspace as { plan: string; plan_expires_at: number | null }
-    const effectivePlan = getEffectivePlan(ws.plan, ws.plan_expires_at)
+    const effectivePlan = getEffectivePlan(ws.plan, ws.plan_expires_at, workspaceSlug)
 
     const statsRow = statsResult.results[0] as { sessions_total: number; total_seconds: number } | undefined
     const topLangRow = topLangResult.results[0] as { target_lang: string } | undefined
